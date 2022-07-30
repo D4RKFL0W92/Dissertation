@@ -87,58 +87,79 @@ Elf64_Ehdr* getELFHeader64(char* filepath)
     return e_hdr;
 }
 
+int8_t printELF32Strings(char* filepath)
+{
+    ssize_t bytes_read;
+    char MAGIC[5];
+    uint8_t* file_mem;
+    int fd, ret;
+    struct stat st;
+
+    if( (fd = open(filepath, O_RDONLY)) < 0)
+    {
+        // Should really log errors/failures.
+        perror("Unable to open file inside printELF32Strings().");
+        return -1;
+    }
+
+    if(stat(fd, &st) < 0)
+    {
+        perror("Unable to stat() file in printELF32Strings().");
+        return -1;
+    }
+
+    // Check is an ELF file before mapping into memory.
+    if( (bytes_read = read(fd, MAGIC, 5)) < 5)
+    {
+        perror("Unable to read() ELF header in printELF32Strings().");
+        return -1;
+    }
+
+    enum BITS arch = isELF(MAGIC);
+
+    switch(arch)
+    {
+        case T_32:
+            /* Map the ELF file into */
+            if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+            {
+                perror("Unable to mmap() file in printELF32Strings().");
+                return -1;
+            }
+            Elf32_Ehdr* ehdr32 = (Elf32_Ehdr *)file_mem[0];
+
+            /* Find and print the strings in the str table .*/
+
+            break;
+
+        case T_64:
+            /* Map the ELF file into */
+            if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+            {
+                perror("Unable to mmap() file in printELF32Strings().");
+                return -1;
+            }
+            Elf64_Ehdr* ehdr64 = (Elf64_Ehdr *)file_mem[0];
+
+            /* Find and print the strings in the str table .*/
+
+            break;
+
+        case T_NO_ELF:
+            printf("%s is not an ELF file.", filepath);
+            return -1;
+    }
+
+    
+}
+
  int main(int argc, char** argv)
  {
-    // if(argc < 2)
-    // {
-    //     puts("Provide path to binary.");
-    //     return 0;
-    // }
 
-    // int fd;
-    // char path[] = "./test";
+    // test_isELF();
+    // test_getELFHeader64();
 
-    // if( (fd = open(path, O_RDONLY)) < 0)
-    // {
-    //     puts("Failed to open file.");
-    //     exit(-1);
-    // }
-
-    // char buf[20];
-    // if(read(fd, buf, 20) < 10)
-    // {
-    //     puts("Unable to read from file.");
-    //     exit(-1);
-    // }
-
-    // enum BITS ret = isELF(buf);
-    // if(ret == T_32)
-    // {
-    //     puts("32 BIT");
-    //     Elf32_Ehdr* ehdr;
-    // }
-    // else if(ret == T_64)
-    // {
-    //     puts("64 BIT");
-    //     Elf64_Ehdr* ehdr;
-
-    //     if( (ehdr = getELFHeader64(path)) == NULL)
-    //     {
-    //         puts("Unable to get ELF header.");
-    //         exit(-1);
-    //     }
-    //     printf("Entry located at: 0x%x\n", ehdr->e_entry);
-    //     printf("Program header located at: 0x%x\n", ehdr->e_phoff);
-    // }
-    // else
-    // {
-    //     puts("Unknown architecture.");
-    //     Elf64_Ehdr* ehdr;
-    // }
-
-    test_isELF();
-    test_getELFHeader64();
-
+    printELF32Strings("~/Malware_Research/ELF_Parser/test");
     return 1;
  }
 
