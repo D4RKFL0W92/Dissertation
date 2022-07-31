@@ -102,7 +102,7 @@ int8_t printELF32Strings(char* filepath)
         return -1;
     }
 
-    if(stat(fd, &st) < 0)
+    if(fstat(fd, &st) < 0)
     {
         perror("Unable to stat() file in printELF32Strings().");
         return -1;
@@ -159,7 +159,7 @@ int8_t printELF32Strings(char* filepath)
     // test_isELF();
     // test_getELFHeader64();
 
-    printELF32Strings("~/Malware_Research/ELF_Parser/test");
+    printELF32Strings("/home/calum/Malware_Research/ELF_Parser/test");
     return 1;
  }
 
