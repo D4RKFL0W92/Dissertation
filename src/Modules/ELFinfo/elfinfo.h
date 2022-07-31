@@ -17,11 +17,30 @@
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
 
-static enum BITS isELF(char* arch);
-
+/*
+ * Checks the first five bytes of the file to see if they are in accourdance with
+ * an ELF file.
+ * 
+ * Param_1: A five byte string taken from the start of the ELF file.
+ * 
+ * Return: Returns an enum value, representing the word size of the binary:
+ *          T_32, T64, or T_NO_ELF
+*/
+static enum BITS isELF(char* MAG);
 
 enum ENDIANESS getEndianess(unsigned char);
 
+/*
+ * Tries to open the file specified by 'filepath' and map it to memory. 
+ * Thyis function will only map the file to memory if it is an ELF executable file.
+ * 
+ * Param_1: A string representing a valid path to an ELF file.
+ * Param_2: A pointer 'BITS' enum value to receive/store the detected
+ *          architecture of the binary.
+ * Param_3: a pointer to a uint64_t pointer to receive and store the size of the executable file.
+ * 
+ * Return: Function returns a pointer to the memory where the file has been mapped.
+*/
 uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz);
 
 Elf32_Ehdr* getELFHeader32(char* filepath);

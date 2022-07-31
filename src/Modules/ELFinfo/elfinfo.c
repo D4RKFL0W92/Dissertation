@@ -65,6 +65,9 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
         perror("Unable to mmap() file to memory in mapELFToMemory().");
         return NULL;
     }
+
+    close(fd);
+    return file_mem;
 }
 
 
