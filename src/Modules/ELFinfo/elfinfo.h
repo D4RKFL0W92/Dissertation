@@ -22,6 +22,7 @@ static enum BITS isELF(char* arch);
 
 enum ENDIANESS getEndianess(unsigned char);
 
+uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz);
 
 Elf32_Ehdr* getELFHeader32(char* filepath);
 Elf64_Ehdr* getELFHeader64(char* filepath);

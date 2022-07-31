@@ -24,6 +24,49 @@
     return T_NO_ELF; // // Likely not an ELF executable
  }
 
+uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
+{
+    ssize_t bytes_read;
+    char MAGIC[5];
+    uint8_t* file_mem;
+    int fd, ret;
+    struct stat st;
+
+    if( (fd = open(filepath, O_RDONLY)) < 0)
+    {
+        // Should really log errors/failures.
+        perror("Unable to open file inside mapELFToMemory().");
+        return NULL;
+    }
+
+    if(fstat(fd, &st) < 0)
+    {
+        perror("Unable to stat() file in mapELFToMemory().");
+        return NULL;
+    }
+
+    // Check is an ELF file before mapping into memory.
+    if( (bytes_read = read(fd, MAGIC, 5)) < 5)
+    {
+        perror("Unable to read() ELF header in mapELFToMemory().");
+        return NULL;
+    }
+
+    if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
+    {
+        perror("File being mmap'd in mapELFToMemory() is not an ELF file.");
+        return NULL;
+    }
+
+    *map_sz = st.st_size; // Store size of ELF file for later use.
+
+    if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+    {
+        perror("Unable to mmap() file to memory in mapELFToMemory().");
+        return NULL;
+    }
+}
+
 
 
 Elf32_Ehdr* getELFHeader32(char* filepath)
@@ -89,77 +132,17 @@ Elf64_Ehdr* getELFHeader64(char* filepath)
 
 int8_t printELF32Strings(char* filepath)
 {
-    ssize_t bytes_read;
-    char MAGIC[5];
-    uint8_t* file_mem;
-    int fd, ret;
-    struct stat st;
 
-    if( (fd = open(filepath, O_RDONLY)) < 0)
-    {
-        // Should really log errors/failures.
-        perror("Unable to open file inside printELF32Strings().");
-        return -1;
-    }
-
-    if(fstat(fd, &st) < 0)
-    {
-        perror("Unable to stat() file in printELF32Strings().");
-        return -1;
-    }
-
-    // Check is an ELF file before mapping into memory.
-    if( (bytes_read = read(fd, MAGIC, 5)) < 5)
-    {
-        perror("Unable to read() ELF header in printELF32Strings().");
-        return -1;
-    }
-
-    enum BITS arch = isELF(MAGIC);
-
-    switch(arch)
-    {
-        case T_32:
-            /* Map the ELF file into */
-            if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
-            {
-                perror("Unable to mmap() file in printELF32Strings().");
-                return -1;
-            }
-            Elf32_Ehdr* ehdr32 = (Elf32_Ehdr *)file_mem[0];
-
-            /* Find and print the strings in the str table .*/
-
-            break;
-
-        case T_64:
-            /* Map the ELF file into */
-            if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
-            {
-                perror("Unable to mmap() file in printELF32Strings().");
-                return -1;
-            }
-            Elf64_Ehdr* ehdr64 = (Elf64_Ehdr *)file_mem[0];
-
-            /* Find and print the strings in the str table .*/
-
-            break;
-
-        case T_NO_ELF:
-            printf("%s is not an ELF file.", filepath);
-            return -1;
-    }
-
-    
 }
 
  int main(int argc, char** argv)
  {
+    uint8_t* mem;
+    uint64_t* p_int;
+    enum BITS* arch;
 
-    // test_isELF();
-    // test_getELFHeader64();
+    mem = mapELFToMemory("/home/calum/Malware_Research/ELF_Parser/test", &arch, &p_int);
 
-    printELF32Strings("/home/calum/Malware_Research/ELF_Parser/test");
     return 1;
  }
 
