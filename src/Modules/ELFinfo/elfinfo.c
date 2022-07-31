@@ -1,8 +1,26 @@
 #include "elfinfo.h"
 
+static int logEvent(char* filepath, const char* func_name, const char* cause)
+{
+    FILE* file;
 
- static enum BITS isELF(char* arch)
- {
+    if( (file = fopen(filepath, "a+")) == NULL)
+    {
+        perror("Unable to log error");
+        return -1;
+    }
+
+    if(fprintf(file, "%s failed while calling %s", func_name, cause) < 0)
+    {
+        perror("Unable to write log to file.");
+        return -1;
+    }
+
+    return 1;
+}
+
+static enum BITS isELF(char* arch)
+{
     if(arch == NULL || strlen(arch) < 5)
         return T_NO_ELF;
 
@@ -22,10 +40,13 @@
     }
 
     return T_NO_ELF; // // Likely not an ELF executable
- }
+}
 
 uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
 {
+    #ifdef DEBUG
+    char* func_name = "mapELFToMemory()";
+    #endif
     ssize_t bytes_read;
     char MAGIC[5];
     uint8_t* file_mem;
@@ -35,26 +56,40 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     if( (fd = open(filepath, O_RDONLY)) < 0)
     {
         // Should really log errors/failures.
-        perror("Unable to open file inside mapELFToMemory().");
+        #ifdef DEBUG
+        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "open()");
+        perror("Unable to open() file inside mapELFToMemory().");
+        #endif
         return NULL;
     }
 
     if(fstat(fd, &st) < 0)
     {
-        perror("Unable to stat() file in mapELFToMemory().");
+        #ifdef DEBUG
+        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "fstat()");
+        perror("Unable to fstat() file inside mapELFToMemory().");
+        #endif
         return NULL;
     }
 
     // Check is an ELF file before mapping into memory.
     if( (bytes_read = read(fd, MAGIC, 5)) < 5)
     {
-        perror("Unable to read() ELF header in mapELFToMemory().");
+        #ifdef DEBUG
+        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "read()");
+        perror("Unable to read() file inside mapELFToMemory().");
+        #endif
+      
         return NULL;
     }
 
     if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
     {
-        perror("File being mmap'd in mapELFToMemory() is not an ELF file.");
+        #ifdef DEBUG
+        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "isELF()");
+        perror("File being read is not an ELF file.");
+        #endif
+        
         return NULL;
     }
 
@@ -62,7 +97,10 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
 
     if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
     {
-        perror("Unable to mmap() file to memory in mapELFToMemory().");
+        #ifdef DEBUG
+        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "isELF()");
+        perror("Unable to mmap() in mapELFToMemory().");
+        #endif
         return NULL;
     }
 
@@ -133,18 +171,9 @@ Elf64_Ehdr* getELFHeader64(char* filepath)
     return e_hdr;
 }
 
-int8_t printELF32Strings(char* filepath)
-{
-
-}
-
  int main(int argc, char** argv)
  {
-    uint8_t* mem;
-    uint64_t* p_int;
-    enum BITS* arch;
-
-    mem = mapELFToMemory("/home/calum/Malware_Research/ELF_Parser/test", &arch, &p_int);
+    logEvent("/home/calum/Dissertation_Project/Logs/test_log.txt", "main()", "test");
 
     return 1;
  }

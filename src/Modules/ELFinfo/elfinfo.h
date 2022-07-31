@@ -14,8 +14,12 @@
 
 #include "../../Types/turtle_types.h"
 
+#define DEBUG
+
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
+
+static int logEvent(char* filepath, const char* func_name, const char* cause);
 
 /*
  * Checks the first five bytes of the file to see if they are in accourdance with
