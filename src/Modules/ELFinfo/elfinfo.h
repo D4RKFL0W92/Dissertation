@@ -16,6 +16,8 @@
 
 #define DEBUG
 
+#define LOG_FILE "/home/calum/Dissertation_Project/Logs/elfinfo_logs"
+
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
 
@@ -47,16 +49,23 @@ enum ENDIANESS getEndianess(unsigned char);
 */
 uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz);
 
-Elf32_Ehdr* getELFHeader32(char* filepath);
-Elf64_Ehdr* getELFHeader64(char* filepath);
+uint8_t printELFInfo(char* filepath);
+
+Elf32_Ehdr* getELFHeader32(int fd);
+Elf64_Ehdr* getELFHeader64(int fd);
 
 int8_t printELF32Strings(char* filepath);
 int8_t printELF64Strings(char* filepath);
 
 #ifdef DEBUG
-    static void test_isELF();
-    static void test_getELFHeader32();
-    static void test_getELFHeader64();
+
+#define TEST_FILE "/home/calum/Malware_Research/ELF_Parser/test"
+
+
+    // static void test_isELF();
+    // static void test_getELFHeader32();
+    // static void test_getELFHeader64();
+
 #endif
 
 

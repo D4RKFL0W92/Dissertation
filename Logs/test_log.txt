@@ -1,1 +1,1 @@
-main() failed while calling test
+main() failed while calling testmain() failed while calling testmain() failed while calling test

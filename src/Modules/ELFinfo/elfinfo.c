@@ -21,7 +21,7 @@ static int logEvent(char* filepath, const char* func_name, const char* cause)
 
 static enum BITS isELF(char* arch)
 {
-    if(arch == NULL || strlen(arch) < 5)
+    if(arch == NULL || strlen(arch) < 6)
         return T_NO_ELF;
 
     if(arch[0] != 0x7f || arch[1] != (uint8_t)'E' ||
@@ -57,7 +57,7 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     {
         // Should really log errors/failures.
         #ifdef DEBUG
-        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "open()");
+        logEvent(LOG_FILE, func_name, "open()");
         perror("Unable to open() file inside mapELFToMemory().");
         #endif
         return NULL;
@@ -66,7 +66,7 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     if(fstat(fd, &st) < 0)
     {
         #ifdef DEBUG
-        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "fstat()");
+        logEvent(LOG_FILE, func_name, "fstat()");
         perror("Unable to fstat() file inside mapELFToMemory().");
         #endif
         return NULL;
@@ -76,7 +76,7 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     if( (bytes_read = read(fd, MAGIC, 5)) < 5)
     {
         #ifdef DEBUG
-        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "read()");
+        logEvent(LOG_FILE, func_name, "read()");
         perror("Unable to read() file inside mapELFToMemory().");
         #endif
       
@@ -86,7 +86,7 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
     {
         #ifdef DEBUG
-        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "isELF()");
+        logEvent(LOG_FILE, func_name, "isELF()");
         perror("File being read is not an ELF file.");
         #endif
         
@@ -98,7 +98,7 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
     {
         #ifdef DEBUG
-        logEvent("/home/calum/Dissertation_Project/Logs/elfinfo_logs", func_name, "isELF()");
+        logEvent(LOG_FILE, func_name, "mmap()");
         perror("Unable to mmap() in mapELFToMemory().");
         #endif
         return NULL;
@@ -108,110 +108,183 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     return file_mem;
 }
 
+uint8_t printELFInfo(char* filepath)
+{
+    #ifdef DEBUG
+    const char *func_name = "printELFInfo()";
+    #endif
+
+    char ehdr_buf[ sizeof(Elf64_Ehdr) ];
+    char MAGIC[6];
+
+    char class[6];
+    char endian[6];
+    char arch[20];
+    
+    enum BITS bits;
+    int fd;
+    ssize_t read_ret;
+
+    if( (fd = open(filepath, O_RDONLY)) < 0)
+    {
+        #ifdef DEBUG
+        perror("Unable to open() file in printELFInfo().");
+        #endif
+
+        logEvent(LOG_FILE, func_name, "open()");
+        close(fd);
+        return FALSE;
+    }
+
+    if(read(fd, MAGIC, sizeof(MAGIC)) == -1)
+    {
+        #ifdef DEBUG
+        perror("Unable to read() magic bytes of file in printELFInfo().");
+        #endif
+
+        logEvent(LOG_FILE, func_name, "read()");
+        close(fd);
+        return FALSE;
+    }
+
+    /*
+        Reset the file cursor to read in the ELF header.
+    */
+    if(lseek(fd, 0, SEEK_SET) < 0) // Return to start of the file
+    {
+        #ifdef DEBUG
+        perror("Unable to lseek() to start of file in printELFInfo().");
+        #endif
+
+        logEvent(LOG_FILE, func_name, "lseek()");
+        close(fd);
+        return FALSE;
+    }
+
+    /* Only read sizeof elf MAGIC number until we are sure it's an ELF */
+    bits = isELF(MAGIC);
+
+    /*
+        Get endianess of the ELF file. This is alwas stored in the sixth byte of the file.
+    */
+    switch(MAGIC[5])
+    {
+        case ELFDATA2LSB:
+            strncpy(endian, "LITTLE", strlen("LITTLE"));
+            break;
+
+        case ELFDATA2MSB:
+            strncpy(endian, "BIG", strlen("BIG"));
+            break;
+
+        case ELFDATANONE:
+            close(fd); 
+            return FALSE;
+    }
+
+    /*
+        We can extract the ELF header now (32/64-bit) dependent on the return of isELF().
+    */
+    if(bits == T_32)
+    {
+        strncpy(class, "32-BIT", strlen("32-BIT"));
+        Elf32_Ehdr* ehdr;
+        read_ret = read(fd, ehdr_buf, sizeof(Elf32_Ehdr));
+
+        if(read_ret == -1 || read_ret < sizeof(Elf32_Ehdr))
+        {
+            #ifdef DEBUG
+            perror("Error reading Elf32_Ehdr in printELFInfo()");
+            #endif
+            logEvent(LOG_FILE, func_name, "reading Elf32_Ehdr");
+            close(fd);
+            return FALSE;
+        }
+        ehdr = (Elf32_Ehdr *)ehdr_buf;
+
+        
+    }
+    else if(bits == T_64)
+    {
+        strncpy(class, "64-BIT", 6);
+        Elf64_Ehdr* ehdr;
+        read_ret = read(fd, ehdr_buf, sizeof(Elf64_Ehdr));
+
+        if(read_ret == -1 || read_ret < sizeof(Elf64_Ehdr))
+        {
+            #ifdef DEBUG
+            perror("Error reading Elf64_Ehdr in printELFInfo()");
+            #endif
+            logEvent(LOG_FILE, func_name, "reading Elf64_Ehdr");
+            close(fd);
+            return FALSE;
+        }
+        ehdr = (Elf64_Ehdr *)ehdr_buf;
+    }
+    else
+    {
+        close(fd);
+        return FALSE;
+    }
 
 
-Elf32_Ehdr* getELFHeader32(char* filepath)
+    printf("\nClass\t%s\nEndianess:\t%s\n", class, endian); // 
+    close(fd);
+    return TRUE;
+}
+
+Elf32_Ehdr* getELFHeader32(int fd)
 {
     Elf32_Ehdr* e_hdr;
     char MAGIC[5];
     unsigned char buf[sizeof(Elf32_Ehdr)];
-    int fd;
-
-    if( (fd = open(filepath, O_RDONLY)) < 0)
-    {
-        return NULL;
-    }
 
     if(read(fd, buf, sizeof(Elf32_Ehdr)) < sizeof(Elf32_Ehdr))
     {
         return NULL;
     }
 
-    
-    strncpy(MAGIC, buf, 5);
-    if(!isELF(MAGIC))
-    {
-        return NULL;
-    }
-
     e_hdr = (Elf32_Ehdr *)buf;
-    close(fd);
 
     return e_hdr;
 
 }
 
-Elf64_Ehdr* getELFHeader64(char* filepath)
+Elf64_Ehdr* getELFHeader64(int fd)
 {
     Elf64_Ehdr* e_hdr;
     char MAGIC[5];
     unsigned char buf[sizeof(Elf64_Ehdr)];
-    int fd;
-
-    if( (fd = open(filepath, O_RDONLY)) < 0)
-    {
-        return NULL;
-    }
 
     if(read(fd, buf, sizeof(Elf64_Ehdr)) < sizeof(Elf64_Ehdr))
     {
         return NULL;
     }
 
-    
-    strncpy(MAGIC, buf, 5);
-    if(!isELF(MAGIC))
-    {
-        return NULL;
-    }
-
-    e_hdr = (Elf64_Ehdr *)buf;
-    close(fd);
+    e_hdr = (Elf64_Ehdr *) buf;
 
     return e_hdr;
 }
 
  int main(int argc, char** argv)
  {
-    logEvent("/home/calum/Dissertation_Project/Logs/test_log.txt", "main()", "test");
+    printELFInfo(TEST_FILE);
 
     return 1;
  }
 
  #ifdef DEBUG
 
- static void test_isELF()
- {
-    assert(isELF("\x7f\x45\x4c\x46\x01") == T_32); // Test a real 64-bit ELF header.
-    assert(isELF("\x7f\x45\x4c\x46\x02") == T_64); // Test a real 64-bit ELF header.
-    // Test some broken headers
-    assert(isELF("\x7f\x45\x4c\x40\x01") == T_NO_ELF);
-    assert(isELF("\x7f\x41\x4c\x46\x01") == T_NO_ELF);
-    assert(isELF("\x00\x00\x00\x00\x00") == T_NO_ELF);
+//  static void test_isELF()
+//  {
+//     assert(isELF("\x7f\x45\x4c\x46\x01") == T_32); // Test a real 64-bit ELF header.
+//     assert(isELF("\x7f\x45\x4c\x46\x02") == T_64); // Test a real 64-bit ELF header.
+//     // Test some broken headers
+//     assert(isELF("\x7f\x45\x4c\x40\x01") == T_NO_ELF);
+//     assert(isELF("\x7f\x41\x4c\x46\x01") == T_NO_ELF);
+//     assert(isELF("\x00\x00\x00\x00\x00") == T_NO_ELF);
 
- }
+//  }
 
- static void test_getELFHeader64()
- {
-    Elf64_Ehdr* ehdr;
-    char *filename = "./test";
-
-    ehdr = getELFHeader64(filename);
-
-    /* Test e_ident array for appropriate values */
-    assert(ehdr->e_ident[EI_CLASS] == ELFCLASS64); // Check word size of executable
-    assert(ehdr->e_ident[EI_DATA] == ELFDATA2LSB || ehdr->e_ident[EI_DATA] == ELFDATA2MSB || ehdr->e_ident[EI_DATA] == ELFDATANONE); // Check endianess
-    assert(ehdr->e_ident[EI_VERSION] == EV_CURRENT || ehdr->e_ident[EI_VERSION] == EV_NONE); // Check version
-    assert(ehdr->e_ident[EI_OSABI] == ELFOSABI_NONE || ehdr->e_ident[EI_OSABI] == ELFOSABI_SYSV || ehdr->e_ident[EI_OSABI] == ELFOSABI_HPUX
-        || ehdr->e_ident[EI_OSABI] == ELFOSABI_NETBSD || ehdr->e_ident[EI_OSABI] == ELFOSABI_LINUX || ehdr->e_ident[EI_OSABI] == ELFOSABI_SOLARIS
-        || ehdr->e_ident[EI_OSABI] == ELFOSABI_IRIX || ehdr->e_ident[EI_OSABI] == ELFOSABI_FREEBSD || ehdr->e_ident[EI_OSABI] == ELFOSABI_TRU64
-        || ehdr->e_ident[EI_OSABI] == ELFOSABI_ARM || ehdr->e_ident[EI_OSABI] == ELFOSABI_STANDALONE); // Check ABI
-    /* Test e_type for appropriate values. */
-    assert(ehdr->e_type == ET_NONE || ehdr->e_type == ET_REL || ehdr->e_type == ET_EXEC || ehdr->e_type == ET_DYN || ehdr->e_type == ET_CORE);
-    /* Test e_machine for appropriate values */
-
-    assert(ehdr->e_phoff <= sizeof(Elf64_Ehdr));
-
- }
 
  #endif
