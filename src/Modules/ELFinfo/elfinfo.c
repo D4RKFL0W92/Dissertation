@@ -117,9 +117,10 @@ uint8_t printELFInfo(char* filepath)
     char ehdr_buf[ sizeof(Elf64_Ehdr) ];
     char MAGIC[6];
 
-    char class[6];
-    char endian[6];
-    char arch[20];
+    char class[4];
+    char endian[8];
+    char elf_type[16];
+    char arch[16];
     
     enum BITS bits;
     int fd;
@@ -170,11 +171,11 @@ uint8_t printELFInfo(char* filepath)
     switch(MAGIC[5])
     {
         case ELFDATA2LSB:
-            strncpy(endian, "LITTLE", strlen("LITTLE"));
+            strcpy(endian, ENDIAN_LITTLE);
             break;
 
         case ELFDATA2MSB:
-            strncpy(endian, "BIG", strlen("BIG"));
+            strcpy(endian, ENDIAN_BIG);
             break;
 
         case ELFDATANONE:
@@ -187,7 +188,8 @@ uint8_t printELFInfo(char* filepath)
     */
     if(bits == T_32)
     {
-        strncpy(class, "32-BIT", strlen("32-BIT"));
+        strcpy(class, CLASS32); // Assign bit size to a string for printing.
+
         Elf32_Ehdr* ehdr;
         read_ret = read(fd, ehdr_buf, sizeof(Elf32_Ehdr));
 
@@ -201,12 +203,32 @@ uint8_t printELFInfo(char* filepath)
             return FALSE;
         }
         ehdr = (Elf32_Ehdr *)ehdr_buf;
+        switch(ehdr->e_type)
+        {
+            case ET_REL:
+                strcpy(elf_type, ELF_REL_T);
+                break;
 
+            case ET_EXEC:
+                strcpy(elf_type, ELF_EXEC_T);
+                break;
+
+            case ET_DYN:
+                strcpy(elf_type, ELF_DYN_T);
+                break;
+
+            case ET_CORE:
+                strcpy(elf_type, ELF_CORE_T);
+                break;
+
+            case ET_NONE:
+            
+        }
         
     }
     else if(bits == T_64)
     {
-        strncpy(class, "64-BIT", 6);
+        strcpy(class, CLASS64); // Assign bit size to a string for printing.
         Elf64_Ehdr* ehdr;
         read_ret = read(fd, ehdr_buf, sizeof(Elf64_Ehdr));
 
@@ -220,6 +242,27 @@ uint8_t printELFInfo(char* filepath)
             return FALSE;
         }
         ehdr = (Elf64_Ehdr *)ehdr_buf;
+        switch(ehdr->e_type)
+        {
+            case ET_REL:
+                strcpy(elf_type, ELF_REL_T);
+                break;
+
+            case ET_EXEC:
+                strcpy(elf_type, ELF_EXEC_T);
+                break;
+
+            case ET_DYN:
+                strcpy(elf_type, ELF_DYN_T);
+                break;
+
+            case ET_CORE:
+                strcpy(elf_type, ELF_CORE_T);
+                break;
+
+            case ET_NONE:
+            
+        }
     }
     else
     {
@@ -227,8 +270,10 @@ uint8_t printELFInfo(char* filepath)
         return FALSE;
     }
 
+    /* Print tablized ELF binary iinformation */
+    puts("------------------------------- ELF Binary Information -------------------------------\n\n");
+    printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\n", class, endian, elf_type);
 
-    printf("\nClass\t%s\nEndianess:\t%s\n", class, endian); // 
     close(fd);
     return TRUE;
 }
@@ -237,9 +282,9 @@ Elf32_Ehdr* getELFHeader32(int fd)
 {
     Elf32_Ehdr* e_hdr;
     char MAGIC[5];
-    unsigned char buf[sizeof(Elf32_Ehdr)];
+    unsigned char buf[ sizeof(Elf32_Ehdr) ];
 
-    if(read(fd, buf, sizeof(Elf32_Ehdr)) < sizeof(Elf32_Ehdr))
+    if( read(fd, buf, sizeof(Elf32_Ehdr)) < sizeof(Elf32_Ehdr) )
     {
         return NULL;
     }
@@ -247,7 +292,6 @@ Elf32_Ehdr* getELFHeader32(int fd)
     e_hdr = (Elf32_Ehdr *)buf;
 
     return e_hdr;
-
 }
 
 Elf64_Ehdr* getELFHeader64(int fd)
@@ -275,16 +319,16 @@ Elf64_Ehdr* getELFHeader64(int fd)
 
  #ifdef DEBUG
 
-//  static void test_isELF()
-//  {
-//     assert(isELF("\x7f\x45\x4c\x46\x01") == T_32); // Test a real 64-bit ELF header.
-//     assert(isELF("\x7f\x45\x4c\x46\x02") == T_64); // Test a real 64-bit ELF header.
-//     // Test some broken headers
-//     assert(isELF("\x7f\x45\x4c\x40\x01") == T_NO_ELF);
-//     assert(isELF("\x7f\x41\x4c\x46\x01") == T_NO_ELF);
-//     assert(isELF("\x00\x00\x00\x00\x00") == T_NO_ELF);
+ static void test_isELF()
+ {
+    assert(isELF("\x7f\x45\x4c\x46\x01") == T_32); // Test a real 64-bit ELF header.
+    assert(isELF("\x7f\x45\x4c\x46\x02") == T_64); // Test a real 64-bit ELF header.
+    // Test some broken headers
+    assert(isELF("\x7f\x45\x4c\x40\x01") == T_NO_ELF);
+    assert(isELF("\x7f\x41\x4c\x46\x01") == T_NO_ELF);
+    assert(isELF("\x00\x00\x00\x00\x00") == T_NO_ELF);
 
-//  }
+ }
 
 
  #endif

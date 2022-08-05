@@ -18,6 +18,24 @@
 
 #define LOG_FILE "/home/calum/Dissertation_Project/Logs/elfinfo_logs"
 
+#define CLASS32           "32"
+#define CLASS64           "64"
+
+#define ENDIAN_LITTLE     "Little"
+#define ENDIAN_BIG        "BIG"
+
+#define ELF_REL_T         "Relocatable"
+#define ELF_EXEC_T        "Executable"
+#define ELF_DYN_T         "Shared Object"
+#define ELF_CORE_T        "Core"
+#define ELF_UNKNOWN_T     "Unidentifiable"
+
+#define ARCH_AMD          "AMD"
+#define ARCH_ARM          "ARM"
+#define ARCH_Intel86      "X_86"
+#define ARCH_Intel64      "X_64"
+
+
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
 
@@ -62,7 +80,7 @@ int8_t printELF64Strings(char* filepath);
 #define TEST_FILE "/home/calum/Malware_Research/ELF_Parser/test"
 
 
-    // static void test_isELF();
+    static void test_isELF();
     // static void test_getELFHeader32();
     // static void test_getELFHeader64();
 
