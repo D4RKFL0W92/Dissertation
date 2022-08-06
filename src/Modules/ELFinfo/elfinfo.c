@@ -1,24 +1,5 @@
 #include "elfinfo.h"
 
-static int logEvent(char* filepath, const char* func_name, const char* cause)
-{
-    FILE* file;
-
-    if( (file = fopen(filepath, "a+")) == NULL)
-    {
-        perror("Unable to log error");
-        return -1;
-    }
-
-    if(fprintf(file, "%s failed while calling %s", func_name, cause) < 0)
-    {
-        perror("Unable to write log to file.");
-        return -1;
-    }
-
-    return 1;
-}
-
 static enum BITS isELF(char* arch)
 {
     if(arch == NULL || strlen(arch) < 6)
@@ -121,6 +102,7 @@ uint8_t printELFInfo(char* filepath)
     char endian[8];
     char elf_type[16];
     char arch[16];
+    char stripped[8];
     
     enum BITS bits;
     int fd;
@@ -222,8 +204,14 @@ uint8_t printELFInfo(char* filepath)
                 break;
 
             case ET_NONE:
-            
+                strcpy(elf_type, ELF_UNKNOWN_T);
+                break;
         }
+        /* Check if the binary is stripped by checking for a section header */
+        if(ehdr->e_shoff == 0)
+            strcpy(stripped, TRUE_STR);
+        else
+            strcpy(stripped, FALSE_STR);
         
     }
     else if(bits == T_64)
@@ -261,8 +249,14 @@ uint8_t printELFInfo(char* filepath)
                 break;
 
             case ET_NONE:
-            
+                strcpy(elf_type, ELF_UNKNOWN_T);
+                break;
         }
+        /* Check if the binary is stripped by checking for a section header */
+        if(ehdr->e_shoff == 0)
+            strcpy(stripped, TRUE_STR);
+        else
+            strcpy(stripped, FALSE_STR);
     }
     else
     {
@@ -272,7 +266,7 @@ uint8_t printELFInfo(char* filepath)
 
     /* Print tablized ELF binary iinformation */
     puts("------------------------------- ELF Binary Information -------------------------------\n\n");
-    printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\n", class, endian, elf_type);
+    printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\n", class, endian, elf_type, stripped);
 
     close(fd);
     return TRUE;
