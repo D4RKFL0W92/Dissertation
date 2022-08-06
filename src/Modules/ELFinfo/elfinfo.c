@@ -9,6 +9,10 @@ static enum BITS isELF(char* arch)
         arch[2] != (uint8_t)'L' || arch[3] != (uint8_t)'F')
         return T_NO_ELF;
 
+    unsigned char endianness = arch[5];
+    if(endianness != ELFDATANONE && endianness != ELFDATA2LSB && endianness != ELFDATA2MSB)
+        return T_NO_ELF; // // Likely not an ELF executable
+
     // Check and return intended architecture for the binary.
     unsigned char arch_bit = arch[4];
     if(ELFCLASS32 == arch_bit)
@@ -19,8 +23,6 @@ static enum BITS isELF(char* arch)
     {
         return T_64;
     }
-
-    return T_NO_ELF; // // Likely not an ELF executable
 }
 
 uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
@@ -104,6 +106,9 @@ uint8_t printELFInfo(char* filepath)
     char arch[16];
     char stripped[8];
     
+    uint32_t e32_entry = 0;
+    uint64_t e64_entry = 0;
+
     enum BITS bits;
     int fd;
     ssize_t read_ret;
@@ -212,6 +217,8 @@ uint8_t printELFInfo(char* filepath)
             strcpy(stripped, TRUE_STR);
         else
             strcpy(stripped, FALSE_STR);
+
+        e32_entry = ehdr->e_entry;
         
     }
     else if(bits == T_64)
@@ -257,6 +264,8 @@ uint8_t printELFInfo(char* filepath)
             strcpy(stripped, TRUE_STR);
         else
             strcpy(stripped, FALSE_STR);
+
+        e64_entry = ehdr->e_entry;
     }
     else
     {
@@ -266,7 +275,11 @@ uint8_t printELFInfo(char* filepath)
 
     /* Print tablized ELF binary iinformation */
     puts("------------------------------- ELF Binary Information -------------------------------\n\n");
-    printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\n", class, endian, elf_type, stripped);
+    if(e32_entry == 0) // Must be 64-bit
+        printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\n", class, endian, elf_type, stripped, e64_entry);
+    else
+        printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\n", class, endian, elf_type, stripped, e32_entry);
+    
 
     close(fd);
     return TRUE;
