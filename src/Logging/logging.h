@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#define DEBUG
+
 int logEvent(const char* filepath, const char* func_name, const char* cause);
 int logEvent(const char* filepath, const char* func_name, const char* cause)
 {

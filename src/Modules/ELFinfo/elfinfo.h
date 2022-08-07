@@ -16,7 +16,7 @@
 #include "../../Types/turtle_types.h"
 #include "../../Logging/logging.h"
 
-#define DEBUG
+
 
 #define LOG_FILE "/home/calum/Dissertation_Project/Logs/elfinfo_logs"
 

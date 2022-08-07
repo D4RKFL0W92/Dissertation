@@ -386,8 +386,8 @@ Elf64_Ehdr* getELFHeader64(int fd)
 
  int main(int argc, char** argv)
  {
-    // printELFInfo(TEST_FILE, NULL);
-    test_getELF32PhdrAddress();
+    printELFInfo(TEST_FILE, NULL);
+    // test_getELF32PhdrAddress();
 
     return 1;
  }
@@ -413,9 +413,11 @@ static int test_getELF32PhdrAddress()
     uint64_t elf_sz;
 
     p_mem = mapELFToMemory(TEST_FILE, &bits, &elf_sz);
+    assert(p_mem != NULL);
     assert(bits == T_32);
 
     phdr_offset = getELF32PhdrAddress(p_mem);
+    assert(phdr_offset != 0);
     printf("Program Header Offset:\t0x%08x\n", phdr_offset);
 }
 
