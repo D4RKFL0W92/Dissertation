@@ -31,7 +31,7 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     char* func_name = "mapELFToMemory()";
     #endif
     ssize_t bytes_read;
-    char MAGIC[5];
+    char MAGIC[6];
     uint8_t* file_mem;
     int fd, ret;
     struct stat st;
@@ -56,7 +56,7 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     }
 
     // Check is an ELF file before mapping into memory.
-    if( (bytes_read = read(fd, MAGIC, 5)) < 5)
+    if( (bytes_read = read(fd, MAGIC, 6)) < 6)
     {
         #ifdef DEBUG
         logEvent(LOG_FILE, func_name, "read()");
@@ -65,7 +65,7 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
       
         return NULL;
     }
-
+    
     if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
     {
         #ifdef DEBUG
@@ -91,7 +91,31 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     return file_mem;
 }
 
-uint8_t printELFInfo(char* filepath)
+Elf64_Addr getELF64PhdrAddress(uint8_t* p_mem)
+{
+    Elf64_Ehdr* ehdr;
+    Elf64_Addr offset;
+
+    if(p_mem == NULL || p_mem[4] != T_64) return 0; // Erroneous memory mapped pointer passed to function.
+
+    ehdr = (Elf64_Ehdr *)p_mem;
+
+    return ehdr->e_phoff;
+}
+
+Elf64_Addr getELF32PhdrAddress(uint8_t* p_mem)
+{
+    Elf32_Ehdr* ehdr;
+    Elf32_Addr offset;
+
+    if(p_mem == NULL || p_mem[4] != T_32) return 0; // Erroneous memory mapped pointer passed to function.
+
+    ehdr = (Elf32_Ehdr *)p_mem;
+
+    return ehdr->e_phoff;
+}
+
+uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
 {
     #ifdef DEBUG
     const char *func_name = "printELFInfo()";
@@ -105,6 +129,8 @@ uint8_t printELFInfo(char* filepath)
     char elf_type[16];
     char arch[16];
     char stripped[8];
+
+    struct stat st;
     
     uint32_t e32_entry = 0;
     uint64_t e64_entry = 0;
@@ -113,7 +139,9 @@ uint8_t printELFInfo(char* filepath)
     int fd;
     ssize_t read_ret;
 
-    if( (fd = open(filepath, O_RDONLY)) < 0)
+    if(elf_filepath == NULL) return FALSE;
+
+    if( (fd = open(elf_filepath, O_RDONLY)) < 0)
     {
         #ifdef DEBUG
         perror("Unable to open() file in printELFInfo().");
@@ -124,13 +152,25 @@ uint8_t printELFInfo(char* filepath)
         return FALSE;
     }
 
+    if(fstat(fd, &st) == -1)
+    {
+        #ifdef DEBUG
+        perror("Unable to stat() ELF file in printELFInfo().");
+        logEvent(LOG_FILE, func_name, "fstat()");
+        #endif
+
+        close(fd);
+        return FALSE;
+    }
+
     if(read(fd, MAGIC, sizeof(MAGIC)) == -1)
     {
         #ifdef DEBUG
         perror("Unable to read() magic bytes of file in printELFInfo().");
+        logEvent(LOG_FILE, func_name, "read()");
         #endif
 
-        logEvent(LOG_FILE, func_name, "read()");
+        
         close(fd);
         return FALSE;
     }
@@ -272,17 +312,44 @@ uint8_t printELFInfo(char* filepath)
         close(fd);
         return FALSE;
     }
-
     /* Print tablized ELF binary iinformation */
-    puts("------------------------------- ELF Binary Information -------------------------------\n\n");
-    if(e32_entry == 0) // Must be 64-bit
-        printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\n", class, endian, elf_type, stripped, e64_entry);
-    else
-        printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\n", class, endian, elf_type, stripped, e32_entry);
     
 
-    close(fd);
-    return TRUE;
+    if(output_filepath != NULL)
+    {
+        FILE* out = fopen(output_filepath, "a+");
+        if(fopen == NULL)
+        {
+            #ifdef DEBUG
+            logEvent(TEST_FILE, "printELFInfo()", "fopen()");
+            #endif
+            goto failed_file_open; // Resonable use of goto to reduce code duplication (A break could probably be used but this is explicit)
+        }
+        fprintf(out, "------------------------------- ELF Binary Information -------------------------------\n\n");
+        if(e32_entry == 0) // Must be 64-bit
+            fprintf(out, "\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
+                class, endian, elf_type, stripped, e64_entry, st.st_size);
+        else
+            fprintf(out, "\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
+                class, endian, elf_type, stripped, e32_entry, st.st_size);
+        fclose(out);
+        close(fd);
+        return TRUE;
+    }
+    else
+    {
+        failed_file_open:
+        puts("------------------------------- ELF Binary Information -------------------------------\n\n");
+        if(e32_entry == 0) // Must be 64-bit
+            printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
+                class, endian, elf_type, stripped, e64_entry, st.st_size);
+        else
+            printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
+                class, endian, elf_type, stripped, e32_entry, st.st_size);
+        
+        close(fd);
+        return TRUE;
+    }
 }
 
 Elf32_Ehdr* getELFHeader32(int fd)
@@ -319,7 +386,8 @@ Elf64_Ehdr* getELFHeader64(int fd)
 
  int main(int argc, char** argv)
  {
-    printELFInfo(TEST_FILE);
+    // printELFInfo(TEST_FILE, NULL);
+    test_getELF32PhdrAddress();
 
     return 1;
  }
@@ -337,5 +405,18 @@ Elf64_Ehdr* getELFHeader64(int fd)
 
  }
 
+static int test_getELF32PhdrAddress()
+{
+    Elf32_Addr phdr_offset;
+    enum BITS bits;
+    uint8_t* p_mem;
+    uint64_t elf_sz;
+
+    p_mem = mapELFToMemory(TEST_FILE, &bits, &elf_sz);
+    assert(bits == T_32);
+
+    phdr_offset = getELF32PhdrAddress(p_mem);
+    printf("Program Header Offset:\t0x%08x\n", phdr_offset);
+}
 
  #endif

@@ -3,8 +3,8 @@
 
 #include <stdio.h>
 
-int logEvent(char* filepath, const char* func_name, const char* cause);
-int logEvent(char* filepath, const char* func_name, const char* cause)
+int logEvent(const char* filepath, const char* func_name, const char* cause);
+int logEvent(const char* filepath, const char* func_name, const char* cause)
 {
     FILE* file;
 
@@ -14,7 +14,7 @@ int logEvent(char* filepath, const char* func_name, const char* cause)
         return -1;
     }
 
-    if(fprintf(file, "%s failed while calling %s", func_name, cause) < 0)
+    if(fprintf(file, "%s failed while calling %s\n", func_name, cause) < 0)
     {
         perror("Unable to write log to file.");
         return -1;

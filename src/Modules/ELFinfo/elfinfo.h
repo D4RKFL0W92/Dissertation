@@ -67,7 +67,21 @@ enum ENDIANESS getEndianess(unsigned char);
 */
 uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz);
 
-uint8_t printELFInfo(char* filepath);
+Elf64_Addr getELF64PhdrAddress(uint8_t* p_mem);
+Elf64_Addr getELF32PhdrAddress(uint8_t* p_mem);
+
+/*
+    Prints information relevant to static analysis of the binary.
+    All data is read from the file given by the file path and can be optionally written
+    out to a file given by output_filepath. If NULL is passed as the second argument the
+    output will be written to stdout.
+
+    Param_1: Pathname to the ELF binary.
+    Param_2: Pathname to optional output file, or NULL
+
+    Return: Returns TRUE (1) on success or FALSE (0) on failure.
+*/
+uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 
 Elf32_Ehdr* getELFHeader32(int fd);
 Elf64_Ehdr* getELFHeader64(int fd);
@@ -81,6 +95,9 @@ int8_t printELF64Strings(char* filepath);
 
 
     static void test_isELF();
+
+    static int test_getELF64PhdrAddress();
+    static int test_getELF32PhdrAddress();
     // static void test_getELFHeader32();
     // static void test_getELFHeader64();
 

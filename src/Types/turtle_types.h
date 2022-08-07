@@ -3,8 +3,10 @@
 
 #define DEBUG // Used in all .c files for optional debug build that runs tests.
 
-#define TRUE  1
-#define FALSE 0
+#define TRUE             1
+#define FALSE            0
+#define SUCCESS          1
+#define FAILED          -1
 
 
 #define TRUE_STR         "TRUE"
