@@ -5,6 +5,8 @@
 #include <sys/ptrace.h>
 #include <sys/user.h>
 
+#include "../../Logging/logging.h"
+
 struct user_regs_struct* getRegisterValues(int pid);
 
 #endif

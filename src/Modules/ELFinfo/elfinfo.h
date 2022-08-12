@@ -18,7 +18,7 @@
 
 
 
-#define LOG_FILE "/home/calum/Dissertation_Project/Logs/elfinfo_logs"
+
 
 #define CLASS32           "32"
 #define CLASS64           "64"
@@ -37,6 +37,17 @@
 #define ARCH_Intel86      "X_86"
 #define ARCH_Intel64      "X_64"
 
+typedef struct
+{
+    uint16_t pt_loadCnt;
+    uint16_t pt_dynamicCnt;
+    uint16_t pt_interpCnt;
+    uint16_t pt_noteCnt;
+    uint16_t pt_shlibCnt;
+    uint16_t pt_phdrCnt;
+    uint16_t pt_gnu_stackCnt;
+}PHDR_COUNT;
+
 
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
@@ -52,7 +63,6 @@ enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
 */
 static enum BITS isELF(char* MAG);
 
-enum ENDIANESS getEndianess(unsigned char);
 
 /*
  * Tries to open the file specified by 'filepath' and map it to memory. 
@@ -67,31 +77,38 @@ enum ENDIANESS getEndianess(unsigned char);
 */
 uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz);
 
-Elf64_Addr getELF64PhdrAddress(uint8_t* p_mem);
-Elf64_Addr getELF32PhdrAddress(uint8_t* p_mem);
+int printELFPhdrs(uint8_t* p_mem);
+/*
+ * Takes a pointer to an ELF executable that has already been check that it
+ * points to a valid ELF file.
+*/
+static int printELF64Phdrs(uint8_t* p_mem);
+static int printELF32Phdrs(uint8_t* p_mem);
+
 
 /*
-    Prints information relevant to static analysis of the binary.
-    All data is read from the file given by the file path and can be optionally written
-    out to a file given by output_filepath. If NULL is passed as the second argument the
-    output will be written to stdout.
+ * Prints information relevant to static analysis of the binary ELF file.
+ * Capable of handling 32 and 64 bit ELF files.
+ * All data is read from the file given by the file path and can be optionally written
+ * out to a file given by output_filepath. If NULL is passed as the second argument the
+ * output will be written to stdout.
 
-    Param_1: Pathname to the ELF binary.
-    Param_2: Pathname to optional output file, or NULL
+ * Param_1: Pathname to the ELF binary.
+ * Param_2: Pathname to optional output file, or NULL
 
-    Return: Returns TRUE (1) on success or FALSE (0) on failure.
+ * Return: Returns TRUE (1) on success or FALSE (0) on failure.
 */
 uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 
-Elf32_Ehdr* getELFHeader32(int fd);
-Elf64_Ehdr* getELFHeader64(int fd);
+uint8_t printELF64StringTables(uint8_t* p_mem);
 
 int8_t printELF32Strings(char* filepath);
 int8_t printELF64Strings(char* filepath);
 
 #ifdef DEBUG
 
-#define TEST_FILE "/home/calum/Malware_Research/ELF_Parser/test"
+#define TEST_FILE   "/home/calum/Malware_Research/ELF_Parser/test"
+#define TEST_FILE64 "/home/calum/Malware_Research/ELF_Parser/test64"
 
 
     static void test_isELF();

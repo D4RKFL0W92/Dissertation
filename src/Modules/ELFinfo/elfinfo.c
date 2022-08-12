@@ -90,30 +90,120 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     close(fd);
     return file_mem;
 }
-
-Elf64_Addr getELF64PhdrAddress(uint8_t* p_mem)
+int printELFPhdrs(uint8_t* p_mem)
 {
+    enum BITS arch;
+    uint64_t file_sz;
+
+    p_mem = mapELFToMemory(TEST_FILE, &arch, &file_sz);
+
+    if(arch == T_64)
+    {
+        return printELF64Phdrs(p_mem);
+    }
+    else if(arch == T_32)
+    {
+        return printELF32Phdrs(p_mem);
+    }
+    
+}
+
+static int printELF64Phdrs(uint8_t* p_mem)
+{
+
     Elf64_Ehdr* ehdr;
-    Elf64_Addr offset;
 
-    if(p_mem == NULL || p_mem[4] != T_64) return 0; // Erroneous memory mapped pointer passed to function.
+    Elf64_Phdr* phdr;
 
-    ehdr = (Elf64_Ehdr *)p_mem;
+    if(p_mem == NULL)
+    {
+        return -1;
+    }
+    ehdr = (Elf64_Ehdr *) p_mem;
 
-    return ehdr->e_phoff;
+    phdr = (Elf64_Phdr *) (p_mem + ehdr->e_phoff);
+    uint8_t count = 0;
+
+    for(count; count < ehdr->e_phnum; ++count)
+    {
+        switch(phdr[count].p_type)
+        {
+            case PT_LOAD:
+                printf("PT_LOAD Section VADDR At:\t0x%08x\n", phdr[count].p_vaddr);
+                break;
+            case PT_DYNAMIC:
+                printf("PT_DYNAMIC Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_INTERP:
+                printf("PT_INTERP Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_NOTE:
+                printf("PT_NOTE Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_SHLIB:
+                printf("PT_SHLIB Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_PHDR:
+                printf("PT_PHDR Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_GNU_STACK:
+                printf("PT_GNU_STACK Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_NULL: break;
+        }
+    }
+    
 }
 
-Elf64_Addr getELF32PhdrAddress(uint8_t* p_mem)
+static int printELF32Phdrs(uint8_t* p_mem)
 {
+
     Elf32_Ehdr* ehdr;
-    Elf32_Addr offset;
 
-    if(p_mem == NULL || p_mem[4] != T_32) return 0; // Erroneous memory mapped pointer passed to function.
+    Elf32_Phdr* phdr;
 
-    ehdr = (Elf32_Ehdr *)p_mem;
+    if(p_mem == NULL)
+    {
+        return -1;
+    }
+    ehdr = (Elf32_Ehdr *) p_mem;
 
-    return ehdr->e_phoff;
+    phdr = (Elf32_Phdr *) (p_mem + ehdr->e_phoff);
+    uint8_t count = 0;
+
+    for(count; count < ehdr->e_phnum; ++count)
+    {
+        switch(phdr[count].p_type)
+        {
+            case PT_LOAD:
+                printf("PT_LOAD Section VADDR At:\t0x%08x\n", phdr[count].p_vaddr);
+                break;
+            case PT_DYNAMIC:
+                printf("PT_DYNAMIC Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_INTERP:
+                printf("PT_INTERP Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_NOTE:
+                printf("PT_NOTE Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_SHLIB:
+                printf("PT_SHLIB Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_PHDR:
+                printf("PT_PHDR Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_GNU_STACK:
+                printf("PT_GNU_STACK Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_NULL: break;
+        }
+    }
+    
 }
+
+
+
 
 uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
 {
@@ -386,9 +476,15 @@ Elf64_Ehdr* getELFHeader64(int fd)
 
  int main(int argc, char** argv)
  {
-    printELFInfo(TEST_FILE, NULL);
+    enum BITS arch;
+    uint64_t file_sz;
+    // printELFInfo(TEST_FILE, NULL);
     // test_getELF32PhdrAddress();
 
+    uint8_t* p_mem;
+
+    p_mem = mapELFToMemory(TEST_FILE, &arch, &file_sz);
+    printELFPhdrs(p_mem);
     return 1;
  }
 
@@ -405,20 +501,20 @@ Elf64_Ehdr* getELFHeader64(int fd)
 
  }
 
-static int test_getELF32PhdrAddress()
-{
-    Elf32_Addr phdr_offset;
-    enum BITS bits;
-    uint8_t* p_mem;
-    uint64_t elf_sz;
+// static int test_getELF32PhdrAddress()
+// {
+//     Elf32_Addr phdr_offset;
+//     enum BITS bits;
+//     uint8_t* p_mem;
+//     uint64_t elf_sz;
 
-    p_mem = mapELFToMemory(TEST_FILE, &bits, &elf_sz);
-    assert(p_mem != NULL);
-    assert(bits == T_32);
+//     p_mem = mapELFToMemory(TEST_FILE, &bits, &elf_sz);
+//     assert(p_mem != NULL);
+//     assert(bits == T_32);
 
-    phdr_offset = getELF32PhdrAddress(p_mem);
-    assert(phdr_offset != 0);
-    printf("Program Header Offset:\t0x%08x\n", phdr_offset);
-}
+//     phdr_offset = getELF32PhdrAddress(p_mem);
+//     assert(phdr_offset != 0);
+//     printf("Program Header Offset:\t0x%08x\n", phdr_offset);
+// }
 
  #endif
