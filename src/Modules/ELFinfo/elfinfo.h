@@ -77,7 +77,7 @@ static enum BITS isELF(char* MAG);
 */
 uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz);
 
-int printELFPhdrs(uint8_t* p_mem);
+int printELFPhdrs(char* filepath);
 /*
  * Takes a pointer to an ELF executable that has already been check that it
  * points to a valid ELF file.
@@ -106,9 +106,6 @@ int8_t printELF32Strings(char* filepath);
 int8_t printELF64Strings(char* filepath);
 
 #ifdef DEBUG
-
-#define TEST_FILE   "/home/calum/Malware_Research/ELF_Parser/test"
-#define TEST_FILE64 "/home/calum/Malware_Research/ELF_Parser/test64"
 
 
     static void test_isELF();

@@ -90,12 +90,13 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     close(fd);
     return file_mem;
 }
-int printELFPhdrs(uint8_t* p_mem)
+int printELFPhdrs(char* filepath)
 {
+    uint8_t* p_mem;
     enum BITS arch;
     uint64_t file_sz;
 
-    p_mem = mapELFToMemory(TEST_FILE, &arch, &file_sz);
+    p_mem = mapELFToMemory(filepath, &arch, &file_sz);
 
     if(arch == T_64)
     {
@@ -411,7 +412,7 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
         if(fopen == NULL)
         {
             #ifdef DEBUG
-            logEvent(TEST_FILE, "printELFInfo()", "fopen()");
+            logEvent(LOG_FILE, "printELFInfo()", "fopen()");
             #endif
             goto failed_file_open; // Resonable use of goto to reduce code duplication (A break could probably be used but this is explicit)
         }
@@ -474,20 +475,6 @@ Elf64_Ehdr* getELFHeader64(int fd)
     return e_hdr;
 }
 
-//  int main(int argc, char** argv)
-//  {
-//     enum BITS arch;
-//     uint64_t file_sz;
-//     // printELFInfo(TEST_FILE, NULL);
-//     // test_getELF32PhdrAddress();
-
-//     uint8_t* p_mem;
-
-//     p_mem = mapELFToMemory(TEST_FILE, &arch, &file_sz);
-//     printELFPhdrs(p_mem);
-//     return 1;
-//  }
-
  #ifdef DEBUG
 
  static void test_isELF()
@@ -500,21 +487,5 @@ Elf64_Ehdr* getELFHeader64(int fd)
     assert(isELF("\x00\x00\x00\x00\x00") == T_NO_ELF);
 
  }
-
-// static int test_getELF32PhdrAddress()
-// {
-//     Elf32_Addr phdr_offset;
-//     enum BITS bits;
-//     uint8_t* p_mem;
-//     uint64_t elf_sz;
-
-//     p_mem = mapELFToMemory(TEST_FILE, &bits, &elf_sz);
-//     assert(p_mem != NULL);
-//     assert(bits == T_32);
-
-//     phdr_offset = getELF32PhdrAddress(p_mem);
-//     assert(phdr_offset != 0);
-//     printf("Program Header Offset:\t0x%08x\n", phdr_offset);
-// }
 
  #endif
