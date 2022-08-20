@@ -474,19 +474,19 @@ Elf64_Ehdr* getELFHeader64(int fd)
     return e_hdr;
 }
 
- int main(int argc, char** argv)
- {
-    enum BITS arch;
-    uint64_t file_sz;
-    // printELFInfo(TEST_FILE, NULL);
-    // test_getELF32PhdrAddress();
+//  int main(int argc, char** argv)
+//  {
+//     enum BITS arch;
+//     uint64_t file_sz;
+//     // printELFInfo(TEST_FILE, NULL);
+//     // test_getELF32PhdrAddress();
 
-    uint8_t* p_mem;
+//     uint8_t* p_mem;
 
-    p_mem = mapELFToMemory(TEST_FILE, &arch, &file_sz);
-    printELFPhdrs(p_mem);
-    return 1;
- }
+//     p_mem = mapELFToMemory(TEST_FILE, &arch, &file_sz);
+//     printELFPhdrs(p_mem);
+//     return 1;
+//  }
 
  #ifdef DEBUG
 
