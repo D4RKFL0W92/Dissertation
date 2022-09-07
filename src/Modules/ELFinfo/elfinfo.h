@@ -37,17 +37,8 @@
 #define ARCH_Intel86      "X_86"
 #define ARCH_Intel64      "X_64"
 
-typedef struct
-{
-    uint16_t pt_loadCnt;
-    uint16_t pt_dynamicCnt;
-    uint16_t pt_interpCnt;
-    uint16_t pt_noteCnt;
-    uint16_t pt_shlibCnt;
-    uint16_t pt_phdrCnt;
-    uint16_t pt_gnu_stackCnt;
-}PHDR_COUNT;
 
+#define MIN_ELF32_ENTRY     0x8048000
 
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
@@ -77,13 +68,18 @@ static enum BITS isELF(char* MAG);
 */
 uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz);
 
-int printELFPhdrs(char* filepath);
+uint8_t printELFPhdrs(char* filepath);
 /*
  * Takes a pointer to an ELF executable that has already been check that it
  * points to a valid ELF file.
 */
-static int printELF64Phdrs(uint8_t* p_mem);
-static int printELF32Phdrs(uint8_t* p_mem);
+
+static uint8_t printELF32Phdrs(uint8_t* p_mem);
+static uint8_t printELF64Phdrs(uint8_t* p_mem);
+
+uint64_t getELFEntry(char* filepath);
+static Elf32_Addr getELF32Entry(uint8_t* p_mem);
+static Elf64_Addr getELF64Entry(uint8_t* p_mem);
 
 
 /*
@@ -100,10 +96,7 @@ static int printELF32Phdrs(uint8_t* p_mem);
 */
 uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 
-uint8_t printELF64StringTables(uint8_t* p_mem);
-
-int8_t printELF32Strings(char* filepath);
-int8_t printELF64Strings(char* filepath);
+uint8_t printELF64SectionHeaders(uint8_t* p_mem);
 
 #ifdef DEBUG
 

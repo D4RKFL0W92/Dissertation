@@ -90,7 +90,8 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
     close(fd);
     return file_mem;
 }
-int printELFPhdrs(char* filepath)
+
+uint8_t printELFPhdrs(char* filepath)
 {
     uint8_t* p_mem;
     enum BITS arch;
@@ -109,54 +110,7 @@ int printELFPhdrs(char* filepath)
     
 }
 
-static int printELF64Phdrs(uint8_t* p_mem)
-{
-
-    Elf64_Ehdr* ehdr;
-
-    Elf64_Phdr* phdr;
-
-    if(p_mem == NULL)
-    {
-        return -1;
-    }
-    ehdr = (Elf64_Ehdr *) p_mem;
-
-    phdr = (Elf64_Phdr *) (p_mem + ehdr->e_phoff);
-    uint8_t count = 0;
-
-    for(count; count < ehdr->e_phnum; ++count)
-    {
-        switch(phdr[count].p_type)
-        {
-            case PT_LOAD:
-                printf("PT_LOAD Section VADDR At:\t0x%08x\n", phdr[count].p_vaddr);
-                break;
-            case PT_DYNAMIC:
-                printf("PT_DYNAMIC Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_INTERP:
-                printf("PT_INTERP Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_NOTE:
-                printf("PT_NOTE Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_SHLIB:
-                printf("PT_SHLIB Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_PHDR:
-                printf("PT_PHDR Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_GNU_STACK:
-                printf("PT_GNU_STACK Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_NULL: break;
-        }
-    }
-    
-}
-
-static int printELF32Phdrs(uint8_t* p_mem)
+static uint8_t printELF32Phdrs(uint8_t* p_mem)
 {
 
     Elf32_Ehdr* ehdr;
@@ -165,7 +119,7 @@ static int printELF32Phdrs(uint8_t* p_mem)
 
     if(p_mem == NULL)
     {
-        return -1;
+        return FALSE;
     }
     ehdr = (Elf32_Ehdr *) p_mem;
 
@@ -200,8 +154,87 @@ static int printELF32Phdrs(uint8_t* p_mem)
             case PT_NULL: break;
         }
     }
-    
+    return TRUE;
 }
+
+uint64_t getELFEntry(char* filepath)
+{
+    uint8_t* p_mem;
+    enum BITS arch;
+    uint64_t file_sz;
+
+    p_mem = mapELFToMemory(filepath, &arch, &file_sz);
+
+    if(arch == T_64)
+    {
+        return getELF64Entry(p_mem);
+    }
+    else if(arch == T_32)
+    {
+        return getELF32Entry(p_mem);
+    }
+}
+
+static Elf32_Addr getELF32Entry(uint8_t* p_mem)
+{
+    Elf32_Ehdr* ehdr = (Elf32_Ehdr *) p_mem;
+    return ehdr->e_entry;
+}
+
+static Elf64_Addr getELF64Entry(uint8_t* p_mem)
+{
+    Elf64_Ehdr* ehdr = (Elf64_Ehdr *) p_mem;
+    return ehdr->e_entry;
+}
+
+static uint8_t printELF64Phdrs(uint8_t* p_mem)
+{
+
+    Elf64_Ehdr* ehdr;
+
+    Elf64_Phdr* phdr;
+
+    if(p_mem == NULL)
+    {
+        return FALSE;
+    }
+    ehdr = (Elf64_Ehdr *) p_mem;
+
+    phdr = (Elf64_Phdr *) (p_mem + ehdr->e_phoff);
+    uint8_t count = 0;
+
+    for(count; count < ehdr->e_phnum; ++count)
+    {
+        switch(phdr[count].p_type)
+        {
+            case PT_LOAD:
+                printf("PT_LOAD Section VADDR At:\t0x%08x\n", phdr[count].p_vaddr);
+                break;
+            case PT_DYNAMIC:
+                printf("PT_DYNAMIC Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_INTERP:
+                printf("PT_INTERP Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_NOTE:
+                printf("PT_NOTE Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_SHLIB:
+                printf("PT_SHLIB Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_PHDR:
+                printf("PT_PHDR Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_GNU_STACK:
+                printf("PT_GNU_STACK Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
+                break;
+            case PT_NULL: break;
+        }
+    }
+    return TRUE;
+}
+
+
 
 
 
@@ -443,37 +476,20 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
     }
 }
 
-Elf32_Ehdr* getELFHeader32(int fd)
+uint8_t printELF64SectionHeaders(uint8_t* p_mem)
 {
-    Elf32_Ehdr* e_hdr;
-    char MAGIC[5];
-    unsigned char buf[ sizeof(Elf32_Ehdr) ];
+    char*       shStrIdx;
+    Elf64_Ehdr* ehdr;
+    Elf64_Shdr* shdr;
 
-    if( read(fd, buf, sizeof(Elf32_Ehdr)) < sizeof(Elf32_Ehdr) )
-    {
-        return NULL;
-    }
+    ehdr = (Elf64_Ehdr *)p_mem;
+    shdr = (Elf64_Shdr *)&p_mem[ehdr->e_shoff];
 
-    e_hdr = (Elf32_Ehdr *)buf;
+    shStrIdx = &p_mem[ shdr[ehdr->e_shstrndx ].sh_offset ];
 
-    return e_hdr;
+    return TRUE;
 }
 
-Elf64_Ehdr* getELFHeader64(int fd)
-{
-    Elf64_Ehdr* e_hdr;
-    char MAGIC[5];
-    unsigned char buf[sizeof(Elf64_Ehdr)];
-
-    if(read(fd, buf, sizeof(Elf64_Ehdr)) < sizeof(Elf64_Ehdr))
-    {
-        return NULL;
-    }
-
-    e_hdr = (Elf64_Ehdr *) buf;
-
-    return e_hdr;
-}
 
  #ifdef DEBUG
 
@@ -489,3 +505,10 @@ Elf64_Ehdr* getELFHeader64(int fd)
  }
 
  #endif
+
+
+
+#define TEST32 "/home/calum/Test_Files/while32"
+#define TEST64 "/home/calum/Test_Files/while64"
+
+

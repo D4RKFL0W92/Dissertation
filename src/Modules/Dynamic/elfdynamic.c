@@ -19,5 +19,10 @@ struct user_regs_struct* getRegisterValues(int pid)
     if(ptrace(PTRACE_GETREGS, pid, NULL, registers) == -1)
         return NULL;
 
+    if(  ptrace(PTRACE_DETACH, pid, 0, 0) == -1)
+    {
+        return NULL;
+    }
+
     return registers;
 }
