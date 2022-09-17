@@ -2,6 +2,9 @@
 #define _LOGGING_
 
 #include <stdio.h>
+#include <errno.h>
+
+extern errno;
 
 #define DEBUG
 
