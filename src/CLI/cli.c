@@ -6,9 +6,9 @@
 
 
 
-int main(int argc, char const *argv[])
+int main(int argc, char const *argv[], char *envp[])
 {
-    test_getRegisterValues();
+    beginProcessTrace(TEST64, argc, argv, envp);
     return 0;
 }
 

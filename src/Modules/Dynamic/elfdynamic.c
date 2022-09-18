@@ -56,12 +56,12 @@ static int8_t getRegisterValues(int pid, struct user_regs_struct* regs)
 
 int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** envp)
 {
-    struct user_regs_struct* registers;
+    struct user_regs_struct registers;
     pid_t pid;
     enum BITS arch;
     uint64_t exec_sz;
     uint8_t* p_mem;
-    int proc_state;
+    int child_state;
     
     if( (p_mem = mapELFToMemory(p_procName, &arch, &exec_sz)) == NULL)
     {
@@ -96,7 +96,7 @@ int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** 
     
     else
     {
-        wait(&proc_state); /* Wait for state change of child process. */
+        wait(&child_state); /* Wait for state change of child process. */
 
         // if(attachToProcess(pid) == FAILED)
         // {
@@ -106,15 +106,15 @@ int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** 
         //     return FAILED;
         // }
 
-        if(getRegisterValues(pid, registers) == FALSE)
-        {
-            #ifdef DEBUG
-            perror("ERROR: Cannot get register values.");
-            #endif
-            return FAILED;
-        }
+        // if(getRegisterValues(pid, &registers) == FALSE)
+        // {
+        //     #ifdef DEBUG
+        //     perror("ERROR: Cannot get register values.");
+        //     #endif
+        //     return FAILED;
+        // }
 
-        printf("rip: 0x%08x", registers->rip);
+        // printf("rip: 0x%08x", registers.rip);
     }
 
     return TRUE;
