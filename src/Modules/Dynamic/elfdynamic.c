@@ -1,3 +1,4 @@
+#include <signal.h>
 #include "elfdynamic.h"
 
 static int8_t attachToProcess(pid_t pid)
@@ -96,35 +97,73 @@ int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** 
     
     else
     {
-        wait(&child_state); /* Wait for state change of child process. */
+        if(wait(&child_state) == FAILED) /* Wait for state change of child process. */
+        {
+            perror("ERROR calling wait from parent.");
+            exit(FAILED);
+        }
 
-        // if(attachToProcess(pid) == FAILED)
-        // {
-        //     #ifdef DEBUG
-        //     perror("ERROR: Cannot attach to process.");
-        //     #endif
-        //     return FAILED;
-        // }
+        do
+        {
+            if(ptrace(PTRACE_GETREGS, pid, 0, &registers) != 0)
+            {
+                perror("ERROR getting register values.");
+                exit(-1);
+            }
 
-        // if(getRegisterValues(pid, &registers) == FALSE)
-        // {
-        //     #ifdef DEBUG
-        //     perror("ERROR: Cannot get register values.");
-        //     #endif
-        //     return FAILED;
-        // }
+            printf("RIP:\t0x%016x\n", registers.rip);
+            
+            if(ptrace(PTRACE_SINGLESTEP, pid, 0, 0) != 0)
+            {
+                perror("ERROR calling PTRACE_SINGLESTEP on child process.");
+                exit(-1);
+            }
 
-        // printf("rip: 0x%08x", registers.rip);
+            wait(&child_state);
+
+        } while (child_state != SIGCHLD || child_state != SIGTRAP);
+        
     }
 
     return TRUE;
 }
 
-
-
-void test_getRegisterValues(pid_t pid)
+int8_t dump_memory(pid_t pid, uint64_t startAddr, uint64_t uCount)
 {
-    struct user_regs_struct regs;
+    char* pMem;
+    uint64_t tmp;
+    uint64_t iterations;
 
-    getRegisterValues(pid, &regs);
+    if(uCount == 0) { return FAILED; }
+
+    tmp = uCount / 8; /* Divide by intel word size rounding down */
+    iterations = \
+        ((float)(tmp * 8) == uCount) ? tmp : (uint64_t)(tmp) + 1; /* Check tmp is integer value. */
+    
+
+    if( (pMem = malloc(uCount)) == NULL)
+    {
+        perror("ERROR allocating memory for read.");
+        return FAILED;
+    }
+
+    /* Print top of grid. */
+    printf("                  0   2   3   4   5   6   7   8   9   A   B   C   D   E   F\n");
+
+    for(uint64_t i = 0; i < iterations; ++i)
+    {
+        if(ptrace(PTRACE_PEEKDATA, pid, startAddr + (i*8), pMem + (i*8)) == FAILED)
+        {
+            perror("ERROR calling PTRACE_PEEKDATA");
+            return FAILED;
+        }
+        printf("0x%016x %02x %02x %02x %02x, %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", startAddr + (i*8), \
+            *(pMem + (i*8)), *(pMem + (i*8) + 1), *(pMem + (i*8) + 2), *(pMem + (i*8) + 3), *(pMem + (i*8) + 4), \
+            *(pMem + (i*8) + 5), *(pMem + (i*8) + 6), *(pMem + (i*8) + 7), *(pMem + (i*8) + 8), *(pMem + (i*8) + 9), \
+            *(pMem + (i*8) + 10), *(pMem + (i*8) + 11), *(pMem + (i*8) + 12), *(pMem + (i*8) +13), *(pMem + (i*8) + 14), \
+            *(pMem + (i*8) + 15));
+    }
+
+    free(pMem); /* Deallocate memory. */
+    return SUCCESS;
 }

@@ -26,5 +26,6 @@ static int8_t getRegisterValues(int pid, struct user_regs_struct* regs);
 int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** envp);
 
 void test_getRegisterValues(pid_t pid);
+int8_t dump_memory(pid_t pid, uint64_t startAddr, uint64_t uCount);
 
 #endif
