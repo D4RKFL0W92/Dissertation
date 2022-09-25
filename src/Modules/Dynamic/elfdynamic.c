@@ -55,6 +55,79 @@ static int8_t getRegisterValues(int pid, struct user_regs_struct* regs)
     return TRUE;
 }
 
+uint64_t getSymbolAddr(uint8_t* p_Mem, char* symbolName)
+{
+    /* If not an ELF the next check makes no sense. */
+    if(p_Mem[0] != 0x7f || p_Mem[1] != 'E' || p_Mem[2] != 'L' || p_Mem[3] != 'F')
+    {
+        return 0;
+    }
+
+    if(p_Mem[4] == ELFCLASS32)
+    {
+        Elf32_Ehdr* ehdr;
+        Elf32_Shdr* shdr;
+        Elf32_Sym*  sym;
+        char*       strtab;
+
+        ehdr = (Elf32_Ehdr *) p_Mem;
+        shdr = (Elf32_Shdr *) (p_Mem + ehdr->e_shoff);
+
+        for(int i = 0; i < ehdr->e_shnum; i++)
+        {
+            if(shdr[i].sh_type == SHT_SYMTAB);
+            {
+                strtab = (char *) &p_Mem[ shdr[ shdr[i].sh_link].sh_offset ];
+                sym = (Elf32_Sym *) &p_Mem[ shdr[i].sh_offset ];
+
+                for(int j = 0; j < shdr[i].sh_size / sizeof(Elf32_Sym); j++)
+                {
+                    if(strcmp(&strtab[sym->st_name], symbolName) == 0)
+                    {
+                        return (uint64_t) sym->st_value;
+                    }
+                    sym++;
+                }
+            }
+        }
+        return 0;
+    }
+    else if(p_Mem[4] == ELFCLASS64)
+    {
+        Elf64_Ehdr* ehdr;
+        Elf64_Shdr* shdr;
+        Elf64_Sym*  sym;
+        char*       strtab;
+
+        ehdr = (Elf64_Ehdr *) p_Mem;
+        shdr = (Elf64_Shdr *) (p_Mem + ehdr->e_shoff);
+
+        for(int i = 0; i < ehdr->e_shnum; i++)
+        {
+            if(shdr[i].sh_type == SHT_SYMTAB);
+            {
+                strtab = (char *) &p_Mem[ shdr[ shdr[i].sh_link].sh_offset ];
+                sym = (Elf64_Sym *) &p_Mem[ shdr[i].sh_offset ];
+
+                for(int j = 0; j < shdr[i].sh_size / sizeof(Elf64_Sym); j++)
+                {
+                    if(strcmp(&strtab[sym->st_name], symbolName) == 0)
+                    {
+                        return (uint64_t) sym->st_value;
+                    }
+                    sym++;
+                }
+            }
+        }
+        return 0;
+    }
+    else
+    {
+        return 0;
+    }
+
+}
+
 int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** envp)
 {
     struct user_regs_struct registers;
@@ -148,7 +221,7 @@ int8_t dump_memory(pid_t pid, uint64_t startAddr, uint64_t uCount)
     }
 
     /* Print top of grid. */
-    printf("                  0   2   3   4   5   6   7   8   9   A   B   C   D   E   F\n");
+    PRINT_GRID_TOP;
 
     for(uint64_t i = 0; i < iterations; ++i)
     {
