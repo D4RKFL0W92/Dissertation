@@ -31,7 +31,7 @@ static int8_t attachToProcess(pid_t pid);
 static int8_t detachFromProcess(pid_t pid);
 static int8_t getRegisterValues(int pid, struct user_regs_struct* regs);
 
-uint64_t getSymbolAddr(uint8_t* p_Mem, char* symbolName);
+uint64_t getSymbolAddr(char* p_Mem, char* symbolName);
 int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** envp);
 
 void test_getRegisterValues(pid_t pid);

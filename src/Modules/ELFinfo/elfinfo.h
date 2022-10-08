@@ -66,7 +66,7 @@ static enum BITS isELF(char* MAG);
  * 
  * Return: Function returns a pointer to the memory where the file has been mapped.
 */
-uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz);
+char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 
 uint8_t printELFPhdrs(char* filepath);
 /*

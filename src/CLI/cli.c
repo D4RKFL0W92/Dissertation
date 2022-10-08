@@ -1,5 +1,6 @@
 #include "../Modules/ELFinfo/elfinfo.h"
 #include "../Modules/Dynamic/elfdynamic.h"
+#include "../FileOperations/fileOps.h"
 
 #define TEST32 "/home/calum/Test_Files/while32"
 #define TEST64 "/home/calum/Test_Files/while64"
@@ -9,7 +10,15 @@
 
 int main(int argc, char *argv[], char *envp[])
 {
-    beginProcessTrace(TEST64_2, argc, argv, envp);
+    enum BITS* arch;
+    uint64_t fileSz;
+    char* pMem;
+
+    pMem = mapELFToMemory(TEST64, arch, &fileSz);
+
+    uint64_t symAdd = getSymbolAddr(pMem, "test");
+
+    printf("Address of main: 0x%08x\n", symAdd);
     return 0;
 }
 

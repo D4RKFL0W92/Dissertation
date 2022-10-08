@@ -25,14 +25,14 @@ static enum BITS isELF(char* arch)
     }
 }
 
-uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
+char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
 {
     #ifdef DEBUG
     char* func_name = "mapELFToMemory()";
     #endif
     ssize_t bytes_read;
     char MAGIC[6];
-    uint8_t* file_mem;
+    char* file_mem;
     int fd, ret;
     struct stat st;
 
@@ -66,15 +66,15 @@ uint8_t* mapELFToMemory(char* filepath, enum BITS* arch, uint64_t* map_sz)
         return NULL;
     }
     
-    if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
-    {
-        #ifdef DEBUG
-        logEvent(LOG_FILE, func_name, "isELF()");
-        perror("File being read is not an ELF file.");
-        #endif
+    // if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
+    // {
+    //     #ifdef DEBUG
+    //     logEvent(LOG_FILE, func_name, "isELF()");
+    //     perror("File being read is not an ELF file.");
+    //     #endif
         
-        return NULL;
-    }
+    //     return NULL;
+    // }
 
     *map_sz = st.st_size; // Store size of ELF file for later use.
 
