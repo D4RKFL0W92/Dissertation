@@ -8,11 +8,14 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "../Types/turtle_types.h"
+#include "../Logging/logging.h"
 
 /*
  * Basic file map function, performs no checks on file type.
 */
-uint8_t* basicFileMap(char* filepath, uint64_t* fileSz);
+char* basicFileMap(char* filepath, uint64_t* fileSz);
+
+int8_t scanForStrings(char* filepath, uint16_t len);
 
 
 #endif

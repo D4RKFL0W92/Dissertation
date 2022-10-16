@@ -58,6 +58,7 @@ static int8_t getRegisterValues(int pid, struct user_regs_struct* regs)
 uint64_t getSymbolAddr(char* p_Mem, char* symbolName)
 {
     char* strtab;
+    uint16_t entries;
     /* If not an ELF the next check makes no sense. */
     if(p_Mem[0] != 0x7f || p_Mem[1] != 'E' || p_Mem[2] != 'L' || p_Mem[3] != 'F')
     {
@@ -108,7 +109,7 @@ uint64_t getSymbolAddr(char* p_Mem, char* symbolName)
         }
 
         shdr = (Elf64_Shdr*) ((char*)ehdr + ehdr->e_shoff);
-        printf("%d Sections.\n Startin from offset: 0x%08x\n %d bytes apart.\n", ehdr->e_shnum, ehdr->e_shoff, ehdr->e_shentsize);
+        printf("%d Sections.\nHeaders startin from offset: 0x%08x\n%d bytes apart.\n", ehdr->e_shnum, ehdr->e_shoff, ehdr->e_shentsize);
 
         /* Loop through the section headers until we find the addresses
          * of the symtab and strtab.
@@ -118,41 +119,32 @@ uint64_t getSymbolAddr(char* p_Mem, char* symbolName)
             if(shdr[i].sh_type == SHT_SYMTAB)
             {
                 sym = (Elf64_Sym *) shdr[i].sh_offset;
-                printf("Symtab address: 0x%08x\n", shdr[i].sh_offset);
+                /* Number of entries can vary per section. */
+                entries = shdr[i].sh_size / sizeof(Elf64_Sym);
+                printf("Symtab address: 0x%08x\nNumber of entries per section: %d\n", shdr[i].sh_offset, entries);
             }
             else if(shdr[i].sh_type == SHT_STRTAB)
             {
                 /* .shstrtab should be the last strtab of the file
                  * (there are multiple shdrs marked as SHT_STRTAB).
                  */
-                strtab = (char *) shdr[i].sh_offset;
+                strtab = ((char *) shdr[i].sh_offset);
                 printf("Strtab address: 0x%08x\n", shdr[i].sh_offset);
             }
 
-            // if(sym && strtab)
-            // {
-                for(uint16_t i = 0; i < (shdr->sh_size / sizeof(Elf64_Sym)); i++)
+            if(entries && sym && strtab)
+            {
+                for(uint16_t i = 0; i < entries; i++)
                 {
-                    if(!strncmp(&strtab[sym->st_name], symbolName, strlen(symbolName)))
+                    char *tmpStr = &strtab[sym->st_name];
+                    if(!strncmp(tmpStr, symbolName, strlen(symbolName)))
                     {
                         /* A match has been found, return the address related to symbol. */
                         return (uint64_t) sym->st_value;
-                    }   
+                    }  
                 }
-            // }
+            }
         }
-
-        // for(uint16_t i = 0; i < (shdr->sh_size / sizeof(Elf64_Sym)); i++)
-        // {
-        //     if(!strncmp(&strtab[sym->st_name], symbolName, strlen(symbolName)))
-        //     {
-        //         /* A match has been found, return the address related to symbol. */
-        //         return (uint64_t) sym->st_value;
-        //     }
-        //     ++sym; 
-        // }
-
-        
         
         return 0;
     }
