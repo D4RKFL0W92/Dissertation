@@ -12,16 +12,31 @@
 
 int main(int argc, char *argv[], char *envp[])
 {
-    // enum BITS* arch;
-    // uint64_t fileSz;
-    // char* pMem;
 
-    // pMem = mapELFToMemory(TEST64, arch, &fileSz);
+    if(clearLogFile(LOG_FILE) == FAILED)
+    {
+        perror("Unable to clear log file.");
+        exit(-1);
+    }
 
-    // uint64_t symAdd = getSymbolAddr(pMem, "test");
+    if(argc < 2)
+    {
+        printf("Usage: < %s > < -opt1 -opt2, ... > < executable >\n", argv[0]);
+        exit(-1);
+    }
 
-    // printf("Address of main: 0x%08x\n", symAdd);
-    scanForStrings(TEST32, 3);
+    for(int i = 1; i < argc-1; i++)
+    {
+        if(!strncmp(argv[i], "-sha1", 5))
+        {
+            if(printSHA1OfFile(argv[argc-1]) == FAILED)
+            {
+                printf("Unable to calculate hash for given file.");
+                return -1;
+            }
+        }
+    }
+    
     return 0;
 }
 
