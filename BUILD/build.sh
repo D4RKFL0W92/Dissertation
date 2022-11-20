@@ -9,4 +9,4 @@ file_ops="../src/FileOperations/fileOps.c"
 
 
 gcc $elfinfo $elfdynamic $cli $logging \
-$file_ops -Lopenssl/openssl-0.9.8k/ -lssl -lcrypto -Iopenssl/openssl-0.9.8k/include -ggdb -o turtle_scan
+$file_ops -Lopenssl/openssl-0.9.8k/ -lssl -lcrypto -Iopenssl/openssl-0.9.8k/include -ggdb -o Turtle-Scan

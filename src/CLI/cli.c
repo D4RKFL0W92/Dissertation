@@ -1,6 +1,7 @@
 #include "../Modules/ELFinfo/elfinfo.h"
 #include "../Modules/Dynamic/elfdynamic.h"
 #include "../FileOperations/fileOps.h"
+#include "../Help/help.h"
 
 #define TEST32 "/home/calum/Test_Files/while32"
 #define TEST64 "/home/calum/Test_Files/while64"
@@ -21,7 +22,7 @@ int main(int argc, char *argv[], char *envp[])
 
     if(argc < 2)
     {
-        printf("Usage: < %s > < -opt1 -opt2, ... > < executable >\n", argv[0]);
+        printf(helpMenu);
         exit(-1);
     }
 
@@ -31,9 +32,31 @@ int main(int argc, char *argv[], char *envp[])
         {
             if(printSHA1OfFile(argv[argc-1]) == FAILED)
             {
-                printf("Unable to calculate hash for given file.");
-                return -1;
+                printf("Unable to calculate hash for %s.\n", argv[argc-1]);
+                exit(-1);
             }
+        }
+        if(!strncmp(argv[i], "-E", 2))
+        {
+            FILE_HANDLE_T handle;
+            if(mapFileToStruct(argv[argc-1], &handle) == FAILED)
+            {
+                printf("Unable map %s into memory\n", argv[argc-1]);
+                exit(-1);
+            }
+
+            if(printElfInfoVerbose(&handle) == FAILED)
+            {
+                printf("Unable to get ELF info from %s\n", argv[argc-1]);
+                exit(-1);
+            }
+        }
+        if(!strncmp(argv[i], "-hd", 3))
+        {
+            uint64_t start = atol(argv[i+1]);
+            uint64_t uCount = atoi(argv[i+2]);
+            
+            dumpHexBytes(argv[argc-1], start, uCount);
         }
     }
     

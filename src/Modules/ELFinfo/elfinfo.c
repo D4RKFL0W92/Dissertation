@@ -476,6 +476,491 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
     }
 }
 
+int8_t printElfInfoVerbose(FILE_HANDLE_T* handle)
+{
+    enum BITS arch;
+    char MAGIC[6];
+
+    if(handle->p_data == NULL)
+    {
+        return FAILED;
+    }
+
+    strncpy(MAGIC, handle->p_data, 6);
+
+    arch = isELF(MAGIC);
+
+    switch(arch)
+    {
+        /* Find out what size Elf header the binary is. */
+        case T_32:
+            Elf32_Ehdr* ehdr32;
+
+            ehdr32 = (Elf32_Ehdr *) &handle->p_data[0];
+            puts("Elf Header:\n");
+            dumpHexBytesFromFileHandle(handle, 0, sizeof(Elf32_Ehdr));
+            puts("Class:\t64 BIT\n");
+            printElf32ElfHeader(ehdr32);
+            printf("\n\n");
+            /* TODO: Print Program/Section Headers. */
+
+            break;
+
+        case T_64:
+            Elf64_Ehdr* ehdr64;
+
+            ehdr64 = (Elf64_Ehdr *) &handle->p_data[0];
+            puts("Elf Header:\n");
+            dumpHexBytesFromFileHandle(handle, 0, sizeof(Elf64_Ehdr));
+            puts("Class:\t64 BIT\n");
+            printElf64ElfHeader(ehdr64);
+            printf("\n\n");
+            /* TODO: Print Program/Section Headers. */
+            break;
+
+        case T_NO_ELF:
+        default:
+            break;
+
+    }
+}
+
+int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
+{
+
+    if(ehdr== NULL)
+    {
+        #ifdef DEBUG
+        perror("ERROR, NULL pointer in printElf32ElfHeader()");
+        #endif
+        return FAILED;
+    }
+    
+    /* Print endianess of binary. */
+    printf("Endianess:\t");
+    switch(ehdr->e_ident[EI_DATA])
+    {
+        case ELFDATA2LSB:
+            printf("        LITTLE\n");
+            break;
+        
+        case ELFDATA2MSB:
+            printf("           BIG\n");
+            break;
+
+        case ELFDATANONE:
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+    /* Print version. None could indicate tampering. */
+    printf("Version:\t");
+    switch(ehdr->e_ident[EI_VERSION])
+    {
+        case EV_CURRENT:
+            printf("       CURRENT\n");
+            break;
+
+        case EV_NONE:
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+
+    printf("ABI:\t");
+    switch(ehdr->e_ident[EI_OSABI])
+    {
+        case ELFOSABI_SYSV:
+            printf("          UNIX\n");
+            break;
+
+        case ELFOSABI_HPUX:
+            printf("         HP-UX\n");
+            break;
+
+        case ELFOSABI_NETBSD:
+            printf("        NETBSD\n");
+            break;
+
+        case ELFOSABI_LINUX:
+            printf("         Linux\n");
+            break;
+
+        case ELFOSABI_SOLARIS:
+            printf("       Solaris\n");
+            break;
+
+        case ELFOSABI_IRIX:
+            printf("          IRIX\n");
+            break;
+
+        case ELFOSABI_FREEBSD:
+            printf("       FREEBSD\n");
+            break;
+
+        case ELFOSABI_TRU64:
+            printf("         TRU64\n");
+            break;
+
+        case ELFOSABI_ARM:
+            printf("           ARM\n");
+            break;
+
+        case ELFOSABI_STANDALONE:
+            printf("    STANDALONE\n");
+            break;
+
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+
+    printf("Type:\t");
+    switch(ehdr->e_type)
+    {
+        case ET_REL:
+            printf("   RELOCATABLE\n");
+            break;
+
+        case ET_EXEC:
+            printf("    EXECUTABLE\n");
+            break;
+
+        case ET_DYN:
+            printf("       DYNAMIC\n");
+            break;
+
+        case ET_CORE:
+            printf("          CORE\n");
+            break;
+
+        case ET_NONE:
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+
+    printf("Architecture:\t");
+    switch(ehdr->e_machine)
+    {
+        case EM_M32:
+            printf("          AT&T\n");
+            break;
+
+        case EM_SPARC:
+            printf("         SPARC\n");
+            break;
+
+        case EM_386:
+            printf("   INTEL 80386\n");
+            break;
+
+        case EM_68K:
+            printf("MOTOROLA 68000\n");
+            break;
+
+        case EM_88K:
+            printf("MOTOROLA 88000\n");
+            break;
+
+        case EM_860:
+            printf("   INTEL 80860\n");
+            break;
+
+        case EM_MIPS:
+            printf("          MIPS\n");
+            break;
+
+        case EM_PARISC:
+            printf("         HP/PA\n");
+            break;
+
+        case EM_SPARC32PLUS:
+            printf("   SPARC32PLUS\n");
+            break;
+
+        case EM_PPC:
+            printf("       POWERPC\n");
+            break;
+
+        case EM_PPC64:
+            printf("     POWERPC64\n");
+            break;
+
+        case EM_S390:
+            printf("           IBM\n");
+            break;
+
+        case EM_ARM:
+            printf("           ARM\n");
+            break;
+
+        case EM_SH:
+            printf("        SUPERH\n");
+            break;
+
+        case EM_SPARCV9:
+            printf("       SPARC64\n");
+            break;
+
+        case EM_IA_64:
+            printf(" INTEL ITANIUM\n");
+            break;
+
+        case EM_X86_64:
+            printf("    AMD x86-64\n");
+            break;
+
+        case EM_VAX:
+            printf("           VAX\n");
+            break;
+
+        case EM_NONE:
+        default:
+            printf("       UNKNOWNN");
+    }
+
+    printf("File Version\t");
+    switch(ehdr->e_version)
+    {
+        case EV_CURRENT:
+            printf("       CURRENT\n");
+            break;
+
+        case EV_NONE:
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+    /*TODO: Add some checks maybe */
+    printf("Program Entry:\t0x%08x\n", ehdr->e_entry);
+    printf("Program Header Offset:\t0x%08x\n", ehdr->e_phoff);
+    printf("Number Of Program Headers:\t0x%08x\n", ehdr->e_phnum);
+    printf("Program Header Size:\t0x%08x\n", ehdr->e_phentsize);
+    printf("Number Of Section Headers:\t0x%08x\n", ehdr->e_shnum);
+    printf("Section Header Entry Size:\t0x%08x\n", ehdr->e_shentsize);
+    printf("Section Header STRNDX:\t0x%08x\n", ehdr->e_shstrndx);
+
+    return SUCCESS;
+}
+
+int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
+{
+    if(ehdr== NULL)
+    {
+        #ifdef DEBUG
+        perror("ERROR, NULL pointer in printElf32ElfHeader()");
+        #endif
+        return FAILED;
+    }
+    
+    /* Print endianess of binary. */
+    printf("Endianess:\t");
+    switch(ehdr->e_ident[EI_DATA])
+    {
+        case ELFDATA2LSB:
+            printf("        LITTLE\n");
+            break;
+        
+        case ELFDATA2MSB:
+            printf("           BIG\n");
+            break;
+
+        case ELFDATANONE:
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+    /* Print version. None could indicate tampering. */
+    printf("Version:\t");
+    switch(ehdr->e_ident[EI_VERSION])
+    {
+        case EV_CURRENT:
+            printf("       CURRENT\n");
+            break;
+
+        case EV_NONE:
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+
+    printf("ABI:\t");
+    switch(ehdr->e_ident[EI_OSABI])
+    {
+        case ELFOSABI_SYSV:
+            printf("          UNIX\n");
+            break;
+
+        case ELFOSABI_HPUX:
+            printf("         HP-UX\n");
+            break;
+
+        case ELFOSABI_NETBSD:
+            printf("        NETBSD\n");
+            break;
+
+        case ELFOSABI_LINUX:
+            printf("         Linux\n");
+            break;
+
+        case ELFOSABI_SOLARIS:
+            printf("       Solaris\n");
+            break;
+
+        case ELFOSABI_IRIX:
+            printf("          IRIX\n");
+            break;
+
+        case ELFOSABI_FREEBSD:
+            printf("       FREEBSD\n");
+            break;
+
+        case ELFOSABI_TRU64:
+            printf("         TRU64\n");
+            break;
+
+        case ELFOSABI_ARM:
+            printf("           ARM\n");
+            break;
+
+        case ELFOSABI_STANDALONE:
+            printf("    STANDALONE\n");
+            break;
+
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+
+    printf("Type:\t");
+    switch(ehdr->e_type)
+    {
+        case ET_REL:
+            printf("   RELOCATABLE\n");
+            break;
+
+        case ET_EXEC:
+            printf("    EXECUTABLE\n");
+            break;
+
+        case ET_DYN:
+            printf("       DYNAMIC\n");
+            break;
+
+        case ET_CORE:
+            printf("          CORE\n");
+            break;
+
+        case ET_NONE:
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+
+    printf("Architecture:\t");
+    switch(ehdr->e_machine)
+    {
+        case EM_M32:
+            printf("          AT&T\n");
+            break;
+
+        case EM_SPARC:
+            printf("         SPARC\n");
+            break;
+
+        case EM_386:
+            printf("   INTEL 80386\n");
+            break;
+
+        case EM_68K:
+            printf("MOTOROLA 68000\n");
+            break;
+
+        case EM_88K:
+            printf("MOTOROLA 88000\n");
+            break;
+
+        case EM_860:
+            printf("   INTEL 80860\n");
+            break;
+
+        case EM_MIPS:
+            printf("          MIPS\n");
+            break;
+
+        case EM_PARISC:
+            printf("         HP/PA\n");
+            break;
+
+        case EM_SPARC32PLUS: /* Could have been tampered with, so we'll keep this here. */
+            printf("   SPARC32PLUS\n");
+            break;
+
+        case EM_PPC:
+            printf("       POWERPC\n");
+            break;
+
+        case EM_PPC64:
+            printf("     POWERPC64\n");
+            break;
+
+        case EM_S390:
+            printf("           IBM\n");
+            break;
+
+        case EM_ARM:
+            printf("           ARM\n");
+            break;
+
+        case EM_SH:
+            printf("        SUPERH\n");
+            break;
+
+        case EM_SPARCV9:
+            printf("       SPARC64\n");
+            break;
+
+        case EM_IA_64:
+            printf(" INTEL ITANIUM\n");
+            break;
+
+        case EM_X86_64:
+            printf("    AMD x86-64\n");
+            break;
+
+        case EM_VAX:
+            printf("           VAX\n");
+            break;
+
+        case EM_NONE:
+        default:
+            printf("       UNKNOWNN");
+    }
+
+    printf("File Version\t");
+    switch(ehdr->e_version)
+    {
+        case EV_CURRENT:
+            printf("       CURRENT\n");
+            break;
+
+        case EV_NONE:
+        default:
+            printf("       UNKNOWNN");
+            break;
+    }
+    /* TODO: Add checks. */
+    printf("Program Entry:\t0x%08x\n", ehdr->e_entry);
+    printf("Program Header Offset:\t0x%08x\n", ehdr->e_phoff);
+    printf("Number Of Program Headers:\t0x%08x\n", ehdr->e_phnum);
+    printf("Program Header Size:\t0x%08x\n", ehdr->e_phentsize);
+    printf("Number Of Section Headers:\t0x%08x\n", ehdr->e_shnum);
+    printf("Section Header Entry Size:\t0x%08x\n", ehdr->e_shentsize);
+    printf("Section Header STRNDX:\t0x%08x\n", ehdr->e_shstrndx);
+    return SUCCESS;
+}
+
 uint8_t printELF64SectionHeaders(uint8_t* p_mem)
 {
     char*       shStrIdx;

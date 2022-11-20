@@ -15,6 +15,7 @@
 
 #include "../../Types/turtle_types.h"
 #include "../../Logging/logging.h"
+#include "../../FileOperations/fileOps.h"
 
 
 
@@ -96,11 +97,15 @@ static Elf64_Addr getELF64Entry(uint8_t* p_mem);
 */
 uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 
+/* TODO: Write a functional test for this function, unit tests will not be realistic. */
+int8_t printElfInfoVerbose(FILE_HANDLE_T* handle);
+/* TODO: Write unit tests for these, Elf headers can be replicated with an array of bytes sizeof(ElfN_Ehdr) */
+int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr);
+int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr);
+
 uint8_t printELF64SectionHeaders(uint8_t* p_mem);
 
 #ifdef DEBUG
-
-
     static void test_isELF();
 
     static int test_getELF64PhdrAddress();

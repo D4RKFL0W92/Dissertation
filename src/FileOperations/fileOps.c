@@ -2,6 +2,7 @@
 
 char* basicFileMap(char* filepath, uint64_t* fileSz)
 {
+    FILE_HANDLE_T handle;
     char* file_mem;
     struct stat st;
     int fd;
@@ -26,6 +27,34 @@ char* basicFileMap(char* filepath, uint64_t* fileSz)
 
     *fileSz = st.st_size;
     return file_mem;
+}
+
+uint8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
+{
+    size_t len;
+
+    if( (handle->fd = open(filepath, O_RDONLY)) == -1)
+    {
+        perror("ERROR opening file.");
+        return FAILED;
+    }
+
+    if(fstat(handle->fd, &handle->st) == -1)
+    {
+        perror("ERROR stat'ing file.");
+        return FAILED;
+    }
+
+    if((handle->p_data = mmap(NULL, handle->st.st_size, PROT_READ, MAP_PRIVATE, handle->fd, 0)) == MAP_FAILED)
+    {
+        perror("ERROR mapping file to memory.");
+        return FAILED;
+    }
+
+    ((len = (strlen(filepath)) <= PATH_MAX ) ? len : PATH_MAX);
+    strncpy(handle->path, filepath, len);
+
+    return SUCCESS;
 }
 
 uint8_t* sha1File(char* filepath)
@@ -120,7 +149,7 @@ int8_t printSHA1OfFile(char* filepath)
         #endif
         return FAILED;
     }
-
+    printf("SHA1: ");
     for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
     {
         printf("%02x", messageDigest[i]);
@@ -170,11 +199,97 @@ int8_t scanForStrings(char* filepath, uint16_t len)
                     strBuff[j] = '\0';
                 }
             }
-        }
+        }   
+    }
+    return SUCCESS;
+}
 
-        
+int8_t dumpHexBytes(char* filepath, uint64_t startAddress, uint64_t uCount)
+{
+    uint8_t *p_memStart, *p_mem;
+    uint64_t sz;
+
+    if( (p_mem = p_memStart = (uint8_t *) basicFileMap(filepath, &sz)) == NULL)
+    {
+        #ifdef DEBUG
+        perror("ERROR mapping file in dumpHexBytes()");
+        #endif
+        return FAILED;
     }
 
-    return SUCCESS;
+    if(startAddress > sz || startAddress + uCount > sz)
+    {
+        #ifdef DEBUG
+        perror("ERROR, illegal offset, in dumpHexBytes()");
+        #endif
+        printf("Offset exceeds file size.");
+        return FAILED;
+    }
 
+    uint8_t lineByteCount = 0;
+    printf("           |00 |01 |02 |03 |04 |05 |06 |07 |08 |09 |0A |0B |0C |0D |0E |0F\n");
+    printf("--------------------------------------------------------------------------");
+    for(uint64_t i = startAddress; i < (startAddress + uCount); ++i)
+    {
+        if(lineByteCount == 0)
+        {
+            printf("\n0x%08x ", startAddress + i);
+        }
+        ++lineByteCount;
+        printf("|%02x ", p_mem[startAddress + i]);
+         /* Reset at end of loop. */
+        if(lineByteCount == 0x10)
+        {
+            lineByteCount = 0;
+        }
+        
+    }
+    printf("\n");
+    return SUCCESS;
+}
+
+int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, uint64_t uCount)
+{
+    uint8_t *pMem;
+    uint64_t sz;
+
+    if(handle == NULL || handle->p_data == NULL)
+    {
+        #ifdef DEBUG
+        perror("ERROR, NULL data, in dumpHexBytes()");
+        #endif
+        return FAILED;
+    }
+
+    pMem = handle->p_data;
+
+    if(startAddress > handle->st.st_size || startAddress + uCount > handle->st.st_size)
+    {
+        #ifdef DEBUG
+        perror("ERROR, illegal offset, in dumpHexBytes()");
+        #endif
+        printf("Offset exceeds file size.");
+        return FAILED;
+    }
+
+    uint8_t lineByteCount = 0;
+    printf("           |00 |01 |02 |03 |04 |05 |06 |07 |08 |09 |0A |0B |0C |0D |0E |0F\n");
+    printf("--------------------------------------------------------------------------");
+    for(uint64_t i = startAddress; i < (startAddress + uCount); ++i)
+    {
+        if(lineByteCount == 0)
+        {
+            printf("\n0x%08x ", startAddress + i);
+        }
+        ++lineByteCount;
+        printf("|%02x ", pMem[startAddress + i]);
+         /* Reset at end of loop. */
+        if(lineByteCount == 0x10)
+        {
+            lineByteCount = 0;
+        }
+        
+    }
+    printf("\n");
+    return SUCCESS;
 }
