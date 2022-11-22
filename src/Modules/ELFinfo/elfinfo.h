@@ -44,6 +44,22 @@
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
 
+typedef struct ELF32_EXECUTABLE
+{
+    FILE_HANDLE_T fileHandle;
+    Elf32_Ehdr* ehdr;
+    Elf32_Phdr* phdr;
+    Elf32_Shdr* shdr;
+}ELF32_EXECUTABLE_HANDLE_T;
+
+typedef struct ELF64_EXECUTABLE
+{
+    FILE_HANDLE_T fileHandle;
+    Elf32_Ehdr* ehdr;
+    Elf32_Phdr* phdr;
+    Elf32_Shdr* shdr;
+}ELF64_EXECUTABLE_HANDLE_T;
+
 /*
  * Checks the first five bytes of the file to see if they are in accourdance with
  * an ELF file.
@@ -103,7 +119,8 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* handle);
 int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr);
 int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr);
 
-uint8_t printELF64SectionHeaders(uint8_t* p_mem);
+int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
+int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 
 #ifdef DEBUG
     static void test_isELF();

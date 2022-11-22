@@ -1,6 +1,7 @@
 #include "../Modules/ELFinfo/elfinfo.h"
 #include "../Modules/Dynamic/elfdynamic.h"
 #include "../FileOperations/fileOps.h"
+#include "../Memory/turtle_memory.h"
 #include "../Help/help.h"
 
 #define TEST32 "/home/calum/Test_Files/while32"
@@ -38,18 +39,22 @@ int main(int argc, char *argv[], char *envp[])
         }
         if(!strncmp(argv[i], "-E", 2))
         {
-            FILE_HANDLE_T handle;
-            if(mapFileToStruct(argv[argc-1], &handle) == FAILED)
+            ELF64_EXECUTABLE_HANDLE_T executableHandle;
+            FILE_HANDLE_T fileHandle;
+            if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
             {
                 printf("Unable map %s into memory\n", argv[argc-1]);
                 exit(-1);
             }
 
-            if(printElfInfoVerbose(&handle) == FAILED)
+            if(printElfInfoVerbose(&fileHandle) == FAILED)
             {
                 printf("Unable to get ELF info from %s\n", argv[argc-1]);
                 exit(-1);
             }
+
+            /* Unmap the file. */
+            munmap(fileHandle.p_data, fileHandle.st.st_size);
         }
         if(!strncmp(argv[i], "-hd", 3))
         {

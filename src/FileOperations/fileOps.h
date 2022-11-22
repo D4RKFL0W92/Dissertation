@@ -20,7 +20,7 @@ typedef struct FILE_HANDLE
 {
     int fd;
     char path[PATH_MAX];
-    char* p_data;
+    char* p_data; /* Mapped memory, must be unmapped. */
     uint16_t pathLen;
     struct stat st;
 
