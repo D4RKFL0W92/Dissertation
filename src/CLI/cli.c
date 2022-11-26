@@ -39,7 +39,6 @@ int main(int argc, char *argv[], char *envp[])
         }
         if(!strncmp(argv[i], "-E", 2))
         {
-            ELF64_EXECUTABLE_HANDLE_T executableHandle;
             FILE_HANDLE_T fileHandle;
             if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
             {

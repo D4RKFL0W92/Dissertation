@@ -261,8 +261,6 @@ int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, 
         return FAILED;
     }
 
-    pMem = handle->p_data;
-
     if(startAddress > handle->st.st_size || startAddress + uCount > handle->st.st_size)
     {
         #ifdef DEBUG
@@ -279,10 +277,10 @@ int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, 
     {
         if(lineByteCount == 0)
         {
-            printf("\n0x%08x ", startAddress + i);
+            printf("\n0x%08x ", i);
         }
         ++lineByteCount;
-        printf("|%02x ", pMem[startAddress + i]);
+        printf("|%02x ", (uint8_t) handle->p_data[i]);
          /* Reset at end of loop. */
         if(lineByteCount == 0x10)
         {

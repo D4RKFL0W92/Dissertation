@@ -55,9 +55,9 @@ typedef struct ELF32_EXECUTABLE
 typedef struct ELF64_EXECUTABLE
 {
     FILE_HANDLE_T fileHandle;
-    Elf32_Ehdr* ehdr;
-    Elf32_Phdr* phdr;
-    Elf32_Shdr* shdr;
+    Elf64_Ehdr* ehdr;
+    Elf64_Phdr* phdr;
+    Elf64_Shdr* shdr;
 }ELF64_EXECUTABLE_HANDLE_T;
 
 /*
@@ -84,6 +84,8 @@ static enum BITS isELF(char* MAG);
  * Return: Function returns a pointer to the memory where the file has been mapped.
 */
 char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
+
+int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle);
 
 uint8_t printELFPhdrs(char* filepath);
 /*

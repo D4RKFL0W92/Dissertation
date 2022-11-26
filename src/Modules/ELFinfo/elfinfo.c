@@ -91,6 +91,21 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
     return file_mem;
 }
 
+int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle)
+{
+    if(fileHandle == NULL)
+    {
+        return FAILED;
+    }
+
+    elfHandle->fileHandle = *fileHandle;
+    elfHandle->ehdr       = (Elf64_Ehdr *) &fileHandle->p_data[0];
+    elfHandle->phdr       = (Elf64_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
+    elfHandle->shdr       = (Elf64_Shdr *) &fileHandle->p_data[ elfHandle->ehdr->e_shoff ];
+
+    return SUCCESS;
+}
+
 uint8_t printELFPhdrs(char* filepath)
 {
     uint8_t* p_mem;
@@ -494,35 +509,26 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
     {
         /* Find out what size Elf header the binary is. */
         case T_32:
-            ELF32_EXECUTABLE_HANDLE_T executableHandle;
-
-            executableHandle.ehdr = (Elf32_Ehdr *) &fileHandle->p_data[0];
             
-            puts("Elf Header:\n");
-            dumpHexBytesFromFileHandle(fileHandle, 0, sizeof(Elf32_Ehdr));
-
-            puts("Class:\t64 BIT\n");
-            printElf32ElfHeader(executableHandle.ehdr);
-            printf("\n\n");
-            /* TODO: Print Program/Section Headers. */
-            // printELF32ProgramHeaders(handle);
 
             break;
 
         case T_64:
+            ELF64_EXECUTABLE_HANDLE_T elfHandle = {0};
             Elf64_Ehdr* ehdr64;
 
-            ehdr64 = (Elf64_Ehdr *) &fileHandle->p_data[0];
+            elfHandle.ehdr = (Elf64_Ehdr *) fileHandle->p_data;
             
             puts("Elf Header:\n");
             dumpHexBytesFromFileHandle(fileHandle, 0, sizeof(Elf64_Ehdr));
 
             puts("Class:\t64 BIT\n");
-            printElf64ElfHeader(ehdr64);
+            printElf64ElfHeader(elfHandle.ehdr);
             printf("\n\n");
             /* TODO: Print Program/Section Headers. */
+            mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle);
             puts("Program Header:\n");
-            printELF64ProgramHeaders(fileHandle);
+            printELF64ProgramHeaders(&elfHandle);
             break;
 
         case T_NO_ELF:
@@ -556,7 +562,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
 
         case ELFDATANONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN\n");
             break;
     }
     /* Print version. None could indicate tampering. */
@@ -569,7 +575,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
 
         case EV_NONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN\n");
             break;
     }
 
@@ -642,7 +648,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
 
         case ET_NONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN\n");
             break;
     }
 
@@ -723,7 +729,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
 
         case EM_NONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN\n");
     }
 
     printf("File Version\t");
@@ -735,14 +741,14 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
 
         case EV_NONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN\n");
             break;
     }
     /* TODO: Add checks. */
     printf("Program Entry:\t0x%08x\n", ehdr->e_entry);
     printf("Program Header Offset:\t0x%08x\n", ehdr->e_phoff);
     printf("Number Of Program Headers:\t0x%08x\n", ehdr->e_phnum);
-    printf("Program Header Size:\t0x%08x\n", ehdr->e_phentsize);
+    printf("Program Header Entry Size:\t0x%08x\n", ehdr->e_phentsize);
     printf("Number Of Section Headers:\t0x%08x\n", ehdr->e_shnum);
     printf("Section Header Entry Size:\t0x%08x\n", ehdr->e_shentsize);
     printf("Section Header STRNDX:\t0x%08x\n", ehdr->e_shstrndx);
@@ -960,7 +966,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
     printf("Program Entry:\t0x%08x\n", ehdr->e_entry);
     printf("Program Header Offset:\t0x%08x\n", ehdr->e_phoff);
     printf("Number Of Program Headers:\t0x%08x\n", ehdr->e_phnum);
-    printf("Program Header Size:\t0x%08x\n", ehdr->e_phentsize);
+    printf("Program Header Entry Size:\t0x%08x\n", ehdr->e_phentsize);
     printf("Number Of Section Headers:\t0x%08x\n", ehdr->e_shnum);
     printf("Section Header Entry Size:\t0x%08x\n", ehdr->e_shentsize);
     printf("Section Header STRNDX:\t0x%08x\n", ehdr->e_shstrndx);
@@ -972,13 +978,12 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
     Elf64_Phdr* phdrIter;
-    uint64_t phdrSize;
-    int i = 0;
+    uint32_t phdrSize;
 
-    if(executableHandle->ehdr == NULL || executableHandle->phdr)
+    if(executableHandle->ehdr == NULL || executableHandle->phdr == NULL)
     {
         #ifdef DEBUG
-        perror("ERROR NULL pointer in printELF64SectionHeaders()");
+        perror("ERROR NULL pointer in printELF64ProgramHeaders()");
         #endif
         return FAILED;
     }
@@ -990,16 +995,53 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
         #endif
         return FAILED;
     }
+    
+    phdrSize = (uint32_t)executableHandle->ehdr->e_phentsize;
 
-    phdrIter = executableHandle->phdr;
-    phdrSize = executableHandle->ehdr->e_phentsize;
-
-    while(i++ < executableHandle->ehdr->e_phnum)
+    for(uint8_t i = 0; i < executableHandle->ehdr->e_phnum; i++)
     {
+        phdrIter = (Elf64_Phdr *)&executableHandle->fileHandle.p_data[executableHandle->ehdr->e_phoff + (phdrSize * i)];
 
-        /* Progress phdr4Iter to the next program header. */
-        phdrIter += phdrSize;
+        dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
+            executableHandle->ehdr->e_phoff + (phdrSize * i), sizeof(Elf64_Phdr));
+            
+        /* Print the data held in each Phdr in a human readable form. */
+        switch(phdrIter->p_type)
+        {
+            printf("Program Header Type\t");
+            case PT_LOAD:
+                printf("PT_LOAD\n");
+                break;
+            case PT_DYNAMIC:
+                printf("PT_DYNAMIC\n");
+                break;
+            case PT_INTERP: /* This section points to the interpreter. */
+                printf("PT_INTERPRETER\n"); /* TODO: Get interpreter. */
+                break;
+            case PT_NOTE:
+                printf("PT_NOTE\n");
+                break;
+            case PT_PHDR: /* Should only be one of these. */
+                printf("PT_LOAD\n"); /* TODO: Confirm there is only one maybe? */
+                break;
+            case PT_SHLIB:
+                printf("PT_SHLIB\n"); /* Not used in standard (could be used for malicious perpuses though. ) */
+                break;
+            case PT_LOPROC:
+                printf("PT_LOPROC\n");
+                break; /* LOPROC/HIPROC are processor specific phdrs. */
+            case PT_HIPROC:
+                printf("PT_HIPROC\n");
+                break;
+            case PT_GNU_STACK:
+                printf("PT_GNU_STACK\n");
+                break;
+            
+        }
+
+        printf("\n\n");
     }
+
 }
 
 
