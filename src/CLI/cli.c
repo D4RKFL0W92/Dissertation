@@ -62,6 +62,28 @@ int main(int argc, char *argv[], char *envp[])
             
             dumpHexBytes(argv[argc-1], start, uCount);
         }
+        if(!strncmp(argv[i], "-s", 2))
+        {
+            int i, len = strlen(argv[i+1]);
+            int isTrue = TRUE; /* TODO: Fix this. (currently segfaults)*/
+            uint16_t charCount = 0; /* This need sanity checks.*/
+            for(i = 0; i < len && isTrue; i++)
+            {
+                if(!isdigit(argv[i+1]))
+                {
+                    isTrue = FALSE;
+                }
+            }
+            if(i > 0)
+            {
+                charCount = atoi(argv[i+1]);
+                scanForStrings(argv[argc-1], charCount);
+            }
+            else
+            {
+                scanForStrings(argv[argc-1], 3);
+            }
+        }
     }
     
     return 0;

@@ -88,13 +88,6 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle);
 
 uint8_t printELFPhdrs(char* filepath);
-/*
- * Takes a pointer to an ELF executable that has already been check that it
- * points to a valid ELF file.
-*/
-
-static uint8_t printELF32Phdrs(uint8_t* p_mem);
-static uint8_t printELF64Phdrs(uint8_t* p_mem);
 
 uint64_t getELFEntry(char* filepath);
 static Elf32_Addr getELF32Entry(uint8_t* p_mem);

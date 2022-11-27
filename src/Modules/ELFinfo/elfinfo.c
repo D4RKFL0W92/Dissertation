@@ -98,6 +98,8 @@ int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABL
         return FAILED;
     }
 
+    /* TODO: Check it is definitely Elf64_Phdr before proceeding. */
+
     elfHandle->fileHandle = *fileHandle;
     elfHandle->ehdr       = (Elf64_Ehdr *) &fileHandle->p_data[0];
     elfHandle->phdr       = (Elf64_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
@@ -201,57 +203,6 @@ static Elf64_Addr getELF64Entry(uint8_t* p_mem)
     Elf64_Ehdr* ehdr = (Elf64_Ehdr *) p_mem;
     return ehdr->e_entry;
 }
-
-static uint8_t printELF64Phdrs(uint8_t* p_mem)
-{
-
-    Elf64_Ehdr* ehdr;
-
-    Elf64_Phdr* phdr;
-
-    if(p_mem == NULL)
-    {
-        return FALSE;
-    }
-    ehdr = (Elf64_Ehdr *) p_mem;
-
-    phdr = (Elf64_Phdr *) (p_mem + ehdr->e_phoff);
-    uint8_t count = 0;
-
-    for(count; count < ehdr->e_phnum; ++count)
-    {
-        switch(phdr[count].p_type)
-        {
-            case PT_LOAD:
-                printf("PT_LOAD Section VADDR At:\t0x%08x\n", phdr[count].p_vaddr);
-                break;
-            case PT_DYNAMIC:
-                printf("PT_DYNAMIC Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_INTERP:
-                printf("PT_INTERP Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_NOTE:
-                printf("PT_NOTE Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_SHLIB:
-                printf("PT_SHLIB Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_PHDR:
-                printf("PT_PHDR Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_GNU_STACK:
-                printf("PT_GNU_STACK Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_NULL: break;
-        }
-    }
-    return TRUE;
-}
-
-
-
-
 
 
 uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
@@ -502,7 +453,6 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
     }
 
     strncpy(MAGIC, fileHandle->p_data, 6);
-
     arch = isELF(MAGIC);
 
     switch(arch)
@@ -547,7 +497,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
         #endif
         return FAILED;
     }
-    
+    printf("Elf 64 Header Size:\t0x%08x\n", ehdr->e_ehsize);
     /* Print endianess of binary. */
     printf("Endianess:\t");
     switch(ehdr->e_ident[EI_DATA])
@@ -623,7 +573,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
             break;
 
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN");
             break;
     }
 
@@ -765,7 +715,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
         #endif
         return FAILED;
     }
-    
+    printf("Elf 32 Header Size:\t0x%08x\n", ehdr->e_ehsize);
     /* Print endianess of binary. */
     printf("Endianess:\t");
     switch(ehdr->e_ident[EI_DATA])
@@ -780,7 +730,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 
         case ELFDATANONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN");
             break;
     }
     /* Print version. None could indicate tampering. */
@@ -793,7 +743,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 
         case EV_NONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN");
             break;
     }
 
@@ -841,7 +791,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
             break;
 
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN");
             break;
     }
 
@@ -866,7 +816,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 
         case ET_NONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN");
             break;
     }
 
@@ -947,7 +897,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 
         case EM_NONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN");
     }
 
     printf("File Version\t");
@@ -959,7 +909,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 
         case EV_NONE:
         default:
-            printf("       UNKNOWNN");
+            printf("       UNKNOWN");
             break;
     }
     /*TODO: Add some checks maybe */
@@ -977,6 +927,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 
 int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
+    char flags[6] = "------";
     Elf64_Phdr* phdrIter;
     uint32_t phdrSize;
 
@@ -997,18 +948,22 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     }
     
     phdrSize = (uint32_t)executableHandle->ehdr->e_phentsize;
+    phdrIter = (Elf64_Phdr *)&executableHandle->fileHandle.p_data[executableHandle->ehdr->e_phoff];
 
     for(uint8_t i = 0; i < executableHandle->ehdr->e_phnum; i++)
     {
-        phdrIter = (Elf64_Phdr *)&executableHandle->fileHandle.p_data[executableHandle->ehdr->e_phoff + (phdrSize * i)];
+        // phdrIter = (Elf64_Phdr *)&executableHandle->fileHandle.p_data[executableHandle->ehdr->e_phoff + (phdrSize * i)];
 
         dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
-            executableHandle->ehdr->e_phoff + (phdrSize * i), sizeof(Elf64_Phdr));
+            executableHandle->ehdr->e_phoff + (executableHandle->ehdr->e_phentsize * i), sizeof(Elf64_Phdr));
+        printf("\n\n");
             
         /* Print the data held in each Phdr in a human readable form. */
-        switch(phdrIter->p_type)
+
+        /* First get the program header type. */
+        switch(executableHandle->phdr[i].p_type)
         {
-            printf("Program Header Type\t");
+            printf("Program Header Type:\t");
             case PT_LOAD:
                 printf("PT_LOAD\n");
                 break;
@@ -1036,12 +991,31 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
             case PT_GNU_STACK:
                 printf("PT_GNU_STACK\n");
                 break;
-            
+            case PT_NULL:
+            default:
+                printf("NULL/UNKNOWN\n");
+                break;
         }
 
-        printf("\n\n");
-    }
+        flags[1] = (executableHandle->phdr[i].p_flags == PF_X) ?  'X' : '-';
+        flags[3] = (executableHandle->phdr[i].p_flags == PF_R) ?  'R' : '-';
+        flags[5] = (executableHandle->phdr[i].p_flags == PF_W) ?  'W' : '-';
+        flags[6] = '\0';
 
+        printf("Flags:\t%s\n", flags);
+        /* Static offset, seems incorrect. */
+        printf("Static Offset:\t0x%08x\n", executableHandle->phdr[i].p_offset);
+        printf("Virtual Address:\t0x%08x\n", executableHandle->phdr[i].p_vaddr);
+        printf("Physical Address:\t0x%08x\n", executableHandle->phdr[i].p_paddr);
+
+        printf("Header File Image Size:\t0x%08x\n", executableHandle->phdr[i].p_filesz);
+        printf("Header Memory Image Size:\t0x%08x\n", executableHandle->phdr[i].p_memsz);
+
+        printf("\n\n");
+        // phdrIter = (Elf64_Phdr *)executableHandle->fileHandle.p_data[(executableHandle->ehdr->e_phoff +
+        //                                                             (executableHandle->ehdr->e_phentsize * i))];
+    }
+    return SUCCESS;
 }
 
 
