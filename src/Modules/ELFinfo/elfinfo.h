@@ -38,8 +38,10 @@
 #define ARCH_Intel86      "X_86"
 #define ARCH_Intel64      "X_64"
 
+#define PHDR_FLAG_LEN       7
+#define SHDR_FLAG_LEN       8
 
-#define MIN_ELF32_ENTRY     0x8048000
+#define MIN_ELF32_ENTRY     0x8048000 // Is this correct??
 
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
@@ -50,6 +52,7 @@ typedef struct ELF32_EXECUTABLE
     Elf32_Ehdr* ehdr;
     Elf32_Phdr* phdr;
     Elf32_Shdr* shdr;
+    int         pid;
 }ELF32_EXECUTABLE_HANDLE_T;
 
 typedef struct ELF64_EXECUTABLE
@@ -58,6 +61,7 @@ typedef struct ELF64_EXECUTABLE
     Elf64_Ehdr* ehdr;
     Elf64_Phdr* phdr;
     Elf64_Shdr* shdr;
+    int         pid;
 }ELF64_EXECUTABLE_HANDLE_T;
 
 /*
@@ -87,7 +91,6 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle);
 
-uint8_t printELFPhdrs(char* filepath);
 
 uint64_t getELFEntry(char* filepath);
 static Elf32_Addr getELF32Entry(uint8_t* p_mem);
@@ -110,21 +113,20 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 
 /* TODO: Write a functional test for this function, unit tests will not be realistic. */
 int8_t printElfInfoVerbose(FILE_HANDLE_T* handle);
-/* TODO: Write unit tests for these, Elf headers can be replicated with an array of bytes sizeof(ElfN_Ehdr) */
+
 int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr);
 int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr);
 
 int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 
+int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
+
+
 #ifdef DEBUG
     static void test_isELF();
 
-    static int test_getELF64PhdrAddress();
-    static int test_getELF32PhdrAddress();
-    // static void test_getELFHeader32();
-    // static void test_getELFHeader64();
-
+    static void elf_info_tests();
 #endif
 
 

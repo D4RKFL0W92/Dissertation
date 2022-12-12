@@ -178,11 +178,11 @@ int8_t scanForStrings(char* filepath, uint16_t len)
     for(uint64_t i = 0; i < sz; i++)
     {
         uint16_t strLen = 0;
-
-        if((uint8_t *) p_mem[i] > 0x21 && (uint8_t *) p_mem[i] < 0x7E)
+        /* In the ASCII range. */
+        if(p_mem[i] > 0x21 && p_mem[i] < 0x7E)
         {
             strBuff[strLen++] = p_mem[i++];
-            while((uint8_t *) p_mem[i] > 0x21 && (uint8_t *) p_mem[i] < 0x7E)
+            while(p_mem[i] > 0x21 && p_mem[i] < 0x7E)
             {
                 strBuff[strLen++] = p_mem[i++];
             }

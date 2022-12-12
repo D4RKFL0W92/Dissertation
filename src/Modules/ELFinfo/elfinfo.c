@@ -108,72 +108,6 @@ int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABL
     return SUCCESS;
 }
 
-uint8_t printELFPhdrs(char* filepath)
-{
-    uint8_t* p_mem;
-    enum BITS arch;
-    uint64_t file_sz;
-
-    p_mem = mapELFToMemory(filepath, &arch, &file_sz);
-
-    if(arch == T_64)
-    {
-        return printELF64Phdrs(p_mem);
-    }
-    else if(arch == T_32)
-    {
-        return printELF32Phdrs(p_mem);
-    }
-    
-}
-
-static uint8_t printELF32Phdrs(uint8_t* p_mem)
-{
-
-    Elf32_Ehdr* ehdr;
-
-    Elf32_Phdr* phdr;
-
-    if(p_mem == NULL)
-    {
-        return FALSE;
-    }
-    ehdr = (Elf32_Ehdr *) p_mem;
-
-    phdr = (Elf32_Phdr *) (p_mem + ehdr->e_phoff);
-    uint8_t count = 0;
-
-    for(count; count < ehdr->e_phnum; ++count)
-    {
-        switch(phdr[count].p_type)
-        {
-            case PT_LOAD:
-                printf("PT_LOAD Section VADDR At:\t0x%08x\n", phdr[count].p_vaddr);
-                break;
-            case PT_DYNAMIC:
-                printf("PT_DYNAMIC Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_INTERP:
-                printf("PT_INTERP Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_NOTE:
-                printf("PT_NOTE Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_SHLIB:
-                printf("PT_SHLIB Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_PHDR:
-                printf("PT_PHDR Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_GNU_STACK:
-                printf("PT_GNU_STACK Section VADDR At:\t0x%08x\n.", phdr[count].p_vaddr);
-                break;
-            case PT_NULL: break;
-        }
-    }
-    return TRUE;
-}
-
 uint64_t getELFEntry(char* filepath)
 {
     uint8_t* p_mem;
@@ -465,20 +399,23 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
 
         case T_64:
             ELF64_EXECUTABLE_HANDLE_T elfHandle = {0};
-            Elf64_Ehdr* ehdr64;
 
             elfHandle.ehdr = (Elf64_Ehdr *) fileHandle->p_data;
             
             puts("Elf Header:\n");
-            dumpHexBytesFromFileHandle(fileHandle, 0, sizeof(Elf64_Ehdr));
+            dumpHexBytesFromFileHandle(fileHandle, 0, elfHandle.ehdr->e_ehsize);
 
             puts("Class:\t64 BIT\n");
             printElf64ElfHeader(elfHandle.ehdr);
             printf("\n\n");
             /* TODO: Print Program/Section Headers. */
             mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle);
-            puts("Program Header:\n");
+            puts("Program Headers:\n");
             printELF64ProgramHeaders(&elfHandle);
+
+            puts("Section Headers:\n");
+            printELF64SectionHeaders(&elfHandle);
+
             break;
 
         case T_NO_ELF:
@@ -499,20 +436,20 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
     }
     printf("Elf 64 Header Size:\t0x%08x\n", ehdr->e_ehsize);
     /* Print endianess of binary. */
-    printf("Endianess:\t");
+    printf("Endianess:");
     switch(ehdr->e_ident[EI_DATA])
     {
         case ELFDATA2LSB:
-            printf("        LITTLE\n");
+            printf("            LITTLE\n");
             break;
         
         case ELFDATA2MSB:
-            printf("           BIG\n");
+            printf("               BIG\n");
             break;
 
         case ELFDATANONE:
         default:
-            printf("       UNKNOWN\n");
+            printf("           UNKNOWN\n");
             break;
     }
     /* Print version. None could indicate tampering. */
@@ -520,12 +457,12 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
     switch(ehdr->e_ident[EI_VERSION])
     {
         case EV_CURRENT:
-            printf("       CURRENT\n");
+            printf("           CURRENT\n");
             break;
 
         case EV_NONE:
         default:
-            printf("       UNKNOWN\n");
+            printf("           UNKNOWN\n");
             break;
     }
 
@@ -533,47 +470,47 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
     switch(ehdr->e_ident[EI_OSABI])
     {
         case ELFOSABI_SYSV:
-            printf("          UNIX\n");
+            printf("              UNIX\n");
             break;
 
         case ELFOSABI_HPUX:
-            printf("         HP-UX\n");
+            printf("             HP-UX\n");
             break;
 
         case ELFOSABI_NETBSD:
-            printf("        NETBSD\n");
+            printf("            NETBSD\n");
             break;
 
         case ELFOSABI_LINUX:
-            printf("         Linux\n");
+            printf("             Linux\n");
             break;
 
         case ELFOSABI_SOLARIS:
-            printf("       Solaris\n");
+            printf("           Solaris\n");
             break;
 
         case ELFOSABI_IRIX:
-            printf("          IRIX\n");
+            printf("              IRIX\n");
             break;
 
         case ELFOSABI_FREEBSD:
-            printf("       FREEBSD\n");
+            printf("           FREEBSD\n");
             break;
 
         case ELFOSABI_TRU64:
-            printf("         TRU64\n");
+            printf("             TRU64\n");
             break;
 
         case ELFOSABI_ARM:
-            printf("           ARM\n");
+            printf("               ARM\n");
             break;
 
         case ELFOSABI_STANDALONE:
-            printf("    STANDALONE\n");
+            printf("        STANDALONE\n");
             break;
 
         default:
-            printf("       UNKNOWN");
+            printf("           UNKNOWN\n");
             break;
     }
 
@@ -581,24 +518,24 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
     switch(ehdr->e_type)
     {
         case ET_REL:
-            printf("   RELOCATABLE\n");
+            printf("       RELOCATABLE\n");
             break;
 
         case ET_EXEC:
-            printf("    EXECUTABLE\n");
+            printf("        EXECUTABLE\n");
             break;
 
         case ET_DYN:
-            printf("       DYNAMIC\n");
+            printf("           DYNAMIC\n");
             break;
 
         case ET_CORE:
-            printf("          CORE\n");
+            printf("              CORE\n");
             break;
 
         case ET_NONE:
         default:
-            printf("       UNKNOWN\n");
+            printf("           UNKNOWN\n");
             break;
     }
 
@@ -606,92 +543,92 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
     switch(ehdr->e_machine)
     {
         case EM_M32:
-            printf("          AT&T\n");
+            printf("              AT&T\n");
             break;
 
         case EM_SPARC:
-            printf("         SPARC\n");
+            printf("             SPARC\n");
             break;
 
         case EM_386:
-            printf("   INTEL 80386\n");
+            printf("       INTEL 80386\n");
             break;
 
         case EM_68K:
-            printf("MOTOROLA 68000\n");
+            printf("    MOTOROLA 68000\n");
             break;
 
         case EM_88K:
-            printf("MOTOROLA 88000\n");
+            printf("    MOTOROLA 88000\n");
             break;
 
         case EM_860:
-            printf("   INTEL 80860\n");
+            printf("       INTEL 80860\n");
             break;
 
         case EM_MIPS:
-            printf("          MIPS\n");
+            printf("              MIPS\n");
             break;
 
         case EM_PARISC:
-            printf("         HP/PA\n");
+            printf("             HP/PA\n");
             break;
 
         case EM_SPARC32PLUS: /* Could have been tampered with, so we'll keep this here. */
-            printf("   SPARC32PLUS\n");
+            printf("       SPARC32PLUS\n");
             break;
 
         case EM_PPC:
-            printf("       POWERPC\n");
+            printf("           POWERPC\n");
             break;
 
         case EM_PPC64:
-            printf("     POWERPC64\n");
+            printf("         POWERPC64\n");
             break;
 
         case EM_S390:
-            printf("           IBM\n");
+            printf("               IBM\n");
             break;
 
         case EM_ARM:
-            printf("           ARM\n");
+            printf("               ARM\n");
             break;
 
         case EM_SH:
-            printf("        SUPERH\n");
+            printf("            SUPERH\n");
             break;
 
         case EM_SPARCV9:
-            printf("       SPARC64\n");
+            printf("           SPARC64\n");
             break;
 
         case EM_IA_64:
-            printf(" INTEL ITANIUM\n");
+            printf("     INTEL ITANIUM\n");
             break;
 
         case EM_X86_64:
-            printf("    AMD x86-64\n");
+            printf("        AMD x86-64\n");
             break;
 
         case EM_VAX:
-            printf("           VAX\n");
+            printf("               VAX\n");
             break;
 
         case EM_NONE:
         default:
-            printf("       UNKNOWN\n");
+            printf("           UNKNOWN\n");
     }
 
     printf("File Version\t");
     switch(ehdr->e_version)
     {
         case EV_CURRENT:
-            printf("       CURRENT\n");
+            printf("           CURRENT\n");
             break;
 
         case EV_NONE:
         default:
-            printf("       UNKNOWN\n");
+            printf("           UNKNOWN\n");
             break;
     }
     /* TODO: Add checks. */
@@ -927,7 +864,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 
 int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
-    char flags[6] = "------";
+    char flags[PHDR_FLAG_LEN];
     Elf64_Phdr* phdrIter;
     uint32_t phdrSize;
 
@@ -952,7 +889,8 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 
     for(uint8_t i = 0; i < executableHandle->ehdr->e_phnum; i++)
     {
-        // phdrIter = (Elf64_Phdr *)&executableHandle->fileHandle.p_data[executableHandle->ehdr->e_phoff + (phdrSize * i)];
+
+        printf("Program Header:\t%d\n", i+1);
 
         dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
             executableHandle->ehdr->e_phoff + (executableHandle->ehdr->e_phentsize * i), sizeof(Elf64_Phdr));
@@ -997,10 +935,31 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
                 break;
         }
 
-        flags[1] = (executableHandle->phdr[i].p_flags == PF_X) ?  'X' : '-';
-        flags[3] = (executableHandle->phdr[i].p_flags == PF_R) ?  'R' : '-';
-        flags[5] = (executableHandle->phdr[i].p_flags == PF_W) ?  'W' : '-';
-        flags[6] = '\0';
+        switch(executableHandle->phdr[i].p_flags)
+        {
+            case 1:
+                strncpy(flags, "-X-----", PHDR_FLAG_LEN);
+                break;
+            case 2:
+                strncpy(flags, "---W---", PHDR_FLAG_LEN);
+                break;
+            case 3:
+                strncpy(flags, "-X-W---", PHDR_FLAG_LEN);
+                break;
+            case 4:
+                strncpy(flags, "-----R-", PHDR_FLAG_LEN);
+                break;
+            case 5:
+                strncpy(flags, "-X---R-", PHDR_FLAG_LEN);
+                break;
+            case 6:
+                strncpy(flags, "---W-R-", PHDR_FLAG_LEN);
+                break;
+            case 7:
+                strncpy(flags, "-X-W-R-", PHDR_FLAG_LEN);
+                break;
+        }
+        flags[7] = '\0';
 
         printf("Flags:\t%s\n", flags);
         /* Static offset, seems incorrect. */
@@ -1011,11 +970,265 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
         printf("Header File Image Size:\t0x%08x\n", executableHandle->phdr[i].p_filesz);
         printf("Header Memory Image Size:\t0x%08x\n", executableHandle->phdr[i].p_memsz);
 
+        puts("-------------------------------------------------------------------------------------");
         printf("\n\n");
-        // phdrIter = (Elf64_Phdr *)executableHandle->fileHandle.p_data[(executableHandle->ehdr->e_phoff +
-        //                                                             (executableHandle->ehdr->e_phentsize * i))];
     }
     return SUCCESS;
+}
+
+int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
+{
+    char flags[] = "-------";
+    uint32_t phdrSize;
+
+    if(executableHandle->ehdr == NULL || executableHandle->phdr == NULL)
+    {
+        #ifdef DEBUG
+        perror("ERROR NULL pointer in printELF64ProgramHeaders()");
+        #endif
+        return FAILED;
+    }
+
+    if(executableHandle->ehdr->e_phnum == 0 || executableHandle->ehdr->e_phentsize == 0)
+    {
+        #ifdef DEBUG
+        perror("ERROR, NO PHDRS in printELF64ProgramHeaders()");
+        #endif
+        return FAILED;
+    }
+    
+    phdrSize = (uint32_t)executableHandle->ehdr->e_phentsize;
+
+    for(uint8_t i = 0; i < executableHandle->ehdr->e_phnum; i++)
+    {
+        printf("Program Header:\t%d\n", i+1);
+
+        dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
+            executableHandle->ehdr->e_phoff + (executableHandle->ehdr->e_phentsize * i), sizeof(Elf64_Phdr));
+        printf("\n\n");
+            
+        /* Print the data held in each Phdr in a human readable form. */
+
+        /* First get the program header type. */
+        switch(executableHandle->phdr[i].p_type)
+        {
+            printf("Program Header Type:\t");
+            case PT_LOAD:
+                printf("PT_LOAD\n");
+                break;
+            case PT_DYNAMIC:
+                printf("PT_DYNAMIC\n");
+                break;
+            case PT_INTERP: /* This section points to the interpreter. */
+                printf("PT_INTERPRETER\n"); /* TODO: Get interpreter. */
+                break;
+            case PT_NOTE:
+                printf("PT_NOTE\n");
+                break;
+            case PT_PHDR: /* Should only be one of these. */
+                printf("PT_LOAD\n"); /* TODO: Confirm there is only one maybe? */
+                break;
+            case PT_SHLIB:
+                printf("PT_SHLIB\n"); /* Not used in standard (could be used for malicious perpuses though. ) */
+                break;
+            case PT_LOPROC:
+                printf("PT_LOPROC\n");
+                break; /* LOPROC/HIPROC are processor specific phdrs. */
+            case PT_HIPROC:
+                printf("PT_HIPROC\n");
+                break;
+            case PT_GNU_STACK:
+                printf("PT_GNU_STACK\n");
+                break;
+            case PT_NULL:
+            default:
+                printf("NULL/UNKNOWN\n");
+                break;
+        }
+
+        switch(executableHandle->phdr[i].p_flags)
+        {
+            case 1:
+                strncpy(flags, "-X-----", PHDR_FLAG_LEN);
+                break;
+            case 2:
+                strncpy(flags, "---W---", PHDR_FLAG_LEN);
+                break;
+            case 3:
+                strncpy(flags, "-X-W---", PHDR_FLAG_LEN);
+                break;
+            case 4:
+                strncpy(flags, "-----R-", PHDR_FLAG_LEN);
+                break;
+            case 5:
+                strncpy(flags, "-X---R-", PHDR_FLAG_LEN);
+                break;
+            case 6:
+                strncpy(flags, "---W-R-", PHDR_FLAG_LEN);
+                break;
+            case 7:
+                strncpy(flags, "-X-W-R-", PHDR_FLAG_LEN);
+                break;
+        }
+        flags[7] = '\0';
+
+        printf("Flags:\t%s\n", flags);
+        /* Static offset, seems incorrect. */
+        printf("Static Offset:\t0x%08x\n", executableHandle->phdr[i].p_offset);
+        printf("Virtual Address:\t0x%08x\n", executableHandle->phdr[i].p_vaddr);
+        printf("Physical Address:\t0x%08x\n", executableHandle->phdr[i].p_paddr);
+
+        printf("Header File Image Size:\t0x%08x\n", executableHandle->phdr[i].p_filesz);
+        printf("Header Memory Image Size:\t0x%08x\n", executableHandle->phdr[i].p_memsz);
+
+        puts("-------------------------------------------------------------------------------------");
+        printf("\n\n");
+    }
+    return SUCCESS;
+}
+
+int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
+{
+    char flags[SHDR_FLAG_LEN+1];
+    uint16_t sectionHeaderSize;
+    if(!executableHandle || !executableHandle->phdr)
+    {
+        #ifdef DEBUG
+        perror("NULL Pointer In printELF64SectionHeaders()");
+        #endif
+        return FAILED;
+    }
+
+    if(executableHandle->ehdr->e_shentsize == 0 || executableHandle->ehdr->e_shnum == 0 ||
+        executableHandle->ehdr->e_shoff == 0 || executableHandle->ehdr->e_shstrndx == 0)
+    {
+        printf("%s is stripped.\n", executableHandle->fileHandle.path);
+        return SUCCESS;
+    }
+
+    sectionHeaderSize = executableHandle->ehdr->e_shentsize;
+
+
+    for(int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    {
+        puts("----------------------------------------------------------\n");
+        printf("Section Header:\t%d\n", i+1);
+
+        // dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
+        //     executableHandle->ehdr->e_shoff + (executableHandle->ehdr->e_shentsize * i), executableHandle->ehdr->e_shentsize);
+
+        printf("\n\n");
+        printf("Section Header String Table Index:\t0x%08x\n", executableHandle->shdr[i].sh_name);
+
+        switch(executableHandle->shdr[i].sh_type)
+        {
+            printf("Section Header Type:\t");
+            case SHT_PROGBITS:
+                /* Meaning is defined by the program. 
+                 * TODO: Check if I can do anything with this information.
+                 */
+                printf("PROGBITS\n");
+                break;
+            case SHT_SYMTAB:
+                /* TODO: Print out useful information contained in the symbol table (symbol names and such)
+                 * This can be used to dicover call to function in libraries.
+                 */
+                printf("SYMTAB\n");
+                break;
+            case SHT_STRTAB:
+                /* TODO: Print out all strings contained in the string table. */
+                printf("STRTAB\n");
+                
+                break;
+            case SHT_RELA:
+                printf("RELA\n");
+                break;
+            case SHT_HASH:
+                printf("HASH TABLE\n");
+                break;
+            case SHT_DYNAMIC:
+                /* TODO; Print GOT info. */
+                /* A binary should only have one DYNAMIC section header. */
+                printf("DYNAMIC\n");
+                break;
+            case SHT_NOTE:
+                printf("NOTE\n");
+                break;
+            case SHT_REL:
+                printf("REL\n");
+                break;
+            case SHT_SHLIB:
+                printf("SHLIB\n");
+                break;
+            case SHT_DYNSYM:
+                printf("DYNSYM\n");
+                break;
+            case SHT_LOPROC:
+            case SHT_HIPROC:
+                printf("LOPROC/HIPROC\n");
+                break;
+            case SHT_LOUSER:
+            case SHT_HIUSER:
+                printf("LOUSER/HIUSER\n");
+                break;
+            case SHT_NOBITS:
+                printf("NOBITS\n"); /* May not even be worth printing this out. */
+                break;
+            case SHT_NULL:
+                printf("NULL\n");
+                break;
+        }
+        
+        /* Get the flags of the section. */
+        switch(executableHandle->shdr[i].sh_flags)
+        {
+            case 1:
+                strncpy(flags, "W-------", SHDR_FLAG_LEN); /* (1 << 0) */
+                break;
+            case 2:
+                strncpy(flags, "-A------", SHDR_FLAG_LEN); /* (1 << 1) */
+                break;
+            case 3:
+                strncpy(flags, "WA------", SHDR_FLAG_LEN);
+                break;
+            case 4:
+                strncpy(flags, "--X-----", SHDR_FLAG_LEN); /* (1 << 2) */
+                break;
+            case 5:
+                strncpy(flags, "W-X-----", SHDR_FLAG_LEN);
+                break;
+            case 6:
+                strncpy(flags, "-AX-----", SHDR_FLAG_LEN);
+                break;
+            case 16:
+                strncpy(flags, "---M----", SHDR_FLAG_LEN); /* (1 << 4) */
+                break;
+            case 32:
+                strncpy(flags, "----S---", SHDR_FLAG_LEN); /* (1 << 5) */
+                break;
+            case 64:
+                strncpy(flags, "-----I--", SHDR_FLAG_LEN); /* (1 << 6) */
+                break;
+            case 128:
+                strncpy(flags, "------P-", SHDR_FLAG_LEN); /* (1 << 7) */
+                break;
+            case 256:
+                strncpy(flags, "-------N", SHDR_FLAG_LEN); /* (1 << 8) */
+                break;
+            case 0:
+            default:
+                strncpy(flags, "--------", SHDR_FLAG_LEN); /* NOFLAGS */
+                break;
+        }
+        flags[SHDR_FLAG_LEN] = '\0';
+        printf("%s\n", flags);
+
+        printf("SH_ADDR:\t0x%08x\n", executableHandle->shdr[i].sh_addr);
+        printf("SH_OFFSET:\t0x%08x\n", executableHandle->shdr[i].sh_offset);
+        printf("SH_SIZE:\t0x%08x\n", executableHandle->shdr[i].sh_size);
+        printf("SH_ADDRALIGN:\t0x%08x\n", executableHandle->shdr[i].sh_addralign);
+        printf("SH_ENTSIZE:\t0x%08x\n", executableHandle->shdr[i].sh_offset);
+    }
 }
 
 
@@ -1023,13 +1236,17 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 
  static void test_isELF()
  {
-    assert(isELF("\x7f\x45\x4c\x46\x01") == T_32); // Test a real 64-bit ELF header.
+    assert(isELF("\x7f\x45\x4c\x46\x01") == T_32); // Test a real 32-bit ELF header.
     assert(isELF("\x7f\x45\x4c\x46\x02") == T_64); // Test a real 64-bit ELF header.
     // Test some broken headers
     assert(isELF("\x7f\x45\x4c\x40\x01") == T_NO_ELF);
     assert(isELF("\x7f\x41\x4c\x46\x01") == T_NO_ELF);
     assert(isELF("\x00\x00\x00\x00\x00") == T_NO_ELF);
+ }
 
+ static void elf_info_tests()
+ {
+    test_isELF();
  }
 
  #endif
