@@ -1,3 +1,5 @@
+#include <ctype.h>
+
 #include "../Modules/ELFinfo/elfinfo.h"
 #include "../Modules/Dynamic/elfdynamic.h"
 #include "../FileOperations/fileOps.h"
@@ -14,6 +16,7 @@
 
 int main(int argc, char *argv[], char *envp[])
 {
+    FILE_HANDLE_T fileHandle;
 
     if(clearLogFile(LOG_FILE) == FAILED)
     {
@@ -29,7 +32,7 @@ int main(int argc, char *argv[], char *envp[])
 
     for(int i = 1; i < argc-1; i++)
     {
-        if(!strncmp(argv[i], "-sha1", 5))
+        if(!strcmp(argv[i], "-sha1"))
         {
             if(printSHA1OfFile(argv[argc-1]) == FAILED)
             {
@@ -37,9 +40,8 @@ int main(int argc, char *argv[], char *envp[])
                 exit(-1);
             }
         }
-        if(!strncmp(argv[i], "-E", 2))
+        if(!strcmp(argv[i], "-E"))
         {
-            FILE_HANDLE_T fileHandle;
             if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
             {
                 printf("Unable map %s into memory\n", argv[argc-1]);
@@ -55,14 +57,14 @@ int main(int argc, char *argv[], char *envp[])
             /* Unmap the file. */
             munmap(fileHandle.p_data, fileHandle.st.st_size);
         }
-        if(!strncmp(argv[i], "-hd", 3))
+        if(!strcmp(argv[i], "-hd"))
         {
             uint64_t start = atol(argv[i+1]);
             uint64_t uCount = atoi(argv[i+2]);
             
             dumpHexBytes(argv[argc-1], start, uCount);
         }
-        if(!strncmp(argv[i], "-s", 2))
+        if(!strcmp(argv[i], "-s")) /* TODO: This functionality is broken. */
         {
             int i, len = strlen(argv[i+1]);
             int isTrue = TRUE; /* TODO: Fix this. (currently segfaults)*/
@@ -84,8 +86,33 @@ int main(int argc, char *argv[], char *envp[])
                 scanForStrings(argv[argc-1], 3);
             }
         }
+        if(!strcmp(argv[i], "-strtab") || !strcmp(argv[i], "-st"))
+        {
+            char magic[6];
+            enum BITS arch;
+            
+            if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
+            {
+                printf("Unable map %s into memory\n", argv[argc-1]);
+                exit(-1);
+            }
+            strcpy(magic, fileHandle.p_data);
+            /* TODO: Decide if ELF32 or ELF64 and print strtab. */
+            // switch( (arch = isELF(&fileHandle.p_data)))
+            // {
+            //     case T_64:
+            //         break;
+            //     case T_32:
+            //         break;
+            //     default:
+            //     case T_NO_ELF:
+            //         break;
+            // }
+        }
     }
     
+
+    unmapFileFromStruct(&fileHandle);
     return 0;
 }
 

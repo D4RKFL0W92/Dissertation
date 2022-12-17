@@ -187,6 +187,8 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
         return FALSE;
     }
 
+    printSHA1OfFile(elf_filepath);
+
     if(read(fd, MAGIC, sizeof(MAGIC)) == -1)
     {
         #ifdef DEBUG
@@ -388,7 +390,7 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
 
     strncpy(MAGIC, fileHandle->p_data, 6);
     arch = isELF(MAGIC);
-
+    printSHA1OfFile(fileHandle->path);
     switch(arch)
     {
         /* Find out what size Elf header the binary is. */
@@ -401,29 +403,32 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
             ELF64_EXECUTABLE_HANDLE_T elfHandle = {0};
 
             elfHandle.ehdr = (Elf64_Ehdr *) fileHandle->p_data;
-            
+            mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle);
+
             puts("Elf Header:\n");
             dumpHexBytesFromFileHandle(fileHandle, 0, elfHandle.ehdr->e_ehsize);
 
             puts("Class:\t64 BIT\n");
             printElf64ElfHeader(elfHandle.ehdr);
-            printf("\n\n");
-            /* TODO: Print Program/Section Headers. */
-            mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle);
-            puts("Program Headers:\n");
+
+            puts("\n\nProgram Headers:\n");
             printELF64ProgramHeaders(&elfHandle);
 
             puts("Section Headers:\n");
             printELF64SectionHeaders(&elfHandle);
 
+            puts("\n\nElf String Table Entries:\n");
+            printELF64StrTable(&elfHandle);
+
             break;
 
         case T_NO_ELF:
         default:
-            break;
+            printf("File <%s> is not an ELF\n", fileHandle->path);
+            return FAILED;
 
     }
-    
+    return SUCCESS;
 }
 int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
 {
@@ -898,10 +903,10 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
             
         /* Print the data held in each Phdr in a human readable form. */
 
+        printf("Program Header Type:\t");
         /* First get the program header type. */
         switch(executableHandle->phdr[i].p_type)
         {
-            printf("Program Header Type:\t");
             case PT_LOAD:
                 printf("PT_LOAD\n");
                 break;
@@ -1009,10 +1014,10 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
             
         /* Print the data held in each Phdr in a human readable form. */
 
+        printf("Program Header Type:\t");
         /* First get the program header type. */
         switch(executableHandle->phdr[i].p_type)
         {
-            printf("Program Header Type:\t");
             case PT_LOAD:
                 printf("PT_LOAD\n");
                 break;
@@ -1118,11 +1123,10 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
         //     executableHandle->ehdr->e_shoff + (executableHandle->ehdr->e_shentsize * i), executableHandle->ehdr->e_shentsize);
 
         printf("\n\n");
-        printf("Section Header String Table Index:\t0x%08x\n", executableHandle->shdr[i].sh_name);
 
+        printf("Section Header Type:\t");
         switch(executableHandle->shdr[i].sh_type)
         {
-            printf("Section Header Type:\t");
             case SHT_PROGBITS:
                 /* Meaning is defined by the program. 
                  * TODO: Check if I can do anything with this information.
@@ -1229,8 +1233,19 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
         printf("SH_ADDRALIGN:\t0x%08x\n", executableHandle->shdr[i].sh_addralign);
         printf("SH_ENTSIZE:\t0x%08x\n", executableHandle->shdr[i].sh_offset);
     }
+    return SUCCESS;
 }
 
+int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
+{
+    const char *shstrtab = executableHandle->fileHandle.p_data +
+        executableHandle->shdr[ executableHandle->ehdr->e_shstrndx ].sh_offset;
+
+    for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    {
+        printf("[Entry: %2d] %s\n", i, shstrtab + executableHandle->shdr[i].sh_name);
+    }
+}
 
  #ifdef DEBUG
 

@@ -29,9 +29,8 @@ char* basicFileMap(char* filepath, uint64_t* fileSz)
     return file_mem;
 }
 
-uint8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
+int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
 {
-    size_t len;
 
     if( (handle->fd = open(filepath, O_RDONLY)) == -1)
     {
@@ -51,10 +50,24 @@ uint8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
         return FAILED;
     }
 
-    ((len = (strlen(filepath)) <= PATH_MAX ) ? len : PATH_MAX);
-    strncpy(handle->path, filepath, len);
+    strncpy(handle->path, filepath, PATH_MAX);
 
     return SUCCESS;
+}
+
+int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
+{
+    if(!handle->p_data || handle->st.st_size == 0)
+    {
+        /* Not technically a failure, we just don't want to try and unmap the memory. */
+        return SUCCESS;
+    }
+
+    if(munmap(handle->p_data, handle->st.st_size) == 0)
+    {
+        return SUCCESS;
+    }
+    return FAILED;
 }
 
 uint8_t* sha1File(char* filepath)
