@@ -1,29 +1,44 @@
 #include "./fileOps.h"
 
-char* basicFileMap(char* filepath, uint64_t* fileSz)
+char* basicFileMap(const char* filepath, uint64_t* fileSz)
 {
-    FILE_HANDLE_T handle;
     char* file_mem;
     struct stat st;
     int fd;
 
+    if(!filepath || !fileSz)
+    {
+        #ifdef DEBUG
+        perror("NULL pointer passed as argument to basicFileMap()");
+        #endif
+        return NULL;
+    }
+
     if( (fd = open(filepath, O_RDONLY)) == -1)
     {
+        #ifdef DEBUG
         perror("ERROR opening file.");
+        #endif
         return NULL;
     }
 
     if(fstat(fd, &st) == -1)
     {
+        #ifdef DEBUG
         perror("ERROR stat'ing file.");
+        #endif
         return NULL;
     }
 
     if((file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
     {
+        #ifdef DEBUG
         perror("ERROR mapping file to memory.");
+        #endif
         return NULL;
     }
+
+    close(fd);
 
     *fileSz = st.st_size;
     return file_mem;
@@ -57,6 +72,13 @@ int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
 
 int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
 {
+    if(handle == NULL)
+    {
+        #ifdef DEBUG
+        perror("NULL handle passed as argument to unmapFileFromStruct()");
+        #endif
+        return FAILED;
+    }
     if(!handle->p_data || handle->st.st_size == 0)
     {
         /* Not technically a failure, we just don't want to try and unmap the memory. */
@@ -67,10 +89,13 @@ int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
     {
         return SUCCESS;
     }
+    #ifdef DEBUG
+    perror("Unable to unmap memory in unmapFileFromStruct()");
+    #endif
     return FAILED;
 }
 
-uint8_t* sha1File(char* filepath)
+uint8_t* sha1File(const char* filepath)
 {
     struct stat st;
     uint8_t* hashDigest = NULL;
@@ -151,7 +176,7 @@ uint8_t* sha1File(char* filepath)
     return hashDigest;
 }
 
-int8_t printSHA1OfFile(char* filepath)
+int8_t printSHA1OfFile(const char* filepath)
 {
     uint8_t* messageDigest;
 

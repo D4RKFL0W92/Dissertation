@@ -66,25 +66,7 @@ int main(int argc, char *argv[], char *envp[])
         }
         if(!strcmp(argv[i], "-s")) /* TODO: This functionality is broken. */
         {
-            int i, len = strlen(argv[i+1]);
-            int isTrue = TRUE; /* TODO: Fix this. (currently segfaults)*/
-            uint16_t charCount = 0; /* This need sanity checks.*/
-            for(i = 0; i < len && isTrue; i++)
-            {
-                if(!isdigit(argv[i+1]))
-                {
-                    isTrue = FALSE;
-                }
-            }
-            if(i > 0)
-            {
-                charCount = atoi(argv[i+1]);
-                scanForStrings(argv[argc-1], charCount);
-            }
-            else
-            {
-                scanForStrings(argv[argc-1], 3);
-            }
+            scanForStrings(argv[argc-1], 3);
         }
         if(!strcmp(argv[i], "-strtab") || !strcmp(argv[i], "-st"))
         {
@@ -96,18 +78,27 @@ int main(int argc, char *argv[], char *envp[])
                 printf("Unable map %s into memory\n", argv[argc-1]);
                 exit(-1);
             }
-            strcpy(magic, fileHandle.p_data);
-            /* TODO: Decide if ELF32 or ELF64 and print strtab. */
-            // switch( (arch = isELF(&fileHandle.p_data)))
-            // {
-            //     case T_64:
-            //         break;
-            //     case T_32:
-            //         break;
-            //     default:
-            //     case T_NO_ELF:
-            //         break;
-            // }
+
+            strncpy(magic, fileHandle.p_data, 6);
+            arch = isELF(magic);
+
+            /* TODO: Finish implementing for 32 bit. */
+            switch(arch)
+            {
+                case T_64:
+                    ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+                    mapELF64ToHandleFromFileHandle(&fileHandle, &elfHandle64);
+                    printELF64StrTable(&elfHandle64);
+                    break;
+                case T_32:
+                    ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+                    mapELF32ToHandleFromFileHandle(&fileHandle, &elfHandle32);
+                    printELF32StrTable(&elfHandle32);
+                    break;
+                default:
+                case T_NO_ELF:
+                    break;
+            }
         }
     }
     

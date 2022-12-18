@@ -73,7 +73,7 @@ typedef struct ELF64_EXECUTABLE
  * Return: Returns an enum value, representing the word size of the binary:
  *          T_32, T64, or T_NO_ELF
 */
-static enum BITS isELF(char* MAG);
+enum BITS isELF(char* MAG);
 
 
 /*
@@ -89,6 +89,7 @@ static enum BITS isELF(char* MAG);
 */
 char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 
+int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T* elfHandle);
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle);
 
 
@@ -122,6 +123,7 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 
 int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
+int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
 

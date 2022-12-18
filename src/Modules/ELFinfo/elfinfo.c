@@ -1,6 +1,6 @@
 #include "elfinfo.h"
 
-static enum BITS isELF(char* arch)
+enum BITS isELF(char* arch)
 {
     if(arch == NULL || strlen(arch) < 6)
         return T_NO_ELF;
@@ -9,8 +9,8 @@ static enum BITS isELF(char* arch)
         arch[2] != (uint8_t)'L' || arch[3] != (uint8_t)'F')
         return T_NO_ELF;
 
-    unsigned char endianness = arch[5];
-    if(endianness != ELFDATANONE && endianness != ELFDATA2LSB && endianness != ELFDATA2MSB)
+
+    if(arch[5] != ELFDATANONE && arch[5] != ELFDATA2LSB && arch[5] != ELFDATA2MSB)
         return T_NO_ELF; // // Likely not an ELF executable
 
     // Check and return intended architecture for the binary.
@@ -89,6 +89,23 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
 
     close(fd);
     return file_mem;
+}
+
+int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T* elfHandle)
+{
+    if(fileHandle == NULL)
+    {
+        return FAILED;
+    }
+
+    /* TODO: Check it is definitely Elf64_Phdr before proceeding. */
+
+    elfHandle->fileHandle = *fileHandle;
+    elfHandle->ehdr       = (Elf32_Ehdr *) &fileHandle->p_data[0];
+    elfHandle->phdr       = (Elf32_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
+    elfHandle->shdr       = (Elf32_Shdr *) &fileHandle->p_data[ elfHandle->ehdr->e_shoff ];
+
+    return SUCCESS;
 }
 
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle)
@@ -1234,6 +1251,17 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
         printf("SH_ENTSIZE:\t0x%08x\n", executableHandle->shdr[i].sh_offset);
     }
     return SUCCESS;
+}
+
+int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
+{
+    const char *shstrtab = executableHandle->fileHandle.p_data +
+        executableHandle->shdr[ executableHandle->ehdr->e_shstrndx ].sh_offset;
+
+    for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    {
+        printf("[Entry: %2d] %s\n", i, shstrtab + executableHandle->shdr[i].sh_name);
+    }
 }
 
 int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
