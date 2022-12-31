@@ -1255,29 +1255,150 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 
 int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
 {
-    const char *shstrtab = executableHandle->fileHandle.p_data +
-        executableHandle->shdr[ executableHandle->ehdr->e_shstrndx ].sh_offset;
+    if(!executableHandle || !executableHandle->fileHandle.p_data)
+    {
+        return FAILED;
+    }
+    /* Get the sh_offset of the shstrndx. */
+    executableHandle->fileHandle.p_data_seekPtr =
+        executableHandle->fileHandle.p_data + executableHandle->shdr[ executableHandle->ehdr->e_shstrndx ].sh_offset;
 
     for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
     {
-        printf("[Entry: %2d] %s\n", i, shstrtab + executableHandle->shdr[i].sh_name);
+        printf("[Entry: %2d] %s\n", i, executableHandle->fileHandle.p_data_seekPtr + executableHandle->shdr[i].sh_name);
     }
+    executableHandle->fileHandle.p_data_seekPtr = executableHandle->fileHandle.p_data;
+    return SUCCESS;
 }
 
+/* TODO: Create unit tests for this function as well as its 32-bit counterpart. */
 int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
-    const char *shstrtab = executableHandle->fileHandle.p_data +
-        executableHandle->shdr[ executableHandle->ehdr->e_shstrndx ].sh_offset;
+    if(!executableHandle || !executableHandle->fileHandle.p_data)
+    {
+        return FAILED;
+    }
+    /* Get the sh_offset of the shstrndx. */
+    executableHandle->fileHandle.p_data_seekPtr =
+        executableHandle->fileHandle.p_data + executableHandle->shdr[ executableHandle->ehdr->e_shstrndx ].sh_offset;
 
     for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
     {
-        printf("[Entry: %2d] %s\n", i, shstrtab + executableHandle->shdr[i].sh_name);
+        printf("[Entry: %2d] %s\n", i, executableHandle->fileHandle.p_data_seekPtr + executableHandle->shdr[i].sh_name);
     }
+    /* Reset the seek pointer in the executable handle structure. */
+    executableHandle->fileHandle.p_data_seekPtr = executableHandle->fileHandle.p_data;
+    return SUCCESS;
+}
+
+int8_t printELF32SymTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
+{
+    Elf32_Shdr *stringTableShdr;
+    Elf32_Sym* symbolTable;
+    uint16_t symbolTableShdrIndex = -1;
+    int numSymbols;
+    int stringTableIndex;
+    char* stringTableOffset;
+
+    if(executableHandle == NULL)
+    {
+        #ifdef DEBUG
+        perror("Null pointer to executable handle passed to printELF64SymTable()");
+        #endif
+        return FAILED;
+    }
+
+    /* Iterate through the section header table to find the symbol tables of the binary.  */
+    for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    {
+        if (executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+        {
+            symbolTableShdrIndex = i;
+            
+            if (symbolTableShdrIndex == -1)
+            {
+                #ifdef DEBUG
+                perror("Unable to find symbol table section header in printELF64SymTable()");
+                #endif
+                return FAILED;
+            }
+
+            /* Get the pointer to the symbol table. */
+            symbolTable = (Elf32_Sym*)((char*)executableHandle->ehdr + executableHandle->shdr[symbolTableShdrIndex].sh_offset);
+            /* Calculate the number of symbols in this symbol table. */
+            numSymbols = executableHandle->shdr[symbolTableShdrIndex].sh_size / sizeof(Elf32_Sym);
+
+            /* Find the section header that contains the string table. */
+            stringTableIndex = executableHandle->shdr[symbolTableShdrIndex].sh_link;
+            stringTableShdr = &executableHandle->shdr[stringTableIndex];
+            stringTableOffset = (char*)executableHandle->ehdr + stringTableShdr->sh_offset;
+
+            /* Iterate through the symbol names printing them. */
+            for (int i = 0; i < numSymbols; i++)
+            {
+                printf("%s\n", symbolTable[i].st_name + stringTableOffset);
+            }
+        }
+    }
+    return SUCCESS;
+}
+
+int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
+{
+    Elf64_Shdr *stringTableShdr;
+    Elf64_Sym* symbolTable;
+    uint16_t symbolTableShdrIndex = -1;
+    int numSymbols;
+    int stringTableIndex;
+    char* stringTableOffset;
+
+    if(executableHandle == NULL)
+    {
+        #ifdef DEBUG
+        perror("Null pointer to executable handle passed to printELF64SymTable()");
+        #endif
+        return FAILED;
+    }
+
+    /* Iterate through the section header table to find the symbol tables of the binary.  */
+    for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    {
+        if (executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+        {
+            symbolTableShdrIndex = i;
+            
+            if (symbolTableShdrIndex == -1)
+            {
+                #ifdef DEBUG
+                perror("Unable to find symbol table section header in printELF64SymTable()");
+                #endif
+                return FAILED;
+            }
+
+            /* Get the pointer to the symbol table. */
+            symbolTable = (Elf64_Sym*)((char*)executableHandle->ehdr + executableHandle->shdr[symbolTableShdrIndex].sh_offset);
+            /* Calculate the number of symbols in this symbol table. */
+            numSymbols = executableHandle->shdr[symbolTableShdrIndex].sh_size / sizeof(Elf64_Sym);
+
+            /* Find the section header that contains the string table. */
+            stringTableIndex = executableHandle->shdr[symbolTableShdrIndex].sh_link;
+            stringTableShdr = &executableHandle->shdr[stringTableIndex];
+            stringTableOffset = (char*)executableHandle->ehdr + stringTableShdr->sh_offset;
+
+            /* Iterate through the symbol names printing them. */
+            for (int i = 0; i < numSymbols; i++)
+            {
+                printf("%s\n", symbolTable[i].st_name + stringTableOffset);
+            }
+        }
+    }
+
+    return SUCCESS;
 }
 
  #ifdef DEBUG
 
- static void test_isELF()
+ void test_isELF()
  {
     assert(isELF("\x7f\x45\x4c\x46\x01") == T_32); // Test a real 32-bit ELF header.
     assert(isELF("\x7f\x45\x4c\x46\x02") == T_64); // Test a real 64-bit ELF header.
@@ -1287,16 +1408,9 @@ int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     assert(isELF("\x00\x00\x00\x00\x00") == T_NO_ELF);
  }
 
- static void elf_info_tests()
+ void elf_info_tests()
  {
     test_isELF();
  }
 
  #endif
-
-
-
-#define TEST32 "/home/calum/Test_Files/while32"
-#define TEST64 "/home/calum/Test_Files/while64"
-
-

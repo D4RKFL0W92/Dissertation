@@ -18,11 +18,12 @@
 /* TODO: Write a function to free p_data and close fd of this structure. */
 typedef struct FILE_HANDLE
 {
-    int fd;
-    char path[PATH_MAX];
-    char* p_data; /* Mapped memory, must be unmapped. */
-    uint16_t pathLen;
-    struct stat st;
+    int                    fd;
+    char       path[PATH_MAX];
+    char*              p_data;
+    char*      p_data_seekPtr;
+    uint16_t          pathLen;
+    struct stat            st;
 
 }FILE_HANDLE_T;
 

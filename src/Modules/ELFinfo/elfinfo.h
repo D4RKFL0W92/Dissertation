@@ -126,11 +126,13 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
+int8_t printELF32SymTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
+int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
 #ifdef DEBUG
-    static void test_isELF();
+    void test_isELF();
 
-    static void elf_info_tests();
+    void elf_info_tests();
 #endif
 
 

@@ -14,7 +14,7 @@ os.system("rm ./sha1-log.txt")
 
 for f in files:
 	path = fileDirectory + str(f)
-	os.system("../BUILD/turtle_scan -sha1 " + path + " >> " + logFile)
+	os.system("../BUILD/Turtle-Scan -sha1 " + path + " >> " + logFile)
 	a = os.system("sha1sum " + path + " >> " + logFile)
 
 # Read the file line by line, (for some reason sha1sum also outputs the filename,

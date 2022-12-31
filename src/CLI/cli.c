@@ -17,6 +17,7 @@
 int main(int argc, char *argv[], char *envp[])
 {
     FILE_HANDLE_T fileHandle;
+    int i = 1;
 
     if(clearLogFile(LOG_FILE) == FAILED)
     {
@@ -30,7 +31,7 @@ int main(int argc, char *argv[], char *envp[])
         exit(-1);
     }
 
-    for(int i = 1; i < argc-1; i++)
+    do
     {
         if(!strcmp(argv[i], "-sha1"))
         {
@@ -40,6 +41,7 @@ int main(int argc, char *argv[], char *envp[])
                 exit(-1);
             }
         }
+        
         if(!strcmp(argv[i], "-E"))
         {
             if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
@@ -57,6 +59,7 @@ int main(int argc, char *argv[], char *envp[])
             /* Unmap the file. */
             munmap(fileHandle.p_data, fileHandle.st.st_size);
         }
+
         if(!strcmp(argv[i], "-hd"))
         {
             uint64_t start = atol(argv[i+1]);
@@ -64,10 +67,12 @@ int main(int argc, char *argv[], char *envp[])
             
             dumpHexBytes(argv[argc-1], start, uCount);
         }
+
         if(!strcmp(argv[i], "-s")) /* TODO: This functionality is broken. */
         {
             scanForStrings(argv[argc-1], 3);
         }
+
         if(!strcmp(argv[i], "-strtab") || !strcmp(argv[i], "-st"))
         {
             char magic[6];
@@ -100,7 +105,44 @@ int main(int argc, char *argv[], char *envp[])
                     break;
             }
         }
-    }
+
+        if(!strcmp(argv[i], "-symtab"))
+        {
+            char magic[6];
+            enum BITS arch;
+            
+            if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
+            {
+                printf("Unable map %s into memory\n", argv[argc-1]);
+                exit(-1);
+            }
+
+            strncpy(magic, fileHandle.p_data, 6);
+            arch = isELF(magic);
+
+            /* TODO: Finish implementing for 32 bit. */
+            switch(arch)
+            {
+                case T_64:
+                    ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+                    if( (mapELF64ToHandleFromFileHandle(&fileHandle, &elfHandle64)) == FAILED)
+                    {
+                        exit(FAILED);
+                    }
+                    printELF64SymTable(&elfHandle64);
+                    break;
+                case T_32:
+                    ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+                    mapELF32ToHandleFromFileHandle(&fileHandle, &elfHandle32);
+                    printELF32SymTable(&elfHandle32);
+                    break;
+                default:
+                case T_NO_ELF:
+                    break;
+            }
+        }
+
+    }while(i++ < argc-1);
     
 
     unmapFileFromStruct(&fileHandle);

@@ -46,25 +46,38 @@ char* basicFileMap(const char* filepath, uint64_t* fileSz)
 
 int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
 {
-
+    if(!filepath || !handle)
+    {
+        #ifdef DEBUG
+        perror("Null pointer passed as parameter in mapFileToStruct()");
+        #endif
+        return FAILED;
+    }
     if( (handle->fd = open(filepath, O_RDONLY)) == -1)
     {
+        #ifdef DEBUG
         perror("ERROR opening file.");
+        #endif
         return FAILED;
     }
 
     if(fstat(handle->fd, &handle->st) == -1)
     {
+        #ifdef DEBUG
         perror("ERROR stat'ing file.");
+        #endif
         return FAILED;
     }
 
     if((handle->p_data = mmap(NULL, handle->st.st_size, PROT_READ, MAP_PRIVATE, handle->fd, 0)) == MAP_FAILED)
     {
+        #ifdef DEBUG
         perror("ERROR mapping file to memory.");
+        #endif
         return FAILED;
     }
 
+    handle->p_data_seekPtr = handle->p_data;
     strncpy(handle->path, filepath, PATH_MAX);
 
     return SUCCESS;
@@ -81,10 +94,13 @@ int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
     }
     if(!handle->p_data || handle->st.st_size == 0)
     {
-        /* Not technically a failure, we just don't want to try and unmap the memory. */
-        return SUCCESS;
+        #ifdef DEBUG
+        perror("Non-mapped memory passed to unmapFileFromStruct()");
+        #endif
+        return FAILED;
     }
 
+    handle->p_data_seekPtr = NULL;
     if(munmap(handle->p_data, handle->st.st_size) == 0)
     {
         return SUCCESS;
@@ -97,6 +113,7 @@ int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
 
 uint8_t* sha1File(const char* filepath)
 {
+    int readAmount;
     struct stat st;
     uint8_t* hashDigest = NULL;
     char* data;
@@ -127,9 +144,6 @@ uint8_t* sha1File(const char* filepath)
         return NULL;
     }
 
-    /* Store position of data pointer for free'ing later */
-    void* p_data = &data;
-
     if( (hashDigest = malloc(SHA_DIGEST_LENGTH)) == NULL)
     {
         #ifdef DEBUG
@@ -138,20 +152,6 @@ uint8_t* sha1File(const char* filepath)
         return NULL;
     }
 
-    // while(bytesRead < st.st_size)
-    // {
-    //     int readAmount;
-    //     if( (readAmount = (int)read(fd, data, st.st_size-bytesRead)) < 0)
-    //     {
-    //         #ifdef DEBUG
-    //         perror("ERROR reading from file in sha1File()");
-    //         #endif
-    //         return NULL;
-    //     }
-    //     bytesRead += readAmount;
-    //     data += bytesRead;
-    // }
-    int readAmount;
     if( (readAmount = (int)read(fd, data, st.st_size-bytesRead)) < 0)
     {
         #ifdef DEBUG
@@ -216,11 +216,11 @@ int8_t scanForStrings(char* filepath, uint16_t len)
     for(uint64_t i = 0; i < sz; i++)
     {
         uint16_t strLen = 0;
-        /* In the ASCII range. */
-        if(p_mem[i] > 0x21 && p_mem[i] < 0x7E)
+        /* In the ASCII range (acount for spaces). */
+        if((p_mem[i] > 0x21 && p_mem[i] < 0x7E) || p_mem[i] == 0x20)
         {
             strBuff[strLen++] = p_mem[i++];
-            while(p_mem[i] > 0x21 && p_mem[i] < 0x7E)
+            while((p_mem[i] > 0x21 && p_mem[i] < 0x7E) || p_mem[i] == 0x20)
             {
                 strBuff[strLen++] = p_mem[i++];
             }
