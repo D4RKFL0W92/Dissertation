@@ -33,6 +33,15 @@ int main(int argc, char *argv[], char *envp[])
 
     do
     {
+        /* Unit tests. */
+        #ifdef UNITTEST
+        if(!strcmp(argv[i], "-u"))
+        {
+            fileOpsTestSuite();
+            elfInfoTestSuite();
+        }
+        #endif
+
         if(!strcmp(argv[i], "-sha1"))
         {
             if(printSHA1OfFile(argv[argc-1]) == FAILED)
@@ -56,8 +65,6 @@ int main(int argc, char *argv[], char *envp[])
                 exit(-1);
             }
 
-            /* Unmap the file. */
-            munmap(fileHandle.p_data, fileHandle.st.st_size);
         }
 
         if(!strcmp(argv[i], "-hd"))
@@ -145,7 +152,10 @@ int main(int argc, char *argv[], char *envp[])
     }while(i++ < argc-1);
     
 
-    unmapFileFromStruct(&fileHandle);
+    if(fileHandle.p_data && fileHandle.st.st_size > 0)
+    {
+        unmapFileFromStruct(&fileHandle);
+    }
     return 0;
 }
 

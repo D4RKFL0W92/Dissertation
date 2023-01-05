@@ -2,7 +2,9 @@
 
 enum BITS isELF(char* arch)
 {
-    if(arch == NULL || strlen(arch) < 6)
+    int i = strlen(arch);
+    /* We check 6 bytes but the last one can be NULL according to the specification (Only for encoding type NONE so shouldn't matter). */
+    if(arch == NULL || strlen(arch) < 5)
         return T_NO_ELF;
 
     if(arch[0] != 0x7f || arch[1] != (uint8_t)'E' ||
@@ -10,8 +12,8 @@ enum BITS isELF(char* arch)
         return T_NO_ELF;
 
 
-    if(arch[5] != ELFDATANONE && arch[5] != ELFDATA2LSB && arch[5] != ELFDATA2MSB)
-        return T_NO_ELF; // // Likely not an ELF executable
+    if(arch[5] != ELFDATA2LSB && arch[5] != ELFDATA2MSB)
+        return T_NO_ELF; // We don't check for DATANONE as there would be no way to interpret it anyway.
 
     // Check and return intended architecture for the binary.
     unsigned char arch_bit = arch[4];
@@ -40,7 +42,6 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
     {
         // Should really log errors/failures.
         #ifdef DEBUG
-        logEvent(LOG_FILE, func_name, "open()");
         perror("Unable to open() file inside mapELFToMemory().");
         #endif
         return NULL;
@@ -49,27 +50,24 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
     if(fstat(fd, &st) < 0)
     {
         #ifdef DEBUG
-        logEvent(LOG_FILE, func_name, "fstat()");
         perror("Unable to fstat() file inside mapELFToMemory().");
         #endif
-        return NULL;
+        goto cleanup;
     }
 
     // Check is an ELF file before mapping into memory.
     if( (bytes_read = read(fd, MAGIC, 6)) < 6)
     {
         #ifdef DEBUG
-        logEvent(LOG_FILE, func_name, "read()");
         perror("Unable to read() file inside mapELFToMemory().");
         #endif
       
-        return NULL;
+        goto cleanup;
     }
     
     // if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
     // {
     //     #ifdef DEBUG
-    //     logEvent(LOG_FILE, func_name, "isELF()");
     //     perror("File being read is not an ELF file.");
     //     #endif
         
@@ -81,7 +79,6 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
     if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
     {
         #ifdef DEBUG
-        logEvent(LOG_FILE, func_name, "mmap()");
         perror("Unable to mmap() in mapELFToMemory().");
         #endif
         return NULL;
@@ -89,6 +86,13 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
 
     close(fd);
     return file_mem;
+
+    /* goto acceptable to use for cleanup. */
+    cleanup:
+    {
+        close(fd);
+        return NULL;
+    }
 }
 
 int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T* elfHandle)
@@ -1396,19 +1400,24 @@ int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     return SUCCESS;
 }
 
- #ifdef DEBUG
+ #ifdef UNITTEST
 
  void test_isELF()
  {
-    assert(isELF("\x7f\x45\x4c\x46\x01") == T_32); // Test a real 32-bit ELF header.
-    assert(isELF("\x7f\x45\x4c\x46\x02") == T_64); // Test a real 64-bit ELF header.
+    assert(isELF("\x7f\x45\x4c\x46\x01\x01") == T_32); // Test a real 32-bit ELF header Little Endian.
+    assert(isELF("\x7f\x45\x4c\x46\x02\x01") == T_64); // Test a real 64-bit ELF header Little Endian.
+    assert(isELF("\x7f\x45\x4c\x46\x01\x02") == T_32); // Test a real 32-bit ELF header Big Endian.
+    assert(isELF("\x7f\x45\x4c\x46\x02\x02") == T_64); // Test a real 64-bit ELF header Big Endian.
+    assert(isELF("\x7f\x45\x4c\x46\x01\x00") == T_32); // Test a real 32-bit ELF header Data None.
+    assert(isELF("\x7f\x45\x4c\x46\x02\x00") == T_64); // Test a real 64-bit ELF header Data None.
+
     // Test some broken headers
-    assert(isELF("\x7f\x45\x4c\x40\x01") == T_NO_ELF);
-    assert(isELF("\x7f\x41\x4c\x46\x01") == T_NO_ELF);
-    assert(isELF("\x00\x00\x00\x00\x00") == T_NO_ELF);
+    assert(isELF("\x7f\x45\x4c\x40\x01\x01") == T_NO_ELF);
+    assert(isELF("\x7f\x41\x4c\x46\x01\x01") == T_NO_ELF);
+    assert(isELF("\x00\x00\x00\x00\x00\x02") == T_NO_ELF);
  }
 
- void elf_info_tests()
+ void elfInfoTestSuite()
  {
     test_isELF();
  }

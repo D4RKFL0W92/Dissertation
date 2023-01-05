@@ -27,7 +27,7 @@ char* basicFileMap(const char* filepath, uint64_t* fileSz)
         #ifdef DEBUG
         perror("ERROR stat'ing file.");
         #endif
-        return NULL;
+        goto cleanup;
     }
 
     if((file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
@@ -35,13 +35,19 @@ char* basicFileMap(const char* filepath, uint64_t* fileSz)
         #ifdef DEBUG
         perror("ERROR mapping file to memory.");
         #endif
-        return NULL;
+        goto cleanup;
     }
 
     close(fd);
 
     *fileSz = st.st_size;
     return file_mem;
+
+    cleanup:
+    {
+        close(fd);
+        return NULL;
+    }
 }
 
 int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
@@ -66,7 +72,7 @@ int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
         #ifdef DEBUG
         perror("ERROR stat'ing file.");
         #endif
-        return FAILED;
+        goto cleanup;
     }
 
     if((handle->p_data = mmap(NULL, handle->st.st_size, PROT_READ, MAP_PRIVATE, handle->fd, 0)) == MAP_FAILED)
@@ -74,13 +80,19 @@ int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
         #ifdef DEBUG
         perror("ERROR mapping file to memory.");
         #endif
-        return FAILED;
+        goto cleanup;
     }
 
     handle->p_data_seekPtr = handle->p_data;
     strncpy(handle->path, filepath, PATH_MAX);
 
     return SUCCESS;
+
+    cleanup:
+    {
+        clean(handle->fd);
+        return FAILED;
+    }
 }
 
 int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
@@ -133,7 +145,7 @@ uint8_t* sha1File(const char* filepath)
         #ifdef DEBUG
         perror("ERROR caling fstat in sah1File()");
         #endif
-        return NULL;
+        goto cleanup;
     }
 
     if( (data = malloc(st.st_size)) == NULL)
@@ -141,7 +153,7 @@ uint8_t* sha1File(const char* filepath)
         #ifdef DEBUG
         perror("ERROR allocating memory for file read in sha1File()");
         #endif
-        return NULL;
+        goto cleanup;
     }
 
     if( (hashDigest = malloc(SHA_DIGEST_LENGTH)) == NULL)
@@ -149,7 +161,7 @@ uint8_t* sha1File(const char* filepath)
         #ifdef DEBUG
         perror("ERROR allocating memory for hash digest in sha1File()");
         #endif
-        return NULL;
+        goto cleanup;
     }
 
     if( (readAmount = (int)read(fd, data, st.st_size-bytesRead)) < 0)
@@ -157,7 +169,7 @@ uint8_t* sha1File(const char* filepath)
         #ifdef DEBUG
         perror("ERROR reading from file in sha1File()");
         #endif
-        return NULL;
+        goto cleanup;
     }
 
     SHA1(data, st.st_size, hashDigest);
@@ -167,18 +179,26 @@ uint8_t* sha1File(const char* filepath)
         #ifdef DEBUG
         perror("ERROR calculating sha1 hash of file in sha1File()");
         #endif
-        return NULL;
+        goto cleanup;
     }
 
     free(data);
     close(fd);
 
     return hashDigest;
+
+    cleanup:
+    {
+        free(hashDigest);
+        free(data);
+        close(fd);
+        return NULL;
+    }
 }
 
 int8_t printSHA1OfFile(const char* filepath)
 {
-    uint8_t* messageDigest;
+    uint8_t* messageDigest = NULL;
 
     if( (messageDigest = sha1File(filepath)) == NULL)
     {
@@ -194,7 +214,10 @@ int8_t printSHA1OfFile(const char* filepath)
     }
     printf("\n");
 
-    free(messageDigest);
+    if(messageDigest)
+    {
+        free(messageDigest);
+    }
     return SUCCESS;
 }
 
@@ -260,7 +283,7 @@ int8_t dumpHexBytes(char* filepath, uint64_t startAddress, uint64_t uCount)
         #ifdef DEBUG
         perror("ERROR, illegal offset, in dumpHexBytes()");
         #endif
-        printf("Offset exceeds file size.");
+        printf("Offset exceeds file size."); // Useful feedback to the user.
         return FAILED;
     }
 
@@ -329,3 +352,36 @@ int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, 
     printf("\n");
     return SUCCESS;
 }
+
+/* Unit tests for fileOps.c */
+#ifdef UNITTEST
+void test_basicFileMap_null_filepath()
+{
+    const char* filepath = NULL;
+    uint64_t fileSz = 0;
+
+    char* ret = basicFileMap(filepath, &fileSz);
+
+    assert(ret == NULL);
+    assert(filepath == NULL);
+    assert(fileSz == 0);
+}
+
+void test_basicFileMap_null_fileSize()
+{
+    const char* filepath = "garbage";
+
+    char* ret = basicFileMap(filepath, NULL);
+
+    assert(ret == NULL);
+    assert(filepath != NULL);
+    assert(strncmp(filepath, "garbage", 7) == 0);
+}
+
+void fileOpsTestSuite()
+{
+    /* Include any unit tests in here. */
+    test_basicFileMap_null_filepath();
+    test_basicFileMap_null_fileSize();
+}
+#endif

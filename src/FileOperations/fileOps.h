@@ -41,5 +41,4 @@ int8_t scanForStrings(char* filepath, uint16_t len);
 int8_t dumpHexBytes(char* filepath, uint64_t startAddress, uint64_t uCount);
 int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, uint64_t uCount);
 
-
 #endif
