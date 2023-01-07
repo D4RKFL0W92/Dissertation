@@ -33,14 +33,6 @@ int main(int argc, char *argv[], char *envp[])
 
     do
     {
-        /* Unit tests. */
-        #ifdef UNITTEST
-        if(!strcmp(argv[i], "-u"))
-        {
-            fileOpsTestSuite();
-            elfInfoTestSuite();
-        }
-        #endif
 
         if(!strcmp(argv[i], "-sha1"))
         {
@@ -148,6 +140,17 @@ int main(int argc, char *argv[], char *envp[])
                     break;
             }
         }
+
+
+
+        /* Unit tests. */
+        #ifdef UNITTEST
+        if(!strcmp(argv[i], "-u"))
+        {
+            fileOpsTestSuite();
+            elfInfoTestSuite();
+        }
+        #endif
 
     }while(i++ < argc-1);
     

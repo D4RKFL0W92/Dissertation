@@ -50,7 +50,7 @@ char* basicFileMap(const char* filepath, uint64_t* fileSz)
     }
 }
 
-int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
+int8_t mapFileToStruct(const char* filepath, FILE_HANDLE_T* handle)
 {
     if(!filepath || !handle)
     {
@@ -90,7 +90,7 @@ int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle)
 
     cleanup:
     {
-        clean(handle->fd);
+        close(handle->fd);
         return FAILED;
     }
 }
@@ -353,17 +353,18 @@ int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, 
     return SUCCESS;
 }
 
+
+
+
 /* Unit tests for fileOps.c */
 #ifdef UNITTEST
 void test_basicFileMap_null_filepath()
 {
-    const char* filepath = NULL;
     uint64_t fileSz = 0;
 
-    char* ret = basicFileMap(filepath, &fileSz);
+    char* ret = basicFileMap(NULL, &fileSz);
 
     assert(ret == NULL);
-    assert(filepath == NULL);
     assert(fileSz == 0);
 }
 
@@ -378,10 +379,51 @@ void test_basicFileMap_null_fileSize()
     assert(strncmp(filepath, "garbage", 7) == 0);
 }
 
+#ifdef LOCALTESTFILES
+void test_basicFileMap_null_legitimate_file()
+{
+    const char* filepath = "/home/calum/Dissertation_Project/tests/files/text1.txt";
+    uint64_t fileSz = 0;
+
+    char* ret = basicFileMap(filepath, &fileSz);
+
+    assert(ret != NULL);
+    assert(strncmp(filepath, "/home/calum/Dissertation_Project/tests/files/text1.txt", 27) == 0);
+    assert(fileSz == 11);
+
+    munmap(ret, fileSz);
+}
+#endif
+
+void test_mapFileToStruct_null_filepath()
+{
+    FILE_HANDLE_T handle = {0};
+    int ret = mapFileToStruct(NULL, &handle);
+
+    assert(ret == FAILED);
+    assert(handle.fd == 0);
+    assert(handle.p_data == NULL);
+    assert(handle.p_data_seekPtr == NULL);
+    assert(handle.pathLen == 0);
+}
+
+void test_mapFileToStruct_null_filehandle()
+{
+    const char *filepath = "garbage";
+    int ret = mapFileToStruct(filepath, NULL);
+
+    assert(ret == FAILED);
+    assert(strncmp(filepath, "garbage", 7) == 0);
+}
+
 void fileOpsTestSuite()
 {
     /* Include any unit tests in here. */
     test_basicFileMap_null_filepath();
     test_basicFileMap_null_fileSize();
+    test_basicFileMap_null_legitimate_file();
+
+    test_mapFileToStruct_null_filepath();
+    test_mapFileToStruct_null_filehandle();
 }
 #endif

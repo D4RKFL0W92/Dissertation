@@ -11,3 +11,7 @@ memory="../src/Memory/turtle_memory.c"
 gcc $elfinfo $elfdynamic $cli $logging \
 $fileops $memory \
 -Lopenssl/openssl-0.9.8k/ -lssl -lcrypto -Iopenssl/openssl-0.9.8k/include -ggdb -o Turtle-Scan
+
+# Run the unit tests for the project on each build.
+echo "Running executable with unit tests..."
+./Turtle-Scan -u

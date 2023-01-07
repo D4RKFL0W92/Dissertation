@@ -12,7 +12,7 @@ enum BITS isELF(char* arch)
         return T_NO_ELF;
 
 
-    if(arch[5] != ELFDATA2LSB && arch[5] != ELFDATA2MSB)
+    if(arch[5] != ELFDATANONE && arch[5] != ELFDATA2LSB && arch[5] != ELFDATA2MSB)
         return T_NO_ELF; // We don't check for DATANONE as there would be no way to interpret it anyway.
 
     // Check and return intended architecture for the binary.
@@ -1379,7 +1379,7 @@ int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
                 return FAILED;
             }
 
-            /* Get the pointer to the symbol table. */
+            /* Get the pointer to the symbol table. This is just the offset from the start of the file. */
             symbolTable = (Elf64_Sym*)((char*)executableHandle->ehdr + executableHandle->shdr[symbolTableShdrIndex].sh_offset);
             /* Calculate the number of symbols in this symbol table. */
             numSymbols = executableHandle->shdr[symbolTableShdrIndex].sh_size / sizeof(Elf64_Sym);

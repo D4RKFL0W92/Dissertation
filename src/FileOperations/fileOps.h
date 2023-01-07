@@ -31,7 +31,7 @@ typedef struct FILE_HANDLE
  * Basic file map function, performs no checks on file type.
 */
 char* basicFileMap(const char* filepath, uint64_t* fileSz);
-int8_t mapFileToStruct(char* filepath, FILE_HANDLE_T* handle);
+int8_t mapFileToStruct(const char* filepath, FILE_HANDLE_T* handle);
 int8_t unmapFileFromStruct(FILE_HANDLE_T* handle);
 
 uint8_t* sha1File(const char* filepath);
