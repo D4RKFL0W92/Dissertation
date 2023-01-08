@@ -1404,6 +1404,7 @@ int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 
  void test_isELF()
  {
+    /* isElf() is only concerned with the first six bytes of the ELF header. */
     assert(isELF("\x7f\x45\x4c\x46\x01\x01") == T_32); // Test a real 32-bit ELF header Little Endian.
     assert(isELF("\x7f\x45\x4c\x46\x02\x01") == T_64); // Test a real 64-bit ELF header Little Endian.
     assert(isELF("\x7f\x45\x4c\x46\x01\x02") == T_32); // Test a real 32-bit ELF header Big Endian.

@@ -115,6 +115,7 @@ int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
     handle->p_data_seekPtr = NULL;
     if(munmap(handle->p_data, handle->st.st_size) == 0)
     {
+        handle->p_data = NULL;
         return SUCCESS;
     }
     #ifdef DEBUG
@@ -356,7 +357,12 @@ int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, 
 
 
 
-/* Unit tests for fileOps.c */
+/*
+ * Unit tests for fileOps.c
+ * This will be part of the automated testing subsystem.
+ * Optionally included with the UNITTEST and LOCALTESTFILES
+ * macros located in turtle_types.h
+ */
 #ifdef UNITTEST
 void test_basicFileMap_null_filepath()
 {
@@ -379,22 +385,6 @@ void test_basicFileMap_null_fileSize()
     assert(strncmp(filepath, "garbage", 7) == 0);
 }
 
-#ifdef LOCALTESTFILES
-void test_basicFileMap_null_legitimate_file()
-{
-    const char* filepath = "/home/calum/Dissertation_Project/tests/files/text1.txt";
-    uint64_t fileSz = 0;
-
-    char* ret = basicFileMap(filepath, &fileSz);
-
-    assert(ret != NULL);
-    assert(strncmp(filepath, "/home/calum/Dissertation_Project/tests/files/text1.txt", 27) == 0);
-    assert(fileSz == 11);
-
-    munmap(ret, fileSz);
-}
-#endif
-
 void test_mapFileToStruct_null_filepath()
 {
     FILE_HANDLE_T handle = {0};
@@ -416,14 +406,69 @@ void test_mapFileToStruct_null_filehandle()
     assert(strncmp(filepath, "garbage", 7) == 0);
 }
 
+#ifdef LOCALTESTFILES
+
+void test_basicFileMap_null_legitimate_file()
+{
+    const char* filepath = "/home/calum/Dissertation_Project/tests/files/text1.txt";
+    uint64_t fileSz = 0;
+
+    char* ret = basicFileMap(filepath, &fileSz);
+
+    assert(ret != NULL);
+    assert(strncmp(filepath, "/home/calum/Dissertation_Project/tests/files/text1.txt", 27) == 0);
+    assert(fileSz == 11);
+
+    munmap(ret, fileSz);
+}
+
+void test_mapFileToStruct_legitimate_parameters()
+{
+    const char *pathname = "/home/calum/Dissertation_Project/tests/files/text1.txt";
+    FILE_HANDLE_T handle = {0};
+    int ret = mapFileToStruct(pathname, &handle);
+
+    assert(ret == SUCCESS);
+    assert(handle.fd > 0);
+    assert(handle.p_data != NULL);
+    assert(handle.p_data_seekPtr != NULL);
+    assert(handle.st.st_size == 11);
+
+    munmap(handle.p_data, handle.st.st_size);
+}
+
+void test_unmapFileFromStruct()
+{
+    FILE_HANDLE_T fileHandle;
+    const char *pathname = "/home/calum/Dissertation_Project/tests/files/text1.txt";
+
+    int ret = mapFileToStruct(pathname, &fileHandle);
+    
+    assert(ret == SUCCESS);
+
+    unmapFileFromStruct(&fileHandle);
+
+    assert(fileHandle.p_data == NULL);
+    assert(fileHandle.p_data_seekPtr == NULL);
+}
+
+#endif
+
 void fileOpsTestSuite()
 {
     /* Include any unit tests in here. */
     test_basicFileMap_null_filepath();
     test_basicFileMap_null_fileSize();
-    test_basicFileMap_null_legitimate_file();
 
     test_mapFileToStruct_null_filepath();
     test_mapFileToStruct_null_filehandle();
+
+
+    /* Tests that a reliant on local test files using complete paths. */
+    #ifdef LOCALTESTFILES
+    test_basicFileMap_null_legitimate_file();
+    test_mapFileToStruct_legitimate_parameters();
+    test_unmapFileFromStruct();
+    #endif
 }
 #endif
