@@ -6,12 +6,30 @@ fileops="../src/FileOperations/fileOps.c"
 cli="../src/CLI/cli.c"
 memory="../src/Memory/turtle_memory.c"
 
+FLAGS=''
+SSLLIB='openssl/openssl-0.9.8k/ -lssl -lcrypto'
+SSLINCLUDES='openssl/openssl-0.9.8k/include'
 
+if [ $# -lt 1 ]; then
+    FLAGS=''
+elif [ $# -eq 1 ]; then
+    if [ $1 == "-d" ]; then
+        echo 'Building With Debug Logic Enabled.'
+        FLAGS='-DDEBUG'
+    elif [ $1 == '-u' ]; then
+        echo 'Building With Unit Tests Enabled.'
+        FLAGS='-DUNITTEST -DLOCALTESTFILES'
+        gcc $FLAGS $elfinfo $elfdynamic $cli $logging \
+        $fileops $memory \
+        -L$SSLLIB -I$SSLINCLUDES -ggdb -o Turtle-Scan
+        echo "Running executable with unit tests..."
+        ./Turtle-Scan -u
+        exit
+    fi
+fi
 
-gcc $elfinfo $elfdynamic $cli $logging \
+gcc $FLAGS $elfinfo $elfdynamic $cli $logging \
 $fileops $memory \
--Lopenssl/openssl-0.9.8k/ -lssl -lcrypto -Iopenssl/openssl-0.9.8k/include -ggdb -o Turtle-Scan
+-L$SSLLIB -lcrypto -I$SSLINCLUDES -ggdb -o Turtle-Scan
 
 # Run the unit tests for the project on each build.
-echo "Running executable with unit tests..."
-./Turtle-Scan -u

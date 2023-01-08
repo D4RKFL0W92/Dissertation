@@ -192,7 +192,6 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
         perror("Unable to open() file in printELFInfo().");
         #endif
 
-        logEvent(LOG_FILE, func_name, "open()");
         close(fd);
         return FALSE;
     }
@@ -201,7 +200,6 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
     {
         #ifdef DEBUG
         perror("Unable to stat() ELF file in printELFInfo().");
-        logEvent(LOG_FILE, func_name, "fstat()");
         #endif
 
         close(fd);
@@ -214,9 +212,7 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
     {
         #ifdef DEBUG
         perror("Unable to read() magic bytes of file in printELFInfo().");
-        logEvent(LOG_FILE, func_name, "read()");
         #endif
-
         
         close(fd);
         return FALSE;
@@ -230,8 +226,6 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
         #ifdef DEBUG
         perror("Unable to lseek() to start of file in printELFInfo().");
         #endif
-
-        logEvent(LOG_FILE, func_name, "lseek()");
         close(fd);
         return FALSE;
     }
@@ -272,7 +266,6 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
             #ifdef DEBUG
             perror("Error reading Elf32_Ehdr in printELFInfo()");
             #endif
-            logEvent(LOG_FILE, func_name, "reading Elf32_Ehdr");
             close(fd);
             return FALSE;
         }
@@ -319,7 +312,6 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
             #ifdef DEBUG
             perror("Error reading Elf64_Ehdr in printELFInfo()");
             #endif
-            logEvent(LOG_FILE, func_name, "reading Elf64_Ehdr");
             close(fd);
             return FALSE;
         }
@@ -368,7 +360,7 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
         if(fopen == NULL)
         {
             #ifdef DEBUG
-            logEvent(LOG_FILE, "printELFInfo()", "fopen()");
+            perror("Unable to open file in printELFInfo()");
             #endif
             goto failed_file_open; // Resonable use of goto to reduce code duplication (A break could probably be used but this is explicit)
         }

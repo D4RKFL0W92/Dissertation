@@ -3,9 +3,9 @@
 
 #include <assert.h>
 
-#define DEBUG // Used in all .c files for optional debug build that runs tests.
-#define UNITTEST
-#define LOCALTESTFILES // Used for unit tests, enables use of complete path names for files.
+// #define DEBUG // Used in all .c files for optional debug build that runs tests.
+// #define UNITTEST
+// #define LOCALTESTFILES // Used for unit tests, enables use of complete path names for files.
 
 #define TRUE             1
 #define FALSE            0

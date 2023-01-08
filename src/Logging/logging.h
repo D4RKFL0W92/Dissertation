@@ -7,8 +7,6 @@
 
 extern errno;
 
-#define DEBUG
-
 #define LOG_FILE "/home/calum/Dissertation_Project/Logs/elfinfo_logs"
 
 int logEvent(const char* filepath, const char* func_name, const char* cause);

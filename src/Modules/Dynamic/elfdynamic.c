@@ -3,16 +3,13 @@
 
 static int8_t attachToProcess(pid_t pid)
 {
-    #ifdef DEBUG
-    const char *func_name = "attachToProcess()";
-    #endif
+
 
     if(ptrace(PTRACE_ATTACH, pid, 0, 0) == -1)
     {
         #ifdef DEBUG
         perror("ERROR CALLING: ptrace(PTRACE_ATTACH, pid, 0, 0)");
         #endif
-        logEvent(LOG_FILE, func_name, "ERROR CALLING: ptrace(PTRACE_ATTACH, pid, 0, 0)");
         return FAILED;
     }
     return SUCCESS;
@@ -20,16 +17,13 @@ static int8_t attachToProcess(pid_t pid)
 
 static int8_t detachFromProcess(pid_t pid)
 {
-    #ifdef DEBUG
-    const char *func_name = "detachFromProcess()";
-    #endif
+
 
     if(ptrace(PTRACE_DETACH, pid, 0, 0) == -1)
     {
         #ifdef DEBUG
         perror("ERROR CALLING: ptrace(PTRACE_DETACH, pid, 0, 0)");
         #endif
-        logEvent(LOG_FILE, func_name, "ERROR CALLING: ptrace(PTRACE_DETACH, pid, 0, 0)");
         return FAILED;
     }
     return SUCCESS;
@@ -48,7 +42,6 @@ static int8_t getRegisterValues(int pid, struct user_regs_struct* regs)
         perror("ERROR CALLING: ptrace(PTRACE_GETREGS, pid, NULL, registers)");
         #endif
 
-        logEvent(LOG_FILE, func_name, "ERROR CALLING: ptrace(PTRACE_GETREGS, pid, NULL, registers)");
         return FALSE;
     }
 
