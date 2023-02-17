@@ -1392,6 +1392,29 @@ int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     return SUCCESS;
 }
 
+uint64_t lookupSymbolAddress(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
+{
+    if(executableHandle == NULL)
+    {
+        #ifdef DEBUG
+        perror("Null pointer to executable handle passed to lookupSymbolAddress()");
+        #endif
+        return 0;
+    }
+
+    /* Iterate through the section header table to find the symbol tables of the binary.  */
+    for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    {
+        Elf64_Shdr* symbolTable = NULL;
+        uint16_t symbolCount = 0;
+        if (executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+        {
+            symbolTable = &executableHandle->shdr[i];
+            symbolCount = executableHandle->shdr[i].sh_size / sizeof(Elf64_Sym);
+        }
+    }
+}
+
  #ifdef UNITTEST
 
  void test_isELF()

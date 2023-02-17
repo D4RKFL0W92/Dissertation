@@ -437,6 +437,25 @@ void test_mapFileToStruct_legitimate_parameters()
     munmap(handle.p_data, handle.st.st_size);
 }
 
+void test_sha1File_correctBehaivour()
+{
+    const char *pathname = "/home/calum/Dissertation_Project/tests/files/text1.txt";
+    /* The SHA1 hash produced by sha1sum of the above file. */
+    const char *actualHash = "\xe9\x3c\xea\xc6\xfa\xc2\x08\x85\x98\x7a\xd2\xe8\x69\xd1\x6a\xf6\x23\xf6\x16\x99";
+    uint8_t* digest = NULL;
+    digest = sha1File(pathname);
+
+    for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
+    {
+        assert((char)actualHash[i] == (char)digest[i]);
+    }
+
+    if(digest == NULL)
+    {
+        free(digest);
+    }
+}
+
 void test_unmapFileFromStruct()
 {
     FILE_HANDLE_T fileHandle;
@@ -463,11 +482,11 @@ void fileOpsTestSuite()
     test_mapFileToStruct_null_filepath();
     test_mapFileToStruct_null_filehandle();
 
-
     /* Tests that a reliant on local test files using complete paths. */
     #ifdef LOCALTESTFILES
     test_basicFileMap_null_legitimate_file();
     test_mapFileToStruct_legitimate_parameters();
+    test_sha1File_correctBehaivour();
     test_unmapFileFromStruct();
     #endif
 }

@@ -112,7 +112,7 @@ static Elf64_Addr getELF64Entry(uint8_t* p_mem);
 */
 uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 
-/* TODO: Write a functional test for this function, unit tests will not be realistic. */
+/* TODO: Write a functional test for the print functions, unit tests will not be realistic. */
 int8_t printElfInfoVerbose(FILE_HANDLE_T* handle);
 
 int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr);
@@ -128,6 +128,8 @@ int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
 int8_t printELF32SymTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
+
+uint64_t lookupSymbolAddress(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
 
 
