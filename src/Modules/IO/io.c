@@ -3,7 +3,6 @@
 uint64_t hexToDecimal(const char* hexString)
 {
     uint64_t value           = 0;
-    uint64_t tmpValue        = 0;
     uint8_t  offsetExponent  = 0;
     int16_t  hexStrLen       = 0;
 
@@ -21,196 +20,63 @@ uint64_t hexToDecimal(const char* hexString)
 
     for(int digitOffset = hexStrLen - 1; digitOffset > 1; --digitOffset, ++offsetExponent)
     {
-        if((char) hexString[digitOffset] == '0')
+        // TODO: Check hexString[digitOffset] is a valid hex digit.
+        switch (hexString[digitOffset])
         {
-            if(offsetExponent == 0)
-            {
-                value += 0;
-            }
-            else
-            {
-                value += 0;
-            }
-        }
-        else if((char) hexString[digitOffset] == '1')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 1;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 10 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == '2')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 2;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 2 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == '3')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 3;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 3 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == '4')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 4;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 4 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == '5')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 5;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 5 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == '6')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 6;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 6 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == '7')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 7;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 7 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == '8')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 8;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 8 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == '9')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 9;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 9 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == 'a' || (char) hexString[digitOffset] == 'A')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 10;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 10 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == 'b' || (char) hexString[digitOffset] == 'B')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 11;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 11 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == 'c' || (char) hexString[digitOffset] == 'C')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 12;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 12 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == 'd' || (char) hexString[digitOffset] == 'D')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 13;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 13 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == 'e' || (char) hexString[digitOffset] == 'E')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 14;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 14 * tmpValue;
-            }
-        }
-        else if((char) hexString[digitOffset] == 'f' || (char) hexString[digitOffset] == 'F')
-        {
-            if(offsetExponent == 0)
-            {
-                value += 15;
-            }
-            else
-            {
-                tmpValue = pow(16, offsetExponent);
-                value    += 15 * tmpValue;
-            }
+            case '0':
+                value += 0 * pow(16, offsetExponent);
+                break;
+            case '1':
+                value += 1 * pow(16, offsetExponent);
+                break;
+            case '2':
+                value += 2 * pow(16, offsetExponent);
+                break;
+            case '3':
+                value += 3 * pow(16, offsetExponent);
+                break;
+            case '4':
+                value += 4 * pow(16, offsetExponent);
+                break;
+            case '5':
+                value += 5 * pow(16, offsetExponent);
+                break;
+            case '6':
+                value += 6 * pow(16, offsetExponent);
+                break;
+            case '7':
+                value += 7 * pow(16, offsetExponent);
+                break;
+            case '8':
+                value += 8 * pow(16, offsetExponent);
+                break;
+            case '9':
+                value += 9 * pow(16, offsetExponent);
+                break;
+            case 'a':
+            case 'A':
+                value += 10 * pow(16, offsetExponent);
+                break;
+            case 'b':
+            case 'B':
+                value += 11 * pow(16, offsetExponent);
+                break;
+            case 'c':
+            case 'C':
+                value += 12 * pow(16, offsetExponent);
+                break;
+            case 'd':
+            case 'D':
+                value += 13 * pow(16, offsetExponent);
+                break;
+            case 'e':
+            case 'E':
+                value += 14 * pow(16, offsetExponent);
+                break;
+            case 'f':
+            case 'F':
+                value += 15 * pow(16, offsetExponent);
+                break;
         }
     }
     return value;
@@ -242,11 +108,15 @@ void test_hexToDecimal_valid()
     assert(hexToDecimal("0xffffffff") == 4294967295);
     assert(hexToDecimal("0xde5469ab") == 3730074027);
     assert(hexToDecimal("0x42424242") == 1111638594);
-    uint64_t val = hexToDecimal("0xf00bcf11");
     assert(hexToDecimal("0xf00bcf11") == 4027305745);
 
     /* Do they have to be 4 bytes long (Can only store U64_MAX). */
-    assert(hexToDecimal("0xfca") == 4042);
+    assert(hexToDecimal("0xfca")      == 4042);
+    assert(hexToDecimal("0xffca")     == 65482);
+    assert(hexToDecimal("0xfc43a")    == 1033274);
+    assert(hexToDecimal("0xff")       == 255);
+    assert(hexToDecimal("0xfcabe5")   == 16559077);
+    assert(hexToDecimal("0xaafcade")  == 179292894);
 }
 
 void ioTestSuite()

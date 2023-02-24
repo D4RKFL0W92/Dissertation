@@ -5,6 +5,7 @@ logging="../src/Logging/logging.c"
 fileops="../src/FileOperations/fileOps.c"
 cli="../src/CLI/cli.c"
 memory="../src/Memory/turtle_memory.c"
+io="../src/Modules/IO/io.c"
 
 FLAGS=''
 SSLLIB='openssl/openssl-0.9.8k/ -lssl -lcrypto'
@@ -20,8 +21,8 @@ elif [ $# -eq 1 ]; then
         echo 'Building With Unit Tests Enabled.'
         FLAGS='-DUNITTEST -DLOCALTESTFILES'
         gcc $FLAGS $elfinfo $elfdynamic $cli $logging \
-        $fileops $memory \
-        -L$SSLLIB -I$SSLINCLUDES -ggdb -o Turtle-Scan
+        $fileops $memory $io \
+        -L$SSLLIB -I$SSLINCLUDES -lm -ggdb -o Turtle-Scan
         echo "Running executable with unit tests..."
         ./Turtle-Scan -u
         exit
@@ -29,7 +30,7 @@ elif [ $# -eq 1 ]; then
 fi
 
 gcc $FLAGS $elfinfo $elfdynamic $cli $logging \
-$fileops $memory \
--L$SSLLIB -lcrypto -I$SSLINCLUDES -ggdb -o Turtle-Scan
+$fileops $memory $io \
+-L$SSLLIB -lcrypto -I$SSLINCLUDES -lm -ggdb -o Turtle-Scan
 
 # Run the unit tests for the project on each build.

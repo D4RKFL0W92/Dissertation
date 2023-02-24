@@ -123,13 +123,16 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 
 int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
+int8_t printElfStringTable(FILE_HANDLE_T * fileHandle);
 int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
+int8_t printELFSymTable(FILE_HANDLE_T * fileHandle);
 int8_t printELF32SymTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
 int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
-uint64_t lookupSymbolAddress(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
+uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName);
+uint64_t lookupSymbolAddressELF64(ELF64_EXECUTABLE_HANDLE_T* executableHandle, char* symbolName);
 
 
 

@@ -90,31 +90,12 @@ int main(int argc, char *argv[], char *envp[])
                 exit(-1);
             }
 
-            strncpy(magic, fileHandle.p_data, 6);
-            arch = isELF(magic);
-
-            switch(arch)
-            {
-                case T_64:
-                    ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-                    mapELF64ToHandleFromFileHandle(&fileHandle, &elfHandle64);
-                    printELF64StrTable(&elfHandle64);
-                    break;
-                case T_32:
-                    ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-                    mapELF32ToHandleFromFileHandle(&fileHandle, &elfHandle32);
-                    printELF32StrTable(&elfHandle32);
-                    break;
-                default:
-                case T_NO_ELF:
-                    break;
-            }
+            printElfStringTable(&fileHandle);
         }
 
         /* Print symbol table of the program given as last argument. */
         if(!strcmp(argv[i], "-symtab"))
         {
-            char magic[6];
             enum BITS arch;
             
             if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
@@ -123,29 +104,7 @@ int main(int argc, char *argv[], char *envp[])
                 exit(-1);
             }
 
-            strncpy(magic, fileHandle.p_data, 6);
-            arch = isELF(magic);
-
-            /* TODO: Finish implementing for 32 bit. */
-            switch(arch)
-            {
-                case T_64:
-                    ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-                    if( (mapELF64ToHandleFromFileHandle(&fileHandle, &elfHandle64)) == FAILED)
-                    {
-                        exit(FAILED);
-                    }
-                    printELF64SymTable(&elfHandle64);
-                    break;
-                case T_32:
-                    ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-                    mapELF32ToHandleFromFileHandle(&fileHandle, &elfHandle32);
-                    printELF32SymTable(&elfHandle32);
-                    break;
-                default:
-                case T_NO_ELF:
-                    break;
-            }
+            printELFSymTable(&fileHandle);
         }
 
         /*
@@ -154,14 +113,21 @@ int main(int argc, char *argv[], char *envp[])
         */
         if(!strcmp(argv[i], "-lookup"))
         {
-            /* Add implementation to extract addresses in hex form.*/
+            uint64_t addr;
+            if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
+            {
+                printf("Unable map %s into memory\n", argv[argc-1]);
+                exit(-1);
+            }
+
+            addr = lookupSymbolAddress(&fileHandle, "main");
         }
 
         /* Convert a hex passed as argument after switch value to decimal. */
         if(!(strcmp(argv[i], "-h2d")))
         {
             uint64_t result = hexToDecimal(argv[i+1]);
-            printf("Result: %d\n", result);
+            printf("Result: %llu\n", result);
             exit(0);
         }
 

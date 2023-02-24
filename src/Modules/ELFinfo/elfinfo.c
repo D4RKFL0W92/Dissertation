@@ -2,7 +2,7 @@
 
 enum BITS isELF(char* arch)
 {
-    int i = strlen(arch);
+    // int i = strlen(arch);
     /* We check 6 bytes but the last one can be NULL according to the specification (Only for encoding type NONE so shouldn't matter). */
     if(arch == NULL || strlen(arch) < 5)
         return T_NO_ELF;
@@ -1249,6 +1249,30 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     return SUCCESS;
 }
 
+int8_t printElfStringTable(FILE_HANDLE_T * fileHandle)
+{
+    enum BITS arch;
+
+    arch = isELF(fileHandle->p_data);
+
+    switch(arch)
+    {
+        case T_64:
+            ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+            mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64);
+            printELF64StrTable(&elfHandle64);
+            return SUCCESS;
+        case T_32:
+            ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+            mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
+            printELF32StrTable(&elfHandle32);
+            return SUCCESS;
+        default:
+        case T_NO_ELF:
+            return FAILED;
+    }
+}
+
 int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
 {
     if(!executableHandle || !executableHandle->fileHandle.p_data)
@@ -1267,14 +1291,17 @@ int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     return SUCCESS;
 }
 
-/* TODO: Create unit tests for this function as well as its 32-bit counterpart. */
+/* TODO: Change this to print the actual strtab (null proceeded & terminated list of strings). */
 int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
     if(!executableHandle || !executableHandle->fileHandle.p_data)
     {
         return FAILED;
     }
-    /* Get the sh_offset of the shstrndx. */
+    /* 
+     * Get the sh_offset of the shstrndx. The shstrndx is a table of strings
+     * that name all of the sections in the ELF binary.
+    */
     executableHandle->fileHandle.p_data_seekPtr =
         executableHandle->fileHandle.p_data + executableHandle->shdr[ executableHandle->ehdr->e_shstrndx ].sh_offset;
 
@@ -1285,6 +1312,30 @@ int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     /* Reset the seek pointer in the executable handle structure. */
     executableHandle->fileHandle.p_data_seekPtr = executableHandle->fileHandle.p_data;
     return SUCCESS;
+}
+
+int8_t printELFSymTable(FILE_HANDLE_T * fileHandle)
+{
+    enum BITS arch;
+
+    arch = isELF(fileHandle->p_data);
+
+    switch(arch)
+    {
+        case T_64:
+            ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+            mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64);
+            printELF64SymTable(&elfHandle64);
+            return SUCCESS;
+        case T_32:
+            ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+            mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
+            printELF32SymTable(&elfHandle32);
+            return SUCCESS;
+        default:
+        case T_NO_ELF:
+            return FAILED;
+    }
 }
 
 int8_t printELF32SymTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
@@ -1392,25 +1443,62 @@ int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     return SUCCESS;
 }
 
-uint64_t lookupSymbolAddress(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
+uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
 {
-    if(executableHandle == NULL)
-    {
-        #ifdef DEBUG
-        perror("Null pointer to executable handle passed to lookupSymbolAddress()");
-        #endif
-        return 0;
-    }
+    uint64_t  address = 0;
+    char      magic[6];
+    enum BITS arch;
 
-    /* Iterate through the section header table to find the symbol tables of the binary.  */
-    for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    strncpy(magic, fileHandle->p_data, 6);
+    arch = isELF(magic);
+
+    /* TODO: Finish implementing for 32 bit. */
+    switch(arch)
     {
-        Elf64_Shdr* symbolTable = NULL;
-        uint16_t symbolCount = 0;
-        if (executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+        case T_64:
+            ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+            if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == FAILED)
+            {
+                exit(FAILED);
+            }
+            address = lookupSymbolAddressELF64(&elfHandle64, "main");
+            break;
+        case T_32:
+            ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+            mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
+            break;
+        default:
+        case T_NO_ELF:
+            break;
+    }
+}
+
+uint64_t lookupSymbolAddressELF64(ELF64_EXECUTABLE_HANDLE_T* executableHandle, char* symbolName)
+{
+    Elf64_Sym * symTable;
+    char *      strTable;
+    int         numSymbols;
+    int         i;
+    int         j;
+
+    for(i = 0; i < executableHandle->ehdr->e_shnum; ++i)
+    {
+        if(executableHandle->shdr[i].sh_type == SHT_SYMTAB)
         {
-            symbolTable = &executableHandle->shdr[i];
-            symbolCount = executableHandle->shdr[i].sh_size / sizeof(Elf64_Sym);
+            strTable = (char *)
+                &executableHandle->fileHandle.p_data[ executableHandle->shdr[ executableHandle->shdr->sh_link ].sh_offset ];
+
+            symTable = (Elf64_Sym *) &executableHandle->fileHandle.p_data[executableHandle->shdr[i].sh_offset ];
+
+            numSymbols = executableHandle->shdr[i].sh_size / sizeof(Elf64_Sym);
+            for(j = 0; j < numSymbols; ++j)
+            {
+                if(!strcmp(&strTable[symTable->st_name], symbolName))
+                {
+                    /* Found a match. */
+                    return symTable->st_value;
+                }
+            }
         }
     }
 }
