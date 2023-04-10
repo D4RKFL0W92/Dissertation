@@ -20,11 +20,13 @@ int main(int argc, char *argv[], char *envp[])
     FILE_HANDLE_T fileHandle;
     int i = 1;
 
-    if(clearLogFile(LOG_FILE) == FAILED)
-    {
-        perror("Unable to clear log file.");
-        exit(-1);
-    }
+    // #ifdef DEBUG
+    // if(clearLogFile(LOG_FILE) == FAILED)
+    // {
+    //     perror("Unable to clear log file.");
+    //     exit(-1);
+    // }
+    // #endif
 
     if(argc < 2)
     {
@@ -120,7 +122,7 @@ int main(int argc, char *argv[], char *envp[])
                 exit(-1);
             }
 
-            addr = lookupSymbolAddress(&fileHandle, "main");
+            addr = lookupSymbolAddress(&fileHandle, "printELFInfo");
         }
 
         /* Convert a hex passed as argument after switch value to decimal. */

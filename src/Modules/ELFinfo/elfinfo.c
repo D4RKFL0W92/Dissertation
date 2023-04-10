@@ -1109,6 +1109,7 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
     char flags[SHDR_FLAG_LEN+1];
     uint16_t sectionHeaderSize;
+
     if(!executableHandle || !executableHandle->phdr)
     {
         #ifdef DEBUG
@@ -1195,8 +1196,8 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
                 printf("NULL\n");
                 break;
         }
-        
         /* Get the flags of the section. */
+        // TODO: There are more possible values here to take into account.
         switch(executableHandle->shdr[i].sh_flags)
         {
             case 1:
@@ -1237,7 +1238,6 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
                 strncpy(flags, "--------", SHDR_FLAG_LEN); /* NOFLAGS */
                 break;
         }
-        flags[SHDR_FLAG_LEN] = '\0';
         printf("%s\n", flags);
 
         printf("SH_ADDR:\t0x%08x\n", executableHandle->shdr[i].sh_addr);
@@ -1475,32 +1475,36 @@ uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
 
 uint64_t lookupSymbolAddressELF64(ELF64_EXECUTABLE_HANDLE_T* executableHandle, char* symbolName)
 {
-    Elf64_Sym * symTable;
-    char *      strTable;
-    int         numSymbols;
-    int         i;
-    int         j;
+    Elf64_Sym  * symTable;
+    Elf64_Shdr * strTable;
+    uint8_t    * p_strTab;
+    uint64_t     strTableOffset;
+    int          numSymbols;
+    int          i;
+    int          j;
 
-    for(i = 0; i < executableHandle->ehdr->e_shnum; ++i)
+    numSymbols = executableHandle->ehdr->e_shnum;
+
+    for(int i = 0; i < numSymbols; i++)
     {
-        if(executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+        if(executableHandle->shdr[i].sh_type == SHT_STRTAB)
         {
-            strTable = (char *)
-                &executableHandle->fileHandle.p_data[ executableHandle->shdr[ executableHandle->shdr->sh_link ].sh_offset ];
+            strTable = &executableHandle->shdr[i];
+            strTableOffset = strTable->sh_addr; // Get the offset into the ELF of the strtab.
 
-            symTable = (Elf64_Sym *) &executableHandle->fileHandle.p_data[executableHandle->shdr[i].sh_offset ];
+            p_strTab = (uint8_t *) &executableHandle->fileHandle.p_data[strTableOffset];
 
-            numSymbols = executableHandle->shdr[i].sh_size / sizeof(Elf64_Sym);
-            for(j = 0; j < numSymbols; ++j)
+            for(int j = 0; j < numSymbols; j++)
             {
-                if(!strcmp(&strTable[symTable->st_name], symbolName))
+                if(executableHandle->shdr[j].sh_type == SHT_SYMTAB)
                 {
-                    /* Found a match. */
-                    return symTable->st_value;
+                    symTable = &executableHandle->shdr[j];
                 }
             }
         }
     }
+
+    return 0; // This is resonable as zero is not a legal user space address.
 }
 
  #ifdef UNITTEST
