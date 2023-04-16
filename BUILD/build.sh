@@ -8,8 +8,8 @@ memory="../src/Memory/turtle_memory.c"
 io="../src/Modules/IO/io.c"
 
 FLAGS=''
-SSLLIB='openssl/openssl-0.9.8k/ -lssl -lcrypto'
-SSLINCLUDES='openssl/openssl-0.9.8k/include'
+SSLLIB='/usr/bin/openssl -lssl -lcrypto'            # These may not always be in the same place
+SSLINCLUDES='/usr/local/src/openssl-3.0.7/include'  # maybe we can locate these dynamically.
 
 if [ $# -lt 1 ]; then
     FLAGS=''
@@ -31,6 +31,6 @@ fi
 
 gcc $FLAGS $elfinfo $elfdynamic $cli $logging \
 $fileops $memory $io \
--L$SSLLIB -lcrypto -I$SSLINCLUDES -lm -ggdb -o Turtle-Scan
+-L$SSLLIB -I$SSLINCLUDES -lm -ggdb -o Turtle-Scan
 
 # Run the unit tests for the project on each build.

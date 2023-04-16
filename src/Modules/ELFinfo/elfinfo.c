@@ -408,7 +408,25 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
     {
         /* Find out what size Elf header the binary is. */
         case T_32:
-            
+            ELF32_EXECUTABLE_HANDLE_T elfHandle32 = {0};
+
+            elfHandle32.ehdr = (Elf32_Ehdr *) fileHandle->p_data;
+            mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
+
+            puts("Elf Header:\n");
+            dumpHexBytesFromFileHandle(fileHandle, 0, elfHandle32.ehdr->e_ehsize);
+
+            puts("Class:\t32 BIT\n");
+            printElf32ElfHeader(elfHandle32.ehdr);
+
+            puts("\n\nProgram Headers:\n");
+            printELF32ProgramHeaders(&elfHandle32);
+
+            puts("Section Headers:\n");
+            // printELF32SectionHeaders(&elfHandle32); // TODO: Define this function
+
+            puts("\n\nElf String Table Entries:\n");
+            printELF32StrTable(&elfHandle32);
 
             break;
 
@@ -1105,6 +1123,150 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     return SUCCESS;
 }
 
+int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
+{
+    char flags[SHDR_FLAG_LEN+1];
+    uint16_t sectionHeaderSize;
+
+    if(!executableHandle || !executableHandle->phdr)
+    {
+        #ifdef DEBUG
+        perror("NULL Pointer In printELF32SectionHeaders()");
+        #endif
+        return FAILED;
+    }
+
+    if(executableHandle->ehdr->e_shentsize == 0 || executableHandle->ehdr->e_shnum == 0 ||
+        executableHandle->ehdr->e_shoff == 0 || executableHandle->ehdr->e_shstrndx == 0)
+    {
+        printf("%s is stripped.\n", executableHandle->fileHandle.path);
+        return SUCCESS;
+    }
+
+    sectionHeaderSize = executableHandle->ehdr->e_shentsize;
+
+
+    for(int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    {
+        puts("----------------------------------------------------------\n");
+        printf("Section Header:\t%d\n", i+1);
+
+        // dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
+        //     executableHandle->ehdr->e_shoff + (executableHandle->ehdr->e_shentsize * i), executableHandle->ehdr->e_shentsize);
+
+        printf("\n\n");
+
+        printf("Section Header Type:\t");
+        switch(executableHandle->shdr[i].sh_type)
+        {
+            case SHT_PROGBITS:
+                /* Meaning is defined by the program. 
+                 * TODO: Check if I can do anything with this information.
+                 */
+                printf("PROGBITS\n");
+                break;
+            case SHT_SYMTAB:
+                /* TODO: Print out useful information contained in the symbol table (symbol names and such)
+                 * This can be used to dicover call to function in libraries.
+                 */
+                printf("SYMTAB\n");
+                break;
+            case SHT_STRTAB:
+                /* TODO: Print out all strings contained in the string table. */
+                printf("STRTAB\n");
+                
+                break;
+            case SHT_RELA:
+                printf("RELA\n");
+                break;
+            case SHT_HASH:
+                printf("HASH TABLE\n");
+                break;
+            case SHT_DYNAMIC:
+                /* TODO; Print GOT info. */
+                /* A binary should only have one DYNAMIC section header. */
+                printf("DYNAMIC\n");
+                break;
+            case SHT_NOTE:
+                printf("NOTE\n");
+                break;
+            case SHT_REL:
+                printf("REL\n");
+                break;
+            case SHT_SHLIB:
+                printf("SHLIB\n");
+                break;
+            case SHT_DYNSYM:
+                printf("DYNSYM\n");
+                break;
+            case SHT_LOPROC:
+            case SHT_HIPROC:
+                printf("LOPROC/HIPROC\n");
+                break;
+            case SHT_LOUSER:
+            case SHT_HIUSER:
+                printf("LOUSER/HIUSER\n");
+                break;
+            case SHT_NOBITS:
+                printf("NOBITS\n"); /* May not even be worth printing this out. */
+                break;
+            case SHT_NULL:
+                printf("NULL\n");
+                break;
+        }
+        /* Get the flags of the section. */
+        // TODO: There are more possible values here to take into account.
+        switch(executableHandle->shdr[i].sh_flags)
+        {
+            case 1:
+                strncpy(flags, "W-------", SHDR_FLAG_LEN); /* (1 << 0) */
+                break;
+            case 2:
+                strncpy(flags, "-A------", SHDR_FLAG_LEN); /* (1 << 1) */
+                break;
+            case 3:
+                strncpy(flags, "WA------", SHDR_FLAG_LEN);
+                break;
+            case 4:
+                strncpy(flags, "--X-----", SHDR_FLAG_LEN); /* (1 << 2) */
+                break;
+            case 5:
+                strncpy(flags, "W-X-----", SHDR_FLAG_LEN);
+                break;
+            case 6:
+                strncpy(flags, "-AX-----", SHDR_FLAG_LEN);
+                break;
+            case 16:
+                strncpy(flags, "---M----", SHDR_FLAG_LEN); /* (1 << 4) */
+                break;
+            case 32:
+                strncpy(flags, "----S---", SHDR_FLAG_LEN); /* (1 << 5) */
+                break;
+            case 64:
+                strncpy(flags, "-----I--", SHDR_FLAG_LEN); /* (1 << 6) */
+                break;
+            case 128:
+                strncpy(flags, "------P-", SHDR_FLAG_LEN); /* (1 << 7) */
+                break;
+            case 256:
+                strncpy(flags, "-------N", SHDR_FLAG_LEN); /* (1 << 8) */
+                break;
+            case 0:
+            default:
+                strncpy(flags, "--------", SHDR_FLAG_LEN); /* NOFLAGS */
+                break;
+        }
+        printf("%s\n", flags);
+
+        printf("SH_ADDR:\t0x%08x\n", executableHandle->shdr[i].sh_addr);
+        printf("SH_OFFSET:\t0x%08x\n", executableHandle->shdr[i].sh_offset);
+        printf("SH_SIZE:\t0x%08x\n", executableHandle->shdr[i].sh_size);
+        printf("SH_ADDRALIGN:\t0x%08x\n", executableHandle->shdr[i].sh_addralign);
+        printf("SH_ENTSIZE:\t0x%08x\n", executableHandle->shdr[i].sh_offset);
+    }
+    return SUCCESS;
+}
+
 int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
     char flags[SHDR_FLAG_LEN+1];
@@ -1249,6 +1411,48 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     return SUCCESS;
 }
 
+int8_t printELFSectionHeaders(FILE_HANDLE_T* fileHandle)
+{
+    char      magic[6];
+    enum BITS arch;
+    int8_t err = 0;
+
+    if(fileHandle == NULL)
+    {
+        #ifdef DEBUG
+        perror("Null pointer passed to printSymbolTableData()");
+        #endif
+        return 0;
+    }
+
+    strncpy(magic, fileHandle->p_data, 6);
+    arch = isELF(magic);
+
+    switch(arch)
+    {
+        case T_64:
+            ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+            if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == FAILED)
+            {
+                exit(FAILED);
+            }
+            err = printELF64SectionHeaders(&elfHandle64);
+            break;
+        case T_32:
+            ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+            if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == FAILED)
+            {
+                exit(FAILED);
+            }
+            err = printELF32SectionHeaders(&elfHandle32);
+            break;
+        default:
+        case T_NO_ELF:
+            break;
+    }
+    return err;
+}
+
 int8_t printElfStringTable(FILE_HANDLE_T * fileHandle)
 {
     enum BITS arch;
@@ -1314,133 +1518,99 @@ int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     return SUCCESS;
 }
 
-int8_t printELFSymTable(FILE_HANDLE_T * fileHandle)
+
+static uint32_t lookupSymbolAddressELF32(ELF32_EXECUTABLE_HANDLE_T* executableHandle, char* symbolName)
 {
-    enum BITS arch;
+    Elf32_Sym*   symTable = NULL;
+    Elf32_Sym*   pSymbol  = NULL;
+    char*        strTable = NULL;
+    uint32_t     strTableOffset = 0;
+    uint32_t     symTableOffset = 0;
+    uint8_t      numSymbols     = 0;
+    uint8_t      numSections    = 0;
 
-    arch = isELF(fileHandle->p_data);
-
-    switch(arch)
+    numSections = executableHandle->ehdr->e_shnum;
+    if(numSections == 0 || symbolName == NULL)
     {
-        case T_64:
-            ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-            mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64);
-            printELF64SymTable(&elfHandle64);
-            return SUCCESS;
-        case T_32:
-            ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-            mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
-            printELF32SymTable(&elfHandle32);
-            return SUCCESS;
-        default:
-        case T_NO_ELF:
-            return FAILED;
-    }
-}
-
-int8_t printELF32SymTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
-{
-    Elf32_Shdr *stringTableShdr;
-    Elf32_Sym* symbolTable;
-    uint16_t symbolTableShdrIndex = -1;
-    int numSymbols;
-    int stringTableIndex;
-    char* stringTableOffset;
-
-    if(executableHandle == NULL)
-    {
-        #ifdef DEBUG
-        perror("Null pointer to executable handle passed to printELF64SymTable()");
-        #endif
-        return FAILED;
+        return 0;
     }
 
-    /* Iterate through the section header table to find the symbol tables of the binary.  */
-    for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
+    for(int i = 0; i < numSections; i++)
     {
-        if (executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+        if(executableHandle->shdr[i].sh_type == SHT_SYMTAB)
         {
-            symbolTableShdrIndex = i;
-            
-            if (symbolTableShdrIndex == -1)
+            symTableOffset = executableHandle->shdr[i].sh_offset;
+            symTable = (Elf32_Sym *) &executableHandle->fileHandle.p_data[symTableOffset];
+
+            strTableOffset = executableHandle->shdr[executableHandle->shdr[i].sh_link].sh_offset;
+            strTable = (char *) &executableHandle->fileHandle.p_data[strTableOffset];
+
+            numSymbols = executableHandle->shdr[i].sh_size / sizeof(Elf32_Sym);
+            if(numSymbols == 0)
             {
-                #ifdef DEBUG
-                perror("Unable to find symbol table section header in printELF64SymTable()");
-                #endif
-                return FAILED;
+                return 0;
             }
 
-            /* Get the pointer to the symbol table. */
-            symbolTable = (Elf32_Sym*)((char*)executableHandle->ehdr + executableHandle->shdr[symbolTableShdrIndex].sh_offset);
-            /* Calculate the number of symbols in this symbol table. */
-            numSymbols = executableHandle->shdr[symbolTableShdrIndex].sh_size / sizeof(Elf32_Sym);
-
-            /* Find the section header that contains the string table. */
-            stringTableIndex = executableHandle->shdr[symbolTableShdrIndex].sh_link;
-            stringTableShdr = &executableHandle->shdr[stringTableIndex];
-            stringTableOffset = (char*)executableHandle->ehdr + stringTableShdr->sh_offset;
-
-            /* Iterate through the symbol names printing them. */
-            for (int i = 0; i < numSymbols; i++)
+            pSymbol = symTable;
+            for(int j = 0; j < numSymbols; j++)
             {
-                printf("%s\n", symbolTable[i].st_name + stringTableOffset);
-            }
-        }
-    }
-    return SUCCESS;
-}
-
-int8_t printELF64SymTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
-{
-    Elf64_Shdr *stringTableShdr;
-    Elf64_Sym* symbolTable;
-    uint16_t symbolTableShdrIndex = -1;
-    int numSymbols;
-    int stringTableIndex;
-    char* stringTableOffset;
-
-    if(executableHandle == NULL)
-    {
-        #ifdef DEBUG
-        perror("Null pointer to executable handle passed to printELF64SymTable()");
-        #endif
-        return FAILED;
-    }
-
-    /* Iterate through the section header table to find the symbol tables of the binary.  */
-    for (int i = 0; i < executableHandle->ehdr->e_shnum; i++)
-    {
-        if (executableHandle->shdr[i].sh_type == SHT_SYMTAB)
-        {
-            symbolTableShdrIndex = i;
-            
-            if (symbolTableShdrIndex == -1)
-            {
-                #ifdef DEBUG
-                perror("Unable to find symbol table section header in printELF64SymTable()");
-                #endif
-                return FAILED;
-            }
-
-            /* Get the pointer to the symbol table. This is just the offset from the start of the file. */
-            symbolTable = (Elf64_Sym*)((char*)executableHandle->ehdr + executableHandle->shdr[symbolTableShdrIndex].sh_offset);
-            /* Calculate the number of symbols in this symbol table. */
-            numSymbols = executableHandle->shdr[symbolTableShdrIndex].sh_size / sizeof(Elf64_Sym);
-
-            /* Find the section header that contains the string table. */
-            stringTableIndex = executableHandle->shdr[symbolTableShdrIndex].sh_link;
-            stringTableShdr = &executableHandle->shdr[stringTableIndex];
-            stringTableOffset = (char*)executableHandle->ehdr + stringTableShdr->sh_offset;
-
-            /* Iterate through the symbol names printing them. */
-            for (int i = 0; i < numSymbols; i++)
-            {
-                printf("%s\n", symbolTable[i].st_name + stringTableOffset);
+                if(strcmp(&strTable[pSymbol->st_name], symbolName) == 0)
+                {
+                    return pSymbol->st_value;
+                }
+                pSymbol++;
             }
         }
     }
 
-    return SUCCESS;
+    return 0; // This is resonable as zero is not a legal user space address.
+}
+
+static uint64_t lookupSymbolAddressELF64(ELF64_EXECUTABLE_HANDLE_T* executableHandle, char* symbolName)
+{
+    Elf64_Sym*   symTable = NULL;
+    Elf64_Sym*   pSymbol  = NULL;
+    char*        strTable = NULL;
+    uint64_t     strTableOffset = 0;
+    uint64_t     symTableOffset = 0;
+    uint8_t      numSymbols     = 0;
+    uint8_t      numSections    = 0;
+
+    numSections = executableHandle->ehdr->e_shnum;
+    if(numSections == 0 || symbolName == NULL)
+    {
+        return 0;
+    }
+
+    for(int i = 0; i < numSections; i++)
+    {
+        if(executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+        {
+            symTableOffset = executableHandle->shdr[i].sh_offset;
+            symTable = (Elf64_Sym *) &executableHandle->fileHandle.p_data[symTableOffset];
+
+            strTableOffset = executableHandle->shdr[executableHandle->shdr[i].sh_link].sh_offset;
+            strTable = (char *) &executableHandle->fileHandle.p_data[strTableOffset];
+
+            numSymbols = executableHandle->shdr[i].sh_size / sizeof(Elf64_Sym);
+            if(numSymbols == 0)
+            {
+                return 0;
+            }
+
+            pSymbol = symTable;
+            for(int j = 0; j < numSymbols; j++)
+            {
+                if(strcmp(&strTable[pSymbol->st_name], symbolName) == 0)
+                {
+                    return pSymbol->st_value;
+                }
+                pSymbol++;
+            }
+        }
+    }
+
+    return 0; // This is resonable as zero is not a legal user space address.
 }
 
 uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
@@ -1448,6 +1618,14 @@ uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
     uint64_t  address = 0;
     char      magic[6];
     enum BITS arch;
+
+    if(fileHandle == NULL || symbolName == NULL)
+    {
+        #ifdef DEBUG
+        perror("Null pointer passed to lookupSymbolAddress()");
+        #endif
+        return 0;
+    }
 
     strncpy(magic, fileHandle->p_data, 6);
     arch = isELF(magic);
@@ -1461,50 +1639,111 @@ uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
             {
                 exit(FAILED);
             }
-            address = lookupSymbolAddressELF64(&elfHandle64, "main");
+            address = lookupSymbolAddressELF64(&elfHandle64, symbolName);
             break;
         case T_32:
             ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-            mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
+            if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == FAILED)
+            {
+                exit(FAILED);
+            }
+            address = lookupSymbolAddressELF32(&elfHandle32, symbolName);
             break;
         default:
         case T_NO_ELF:
             break;
     }
+    return address;
 }
 
-uint64_t lookupSymbolAddressELF64(ELF64_EXECUTABLE_HANDLE_T* executableHandle, char* symbolName)
+static uint64_t printSymbolTableDataElf64(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
-    Elf64_Sym  * symTable;
-    Elf64_Shdr * strTable;
-    uint8_t    * p_strTab;
-    uint64_t     strTableOffset;
-    int          numSymbols;
-    int          i;
-    int          j;
+    Elf64_Sym*   symTable = NULL;
+    Elf64_Sym*   pSymbol  = NULL;
+    char*        strTable = NULL;
+    uint64_t     strTableOffset = 0;
+    uint64_t     symTableOffset = 0;
+    uint8_t      numSymbols     = 0;
+    uint8_t      numSections    = 0;
 
-    numSymbols = executableHandle->ehdr->e_shnum;
-
-    for(int i = 0; i < numSymbols; i++)
+    numSections = executableHandle->ehdr->e_shnum;
+    if(numSections == 0)
     {
-        if(executableHandle->shdr[i].sh_type == SHT_STRTAB)
+        return FAILED;
+    }
+
+    for(int i = 0; i < numSections; i++)
+    {
+        if(executableHandle->shdr[i].sh_type == SHT_SYMTAB)
         {
-            strTable = &executableHandle->shdr[i];
-            strTableOffset = strTable->sh_addr; // Get the offset into the ELF of the strtab.
+            symTableOffset = executableHandle->shdr[i].sh_offset;
+            symTable = (Elf64_Sym *) &executableHandle->fileHandle.p_data[symTableOffset];
 
-            p_strTab = (uint8_t *) &executableHandle->fileHandle.p_data[strTableOffset];
+            strTableOffset = executableHandle->shdr[executableHandle->shdr[i].sh_link].sh_offset;
+            strTable = (char *) &executableHandle->fileHandle.p_data[strTableOffset];
 
+            numSymbols = executableHandle->shdr[i].sh_size / sizeof(Elf64_Sym);
+            if(numSymbols == 0)
+            {
+                return 0;
+            }
+
+            pSymbol = symTable;
             for(int j = 0; j < numSymbols; j++)
             {
-                if(executableHandle->shdr[j].sh_type == SHT_SYMTAB)
-                {
-                    symTable = &executableHandle->shdr[j];
-                }
+                printf("%s\n", &strTable[pSymbol->st_name]);
+                // if(strcmp(&strTable[pSymbol->st_name], symbolName) == 0)
+                // {
+                //     return pSymbol->st_value;
+                // }
+                //TODO: Print symbol + data
+                pSymbol++;
             }
         }
     }
 
-    return 0; // This is resonable as zero is not a legal user space address.
+}
+
+int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle)
+{
+    char      magic[6];
+    enum BITS arch;
+    int8_t err = 0;
+
+    if(fileHandle == NULL)
+    {
+        #ifdef DEBUG
+        perror("Null pointer passed to printSymbolTableData()");
+        #endif
+        return 0;
+    }
+
+    strncpy(magic, fileHandle->p_data, 6);
+    arch = isELF(magic);
+
+    switch(arch)
+    {
+        case T_64:
+            ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+            if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == FAILED)
+            {
+                exit(FAILED);
+            }
+            err = printSymbolTableDataElf64(&elfHandle64);
+            break;
+        case T_32:
+            ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+            if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == FAILED)
+            {
+                exit(FAILED);
+            }
+            // TODO: Print symbol Table.
+            break;
+        default:
+        case T_NO_ELF:
+            break;
+    }
+    return err;
 }
 
  #ifdef UNITTEST

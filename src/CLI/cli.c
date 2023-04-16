@@ -106,23 +106,28 @@ int main(int argc, char *argv[], char *envp[])
                 exit(-1);
             }
 
-            printELFSymTable(&fileHandle);
+            printSymbolTableData(&fileHandle);
         }
 
         /*
          * Lookup address of ELF symbol.
-         * TODO: Finish implementation.
         */
         if(!strcmp(argv[i], "-lookup"))
         {
             uint64_t addr;
             if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
             {
-                printf("Unable map %s into memory\n", argv[argc-1]);
+                printf("Unable map %s into memory.\n", argv[argc-1]);
                 exit(-1);
             }
 
-            addr = lookupSymbolAddress(&fileHandle, "printELFInfo");
+            if(argv[i + 1] == NULL) // TODO: Could we make some check that it is a resonable value.
+            {
+                printf("Please Provide A Symbol Name To Lookup.\n");
+                exit(0);
+            }
+            addr = lookupSymbolAddress(&fileHandle, argv[i + 1]);
+            printf("%s Address: %08x", argv[i + 1], addr);
         }
 
         /* Convert a hex passed as argument after switch value to decimal. */

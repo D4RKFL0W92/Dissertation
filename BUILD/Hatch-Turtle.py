@@ -31,10 +31,16 @@ class Hatch:
         self.buildParameters.insert(0, "gcc")
         self.buildParameters.append("-o")
         self.buildParameters.append("Turtle-Scan")
+
         process = Popen(self.buildParameters, stdout=PIPE, stderr=PIPE)
         self.stdout, self.stderr = process.communicate()
 
+        # TODO: Process stdout/stderr.
         print(self.stdout, self.stderr)
+
+
+
+
 
 if __name__ == "__main__":
     turtle = Hatch()
@@ -45,6 +51,7 @@ if __name__ == "__main__":
         if "-d" in sys.argv[1]:
             print("Building With Debug Logic Enabled.")
             turtle.setFlags("-DDEBUG")
+            turtle.setFlags("-ggdb")
 
         elif "-u" in sys.argv[1]:
             print("Building With Unit Tests Enabled.")
