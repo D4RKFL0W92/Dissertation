@@ -20,15 +20,7 @@ int main(int argc, char *argv[], char *envp[])
   FILE_HANDLE_T fileHandle;
   int i = 1;
 
-  // #ifdef DEBUG
-  // if(clearLogFile(LOG_FILE) == FAILED)
-  // {
-  //   perror("Unable to clear log file.");
-  //   exit(-1);
-  // }
-  // #endif
-
-  if(argc < 2)
+  if(argc < 2 || strcmp(argv[1], "-h") == 0)
   {
     printf(helpMenu);
     exit(-1);
@@ -36,21 +28,13 @@ int main(int argc, char *argv[], char *envp[])
 
   do
   {
-
-    /* Dump the SHA1 hash of the file passed as the last argument. */
-    if(!strcmp(argv[i], "-sha1"))
-    {
-      if(printSHA1OfFile(argv[argc-1]) == FAILED)
-      {
-        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
-        exit(-1);
-      }
-    }
-    
-    /* Print verbose infomation found in the various ELF, section
+    /* Header info related options. */
+    /*
+     * Option:
+     * Print verbose infomation found in the various ELF, section
      * and program headers of the file passed as last argument.
     */
-    if(!strcmp(argv[i], "-E"))
+    if(strcmp(argv[i], "-E") == 0)
     {
       if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
       {
@@ -66,37 +50,7 @@ int main(int argc, char *argv[], char *envp[])
 
     }
 
-    /* Option: Dump hex bytes from given offset.*/
-    if(!strcmp(argv[i], "-hd"))
-    {
-      /* TODO: Add some error checking here. */
-      uint64_t start = atol(argv[i+1]);
-      uint64_t uCount = atoi(argv[i+2]);
-      
-      dumpHexBytes(argv[argc-1], start, uCount);
-    }
-
-    /* Option: Dump ASCII strings. */
-    if(!strcmp(argv[i], "-s")) /* TODO: Adapt this functionality to handle searching for strings of a given size. */
-    {
-      scanForStrings(argv[argc-1], 3);
-    }
-
-    // /* Print all null terminated strings found in the string table. */
-    // if(!strcmp(argv[i], "-strtab") || !strcmp(argv[i], "-st"))
-    // {
-    //   char magic[6];
-    //   enum BITS arch;
-      
-    //   if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
-    //   {
-    //     printf("Unable map %s into memory\n", argv[argc-1]);
-    //     exit(-1);
-    //   }
-
-    //   printElfStringTable(&fileHandle);
-    // }
-
+    /* Function related options. */
     /* Option: Handle dumping of imported function names. */
     if(strcmp(argv[i], "-i") == 0 ||
        strcmp(argv[i], "-imports") == 0)
@@ -132,26 +86,8 @@ int main(int argc, char *argv[], char *envp[])
       }
     }
 
-    /* Print symbol table of the program given as last argument. */
-    // if(!strcmp(argv[i], "-symtab"))
-    // {
-      // enum BITS arch;
-      
-      // if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
-      // {
-      //   printf("Unable map %s into memory\n", argv[argc-1]);
-      //   exit(-1);
-      // }
-      
-    //   if(!strcmp(argv[i+1], "-v"))
-    //     printSymbolTableData(&fileHandle, ALL);
-    //   if(!strcmp(argv[i+1], "-i"))
-    //     printSymbolTableData(&fileHandle, IMPORTS);
-    //   else
-    //     printSymbolTableData(&fileHandle, LOCAL);
-    // }
-
     /*
+     * Option:
      * Lookup address of ELF symbol.
     */
     if(!strcmp(argv[i], "-lookup"))
@@ -163,16 +99,58 @@ int main(int argc, char *argv[], char *envp[])
         exit(-1);
       }
 
-      if(argv[i + 1] == NULL) // TODO: Could we make some check that it is a resonable value.
+      if(argv[i + 1] == NULL) // TODO: Could we make some check that it is a sensical name
       {
         printf("Please Provide A Symbol Name To Lookup.\n");
         exit(0);
       }
       addr = lookupSymbolAddress(&fileHandle, argv[i + 1]);
-      printf("%s Address: %08x", argv[i + 1], addr);
+      printf("<%s>\t0x%016lx", argv[i + 1], addr);
     }
 
-    /* Convert a hex passed as argument after switch value to decimal. */
+    /* Option: Print SHA1 of given file. */
+    if(!strcmp(argv[i], "-sha1"))
+    {
+      if(printSHA1OfFile(argv[argc-1]) == FAILED)
+      {
+        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
+        exit(-1);
+      }
+    }
+    
+
+    /* Option: Dump hex bytes from given offset.*/
+    if(!strcmp(argv[i], "-hd"))
+    {
+      /* TODO: Add some error checking here. */
+      uint64_t start = atol(argv[i+1]);
+      uint64_t uCount = atoi(argv[i+2]);
+      
+      dumpHexBytes(argv[argc-1], start, uCount);
+    }
+
+    /* Option: Dump ASCII strings. */
+    if(!strcmp(argv[i], "-s")) /* TODO: Adapt this functionality to handle searching for strings of a given size. */
+    {
+      scanForStrings(argv[argc-1], 3);
+    }
+
+    // /* Print all null terminated strings found in the string table. */
+    // if(!strcmp(argv[i], "-strtab") || !strcmp(argv[i], "-st"))
+    // {
+    //   char magic[6];
+    //   enum BITS arch;
+      
+    //   if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
+    //   {
+    //     printf("Unable map %s into memory\n", argv[argc-1]);
+    //     exit(-1);
+    //   }
+
+    //   printElfStringTable(&fileHandle);
+    // }
+
+    /* Option: Convert a hex passed as argument after switch value to decimal. */
     if(!(strcmp(argv[i], "-h2d")))
     {
       uint64_t result = hexToDecimal(argv[i+1]);
@@ -180,7 +158,7 @@ int main(int argc, char *argv[], char *envp[])
       exit(0);
     }
 
-    /* Unit tests. */
+    /* Debug_Option: Unit tests. */
     #ifdef UNITTEST
       if(!strcmp(argv[i], "-u"))
       {
