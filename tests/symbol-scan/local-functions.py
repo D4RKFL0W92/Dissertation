@@ -15,13 +15,16 @@ class LocalFunctionExtractionTest:
         self.turtleStdout  = ""
         self.turtleStderr  = ""
 
-        self.objdumpSyms     = {}
-        self.objdumpSymNames = []
-        self.turtleSyms  = {}
+        self.objdumpLocalSyms       = {}
+        self.objdumpImportSyms      = {}
+        self.objdumpLocalSymNames   = []
+        self.objdumpImportSymNames  = []
+        
+        self.turtleLocalSyms      = {}
+        self.turtleImportSyms     = {}
+        self.turtleSymNames       = []
 
         self.testBin = "../executable_files/Turtle-Scan"
-        self.testLog = "../test-logs/FunctionExtractionTest.log"
-        self.log     = ""
 
     def processObjdumpLocalSymbols(self, symbolList):
         if len(symbolList) < 1:
@@ -36,13 +39,25 @@ class LocalFunctionExtractionTest:
                 symbolName = symbolName.strip()
                 print(symbolName)
                 # Add symbol + addr into a dictionary.
-                self.objdumpSyms.update({symbolName : addr})
+                self.objdumpLocalSyms.update({symbolName : str(addr)})
+            else:
+                addr       = re.findall("[0-9a-f]{16}", symbol)[0]
+                symbolName = re.findall("<.*>", symbol)[0]
+                symbolName = symbolName.translate({ord('<'): None})
+                symbolName = symbolName.translate({ord('>'): None})
+                symbolName = symbolName.strip()
+                print(symbolName)
+                # Add symbol + addr into a dictionary.
+                self.objdumpImportSyms.update({symbolName : str(addr)})
 
-        if len(self.objdumpSyms) < 1:
+        # Some Binaries will have only local or imported function.
+        if len(self.objdumpLocalSyms) < 1 and len(self.objdumpImportSyms) < 1:
             return 1
-        self.objdumpSymNames = list(self.objdumpSyms.keys())
+        self.objdumpLocalSymNames  = list(self.objdumpLocalSyms.keys())
+        self.objdumpImportSymNames = list(self.objdumpImportSyms.keys())
         return 0
-
+    
+    # Function runs objdump and extracs all function symbol names and addresses.
     def runObjdump(self):
         command = ["objdump", "-d", self.testBin]
         
@@ -58,8 +73,7 @@ class LocalFunctionExtractionTest:
             return 1
         
         ret = self.processObjdumpLocalSymbols(allFunctionSymbols)
-        self.log + "objdump Complete.\n"
-        print("objdump Complete.")
+        print("\nobjdump Complete.\n")
         if ret != 0:
             return 1
         return 0
@@ -67,44 +81,43 @@ class LocalFunctionExtractionTest:
     # Function that runs Turtle-Scan with all the symbols extracted from the objdump
     # output, comparing the returned address of each to confirm successful parsing of symtab.
     def runLookupOfSymbols(self):
-        for sym in self.objdumpSymNames:
+        for sym in self.objdumpLocalSymNames:
+            objdumpAddr = str(self.objdumpLocalSyms.get(sym))
             command = ["../../BUILD/Turtle-Scan", "-lookup", sym, self.testBin]
             print("Looking Up Address Of: ", sym)
             result = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
             time.sleep(1)
             out, err = result.communicate()
             if result.returncode != 0 or out == None:
-                print("A Failure Has Occured In Lookup Symbols.")
-                self.log + str(out)
-                self.log + str(err)
-                self.log + str("A Lookup Has Failed.\n")
+                print("A Failure Has Occured In Lookup Symbols.\n")
+                print(out + err)
                 return 1
             
-            addr = re.findall("[0-9a-f]{16}", str(out))
-            print("Objdump Result: ", self.objdumpSyms[sym], "Turtle-Scan Result: ", addr)
-            if addr != self.objdumpSyms[sym]:
+            addr = re.findall("[0-9a-f]{16}", str(out))[0]
+            if addr == None:
+                print("Unable To Extract Address In Lookup Symbols\n")
+                return 1
+            print("Objdump Result: ", objdumpAddr, "Turtle-Scan Result: ", addr + "\n")
+            if addr != objdumpAddr:
                 print("Addresses Don't Match")
+                return 1
+            
+        return 0
             
 
     def runTest(self):
-        print("running objdump....")
+        print("running objdump....\n")
         
         objdumpRet = self.runObjdump()
         if objdumpRet != 0:
-            self.log + str("objdump Failed:\n" + str(self.objdumpStdout) + str(self.objdumpStderr))
-            self.writeLog()
+            print("objdump Failed:\n" + str(self.objdumpStdout) + str(self.objdumpStderr))
             exit(1)
-        
-        print("Testing Lookup...")
-        self.runLookupOfSymbols()
-        # Write stderr + stdout to log file
-
-    def writeLog(self):
-        print(self.log)
-        commonFunctionality.writeToFile(self.testLog, self.log)
-
-    def printLogToConsole(self):
-        print(self.log)
+        else:
+            print("Testing Lookup...\n")
+            turtleRet = self.runLookupOfSymbols()
+            if turtleRet != 0:
+                print("Turtle-Scan Lookup Test Failed.")
+            print("Lookup Test Successful.\n")
 
 
 if __name__ == "__main__":

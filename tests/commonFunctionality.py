@@ -2,7 +2,7 @@
 
 def writeToFile(file, out):
     try:
-        with open(file, "a") as file:
+        with open(file, "w") as file:
             file.write(str(out) + "\n")
     except IOError as e:
         print("Exception: ", e)
