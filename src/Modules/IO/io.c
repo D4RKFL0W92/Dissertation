@@ -1,127 +1,274 @@
 #include "./io.h"
 
-uint64_t hexToDecimal(const char* hexString)
+uint8_t hexToDecimal(const char* hexString, uint64_t * value)
 {
-    uint64_t value           = 0;
-    uint8_t  offsetExponent  = 0;
-    int16_t  hexStrLen       = 0;
+  uint8_t  offsetExponent  = 0;
+  int16_t  hexStrLen     = 0;
 
-    if(hexString == NULL)
+  uint64_t lValue       = 0;
+
+  if(hexString == NULL)
+  {
+    return FAILED;
+  }
+
+  if(hexString[0] != '0' && (hexString[1] != 'x' || hexString[1] != 'X'))
+  {
+    return FAILED;
+  }
+
+  hexStrLen = strlen(hexString);
+
+  for(int digitOffset = hexStrLen - 1; digitOffset > 1; --digitOffset, ++offsetExponent)
+  {
+    // TODO: Check hexString[digitOffset] is a valid hex digit.
+    switch (hexString[digitOffset])
     {
-        return 0;
+      case '0':
+        lValue += 0 * pow(16, offsetExponent);
+        break;
+      case '1':
+        lValue += 1 * pow(16, offsetExponent);
+        break;
+      case '2':
+        lValue += 2 * pow(16, offsetExponent);
+        break;
+      case '3':
+        lValue += 3 * pow(16, offsetExponent);
+        break;
+      case '4':
+        lValue += 4 * pow(16, offsetExponent);
+        break;
+      case '5':
+        lValue += 5 * pow(16, offsetExponent);
+        break;
+      case '6':
+        lValue += 6 * pow(16, offsetExponent);
+        break;
+      case '7':
+        lValue += 7 * pow(16, offsetExponent);
+        break;
+      case '8':
+        lValue += 8 * pow(16, offsetExponent);
+        break;
+      case '9':
+        lValue += 9 * pow(16, offsetExponent);
+        break;
+      case 'a':
+      case 'A':
+        lValue += 10 * pow(16, offsetExponent);
+        break;
+      case 'b':
+      case 'B':
+        lValue += 11 * pow(16, offsetExponent);
+        break;
+      case 'c':
+      case 'C':
+        lValue += 12 * pow(16, offsetExponent);
+        break;
+      case 'd':
+      case 'D':
+        lValue += 13 * pow(16, offsetExponent);
+        break;
+      case 'e':
+      case 'E':
+        lValue += 14 * pow(16, offsetExponent);
+        break;
+      case 'f':
+      case 'F':
+        lValue += 15 * pow(16, offsetExponent);
+        break;
     }
-
-    if(hexString[0] != '0' && (hexString[1] != 'x' || hexString[1] != 'X'))
-    {
-        return 0;
-    }
-
-    hexStrLen = strlen(hexString);
-
-    for(int digitOffset = hexStrLen - 1; digitOffset > 1; --digitOffset, ++offsetExponent)
-    {
-        // TODO: Check hexString[digitOffset] is a valid hex digit.
-        switch (hexString[digitOffset])
-        {
-            case '0':
-                value += 0 * pow(16, offsetExponent);
-                break;
-            case '1':
-                value += 1 * pow(16, offsetExponent);
-                break;
-            case '2':
-                value += 2 * pow(16, offsetExponent);
-                break;
-            case '3':
-                value += 3 * pow(16, offsetExponent);
-                break;
-            case '4':
-                value += 4 * pow(16, offsetExponent);
-                break;
-            case '5':
-                value += 5 * pow(16, offsetExponent);
-                break;
-            case '6':
-                value += 6 * pow(16, offsetExponent);
-                break;
-            case '7':
-                value += 7 * pow(16, offsetExponent);
-                break;
-            case '8':
-                value += 8 * pow(16, offsetExponent);
-                break;
-            case '9':
-                value += 9 * pow(16, offsetExponent);
-                break;
-            case 'a':
-            case 'A':
-                value += 10 * pow(16, offsetExponent);
-                break;
-            case 'b':
-            case 'B':
-                value += 11 * pow(16, offsetExponent);
-                break;
-            case 'c':
-            case 'C':
-                value += 12 * pow(16, offsetExponent);
-                break;
-            case 'd':
-            case 'D':
-                value += 13 * pow(16, offsetExponent);
-                break;
-            case 'e':
-            case 'E':
-                value += 14 * pow(16, offsetExponent);
-                break;
-            case 'f':
-            case 'F':
-                value += 15 * pow(16, offsetExponent);
-                break;
-        }
-    }
-    return value;
+  }
+  *value = lValue;
+  return SUCCESS;
 }
 
+uint8_t stringToInteger(const char* numString, uint64_t* value)
+{
+  uint8_t err = 0;
+  uint64_t lValue = 0;
 
+  if(numString[0] == '0' && numString[1] == 'x' || numString[1] == 'X')
+      {
+        err = hexToDecimal(numString, &lValue);
+        if(err == FAILED)
+        {
+          printf("Zero Offset Was Given.");
+          exit(-1);
+        }
+      }
+      else
+      {
+        
+        lValue = atol(numString);
+      }
+}
 
 #ifdef UNITTEST
 
 void test_hexToDecimal_valid()
 {
-    assert(hexToDecimal("0x00000001") == 1);
-    assert(hexToDecimal("0x00000002") == 2);
-    assert(hexToDecimal("0x00000003") == 3);
-    assert(hexToDecimal("0x00000004") == 4);
-    assert(hexToDecimal("0x00000005") == 5);
-    assert(hexToDecimal("0x00000006") == 6);
-    assert(hexToDecimal("0x00000007") == 7);
-    assert(hexToDecimal("0x00000008") == 8);
-    assert(hexToDecimal("0x00000009") == 9);
-    assert(hexToDecimal("0x0000000a") == 10);
-    assert(hexToDecimal("0x0000000b") == 11);
-    assert(hexToDecimal("0x0000000c") == 12);
-    assert(hexToDecimal("0x0000000d") == 13);
-    assert(hexToDecimal("0x0000000e") == 14);
-    assert(hexToDecimal("0x0000000f") == 15);
+  uint8_t err = 0;
+  uint64_t value = 0;
 
-    /* Try some random ones */
-    assert(hexToDecimal("0xffffffff") == 4294967295);
-    assert(hexToDecimal("0xde5469ab") == 3730074027);
-    assert(hexToDecimal("0x42424242") == 1111638594);
-    assert(hexToDecimal("0xf00bcf11") == 4027305745);
+  err = hexToDecimal("0x00000001", &value);
+  assert(err == SUCCESS);
+  assert(value == 1);
+  err = 0;
+  value = 0;
 
-    /* Do they have to be 4 bytes long (Can only store U64_MAX). */
-    assert(hexToDecimal("0xfca")      == 4042);
-    assert(hexToDecimal("0xffca")     == 65482);
-    assert(hexToDecimal("0xfc43a")    == 1033274);
-    assert(hexToDecimal("0xff")       == 255);
-    assert(hexToDecimal("0xfcabe5")   == 16559077);
-    assert(hexToDecimal("0xaafcade")  == 179292894);
+  err = hexToDecimal("0x00000002", &value);
+  assert(err == SUCCESS);
+  assert(value == 2);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x00000003", &value);
+  assert(err == SUCCESS);
+  assert(value == 3);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x00000004", &value);
+  assert(err == SUCCESS);
+  assert(value == 4);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x00000005", &value);
+  assert(err == SUCCESS);
+  assert(value == 5);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x00000006", &value);
+  assert(err == SUCCESS);
+  assert(value == 6);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x00000007", &value);
+  assert(err == SUCCESS);
+  assert(value == 7);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x00000008", &value);
+  assert(err == SUCCESS);
+  assert(value == 8);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x00000009", &value);
+  assert(err == SUCCESS);
+  assert(value == 9);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x0000000a", &value);
+  assert(err == SUCCESS);
+  assert(value == 10);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x0000000b", &value);
+  assert(err == SUCCESS);
+  assert(value == 11);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x0000000c", &value);
+  assert(err == SUCCESS);
+  assert(value == 12);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x0000000d", &value);
+  assert(err == SUCCESS);
+  assert(value == 13);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x0000000e", &value);
+  assert(err == SUCCESS);
+  assert(value == 14);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x0000000f", &value);
+  assert(err == SUCCESS);
+  assert(value == 15);
+  err = 0;
+  value = 0;
+
+  /* Try some random ones */
+  err = hexToDecimal("0xffffffff", &value);
+  assert(err == SUCCESS);
+  assert(value == 4294967295);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0xde5469ab", &value);
+  assert(err == SUCCESS);
+  assert(value == 3730074027);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0x42424242", &value);
+  assert(err == SUCCESS);
+  assert(value == 1111638594);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0xf00bcf11", &value);
+  assert(err == SUCCESS);
+  assert(value == 4027305745);
+  err = 0;
+  value = 0;
+
+  /* Do they have to be 4 bytes long (Can only store U64_MAX). */
+  err = hexToDecimal("0xfca", &value);
+  assert(err == SUCCESS);
+  assert(value == 4042);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0xffca", &value);
+  assert(err == SUCCESS);
+  assert(value == 65482);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0xfc43a", &value);
+  assert(err == SUCCESS);
+  assert(value == 1033274);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0xff", &value);
+  assert(err == SUCCESS);
+  assert(value == 255);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0xfcabe5", &value);
+  assert(err == SUCCESS);
+  assert(value == 16559077);
+  err = 0;
+  value = 0;
+
+  err = hexToDecimal("0xaafcade", &value);
+  assert(err == SUCCESS);
+  assert(value == 179292894);
+  err = 0;
+  value = 0;
+
 }
 
 void ioTestSuite()
 {
-    test_hexToDecimal_valid();
+  test_hexToDecimal_valid();
 }
 
 #endif

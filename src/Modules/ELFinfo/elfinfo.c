@@ -414,7 +414,7 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
       mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
 
       puts("Elf Header:\n");
-      dumpHexBytesFromFileHandle(fileHandle, 0, elfHandle32.ehdr->e_ehsize);
+      dumpHexBytesFromFileFromFileHandle(fileHandle, 0, elfHandle32.ehdr->e_ehsize);
 
       puts("Class:\t32 BIT\n");
       printElf32ElfHeader(elfHandle32.ehdr);
@@ -437,7 +437,7 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
       mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle);
 
       puts("Elf Header:\n");
-      dumpHexBytesFromFileHandle(fileHandle, 0, elfHandle.ehdr->e_ehsize);
+      dumpHexBytesFromFileFromFileHandle(fileHandle, 0, elfHandle.ehdr->e_ehsize);
 
       puts("Class:\t64 BIT\n");
       printElf64ElfHeader(elfHandle.ehdr);
@@ -928,7 +928,7 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 
     printf("Program Header:\t%d\n", i+1);
 
-    dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
+    dumpHexBytesFromFileFromFileHandle(&executableHandle->fileHandle,
       executableHandle->ehdr->e_phoff + (executableHandle->ehdr->e_phentsize * i), sizeof(Elf64_Phdr));
     printf("\n\n");
       
@@ -1039,7 +1039,7 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
   {
     printf("Program Header:\t%d\n", i+1);
 
-    dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
+    dumpHexBytesFromFileFromFileHandle(&executableHandle->fileHandle,
       executableHandle->ehdr->e_phoff + (executableHandle->ehdr->e_phentsize * i), sizeof(Elf64_Phdr));
     printf("\n\n");
       
@@ -1151,7 +1151,7 @@ int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     puts("----------------------------------------------------------\n");
     printf("Section Header:\t%d\n", i+1);
 
-    // dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
+    // dumpHexBytesFromFileFromFileHandle(&executableHandle->fileHandle,
     //   executableHandle->ehdr->e_shoff + (executableHandle->ehdr->e_shentsize * i), executableHandle->ehdr->e_shentsize);
 
     printf("\n\n");
@@ -1295,7 +1295,7 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     puts("----------------------------------------------------------\n");
     printf("Section Header:\t%d\n", i+1);
 
-    // dumpHexBytesFromFileHandle(&executableHandle->fileHandle,
+    // dumpHexBytesFromFileFromFileHandle(&executableHandle->fileHandle,
     //   executableHandle->ehdr->e_shoff + (executableHandle->ehdr->e_shentsize * i), executableHandle->ehdr->e_shentsize);
 
     printf("\n\n");
@@ -1691,27 +1691,34 @@ static uint64_t printSymbolTableDataElf64(ELF64_EXECUTABLE_HANDLE_T* executableH
       pSymbol = symTable;
       for(int j = 0; j < numSymbols; j++)
       {
-        if(pSymbol->st_info != STT_FILE && pSymbol->st_info != STT_FILE)
+        // We are only interested in function symbols in this case.
+        if(pSymbol->st_info != STT_FILE && pSymbol->st_info != STT_OBJECT &&
+           pSymbol->st_info != STT_NOTYPE && pSymbol->st_info)
         {
 
-          if(mode == IMPORTS)
+          switch(mode)
           {
-            if(pSymbol->st_shndx == 0 && pSymbol->st_size == 0 && pSymbol->st_value == 0)
-            {
-              printf("%s\n", &strTable[pSymbol->st_name]);
-            }
+            case IMPORTS:
+              if(pSymbol->st_shndx == 0 && pSymbol->st_size == 0 && pSymbol->st_value == 0)
+              {
+                // TODO: What happens if a function name is longer than 45 characters??
+                printf("%s\n", &strTable[pSymbol->st_name]);
+              }
+              break;
+
+            case LOCAL:
+              // TODO: Do we want to detect '_start' as local??
+              if(pSymbol->st_shndx != 0 && pSymbol->st_size != 0 && pSymbol->st_value != 0)
+              {
+                printf("%s\t\033[45G0x%016lx\n", &strTable[pSymbol->st_name], pSymbol->st_value);
+              }
+              break;
+
+            default:
+              printf("%s\t\033[45G0x%016lx\n", &strTable[pSymbol->st_name], pSymbol->st_value);
+              break;
           }
-          else if(mode == LOCAL)
-          {
-            if(pSymbol->st_shndx != 0 && pSymbol->st_size != 0 && pSymbol->st_value != 0)
-            {
-              printf("%s\n", &strTable[pSymbol->st_name]);
-            }
-          }
-          else
-          {
-            printf("%s\n", &strTable[pSymbol->st_name]);
-          }
+
         }
 
         // printf("%s\n", &strTable[pSymbol->st_name]);

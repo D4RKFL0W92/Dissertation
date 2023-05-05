@@ -7,7 +7,7 @@ from subprocess import PIPE
 sys.path.append("../")
 import commonFunctionality
 
-class LocalFunctionExtractionTest:
+class SymbolExtractionTest:
 
     def __init__(self):
         self.objdumpStdout = ""
@@ -62,7 +62,7 @@ class LocalFunctionExtractionTest:
         command = ["objdump", "-d", self.testBin]
         
         result = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
-        time.sleep(1) # This gives objdump time to complete. (subprocess.call() just hangs)
+        # time.sleep(1) # This gives objdump time to complete. (subprocess.call() just hangs)
         self.objdumpStdout, self.objdumpStderr = result.communicate()
         if result.returncode != 0 or self.objdumpStdout == None:
             print("A failure has occured whilst running objdump.")
@@ -86,7 +86,7 @@ class LocalFunctionExtractionTest:
             command = ["../../BUILD/Turtle-Scan", "-lookup", sym, self.testBin]
             print("Looking Up Address Of: ", sym)
             result = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
-            time.sleep(1)
+            # time.sleep(.5)
             out, err = result.communicate()
             if result.returncode != 0 or out == None:
                 print("A Failure Has Occured In Lookup Symbols.\n")
@@ -104,6 +104,8 @@ class LocalFunctionExtractionTest:
             
         return 0
             
+    # TODO: Add function for testing for -functions -v options,
+    # (This should cover all functionality of symbol table parsing)
 
     def runTest(self):
         print("running objdump....\n")
@@ -121,6 +123,6 @@ class LocalFunctionExtractionTest:
 
 
 if __name__ == "__main__":
-    test = LocalFunctionExtractionTest()
+    test = SymbolExtractionTest()
     test.runTest()
     # test.printLogToConsole()

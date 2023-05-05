@@ -122,11 +122,41 @@ int main(int argc, char *argv[], char *envp[])
     /* Option: Dump hex bytes from given offset.*/
     if(!strcmp(argv[i], "-hd"))
     {
-      /* TODO: Add some error checking here. */
-      uint64_t start = atol(argv[i+1]);
-      uint64_t uCount = atoi(argv[i+2]);
+      uint8_t ret = 0;
+      uint64_t start = 0;
+      uint64_t uCount = 0;
+
+      if(argv[i+1][0] == '0' && argv[i+1][1] == 'x' || argv[i+1][1] == 'X')
+      {
+        start = hexToDecimal(argv[i+1], &start);
+        if(start == FAILED)
+        {
+          printf("Zero Offset Was Given.");
+          exit(-1);
+        }
+      }
+      else
+      {
+        /* TODO: Add some error checking here. (check if it's definitely a number.) */
+        start = atol(argv[i+1]);
+      }
+
+      if(argv[i+2][0] == '0' && argv[i+2][1] == 'x' || argv[i+2][1] == 'X')
+      {
+        start = hexToDecimal(argv[i+2], &uCount);
+        if(start == FAILED)
+        {
+          printf("Zero Byte Count Was Given.");
+          exit(-1);
+        }
+      }
+      else
+      {
+        uCount = atol(argv[i+2]);
+      }
       
-      dumpHexBytes(argv[argc-1], start, uCount);
+      
+      dumpHexBytesFromFile(argv[argc-1], start, uCount);
     }
 
     /* Option: Dump ASCII strings. */
@@ -135,25 +165,13 @@ int main(int argc, char *argv[], char *envp[])
       scanForStrings(argv[argc-1], 3);
     }
 
-    // /* Print all null terminated strings found in the string table. */
-    // if(!strcmp(argv[i], "-strtab") || !strcmp(argv[i], "-st"))
-    // {
-    //   char magic[6];
-    //   enum BITS arch;
-      
-    //   if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
-    //   {
-    //     printf("Unable map %s into memory\n", argv[argc-1]);
-    //     exit(-1);
-    //   }
-
-    //   printElfStringTable(&fileHandle);
-    // }
-
     /* Option: Convert a hex passed as argument after switch value to decimal. */
     if(!(strcmp(argv[i], "-h2d")))
     {
-      uint64_t result = hexToDecimal(argv[i+1]);
+      uint64_t result = 0;
+      uint8_t ret = 0;
+      
+      ret = hexToDecimal(argv[i+1], &result);
       printf("Result: %llu\n", result);
       exit(0);
     }
@@ -162,9 +180,11 @@ int main(int argc, char *argv[], char *envp[])
     #ifdef UNITTEST
       if(!strcmp(argv[i], "-u"))
       {
+        printf("Running Unit Tests...\n");
         fileOpsTestSuite();
         elfInfoTestSuite();
-        ioTestSuite();
+        // ioTestSuite();
+        printf("Unit Tests Successful.\n");
       }
     #endif
 

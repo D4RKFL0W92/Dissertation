@@ -55,6 +55,8 @@ if __name__ == "__main__":
 
         elif "-u" in sys.argv[1]:
             print("Building With Unit Tests Enabled.")
+            turtle.setFlags("-DDEBUG")
+            turtle.setFlags("-ggdb")
             turtle.setFlags("-DUNITTEST -DLOCALTESTFILES")
 
     turtle.hatchTurtle()

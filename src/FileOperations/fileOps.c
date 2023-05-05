@@ -266,7 +266,12 @@ int8_t scanForStrings(char* filepath, uint16_t len)
   return SUCCESS;
 }
 
-int8_t dumpHexBytes(char* filepath, uint64_t startAddress, uint64_t uCount)
+int8_t dumpHexBytesFromOffset(uint8_t* pOffset, uint64_t uCount, uint64_t startOffset)
+{
+  
+}
+
+int8_t dumpHexBytesFromFile(char* filepath, uint64_t startAddress, uint64_t uCount)
 {
   uint8_t *p_memStart, *p_mem;
   uint64_t sz;
@@ -274,7 +279,7 @@ int8_t dumpHexBytes(char* filepath, uint64_t startAddress, uint64_t uCount)
   if( (p_mem = p_memStart = (uint8_t *) basicFileMap(filepath, &sz)) == NULL)
   {
     #ifdef DEBUG
-    perror("ERROR mapping file in dumpHexBytes()");
+    perror("ERROR mapping file in dumpHexBytesFromFile()");
     #endif
     return FAILED;
   }
@@ -282,35 +287,79 @@ int8_t dumpHexBytes(char* filepath, uint64_t startAddress, uint64_t uCount)
   if(startAddress > sz || startAddress + uCount > sz)
   {
     #ifdef DEBUG
-    perror("ERROR, illegal offset, in dumpHexBytes()");
+    perror("ERROR, illegal offset, in dumpHexBytesFromFile()");
     #endif
     printf("Offset exceeds file size."); // Useful feedback to the user.
     return FAILED;
   }
 
-  uint8_t lineByteCount = 0;
-  printf("       |00 |01 |02 |03 |04 |05 |06 |07 |08 |09 |0A |0B |0C |0D |0E |0F\n");
-  printf("--------------------------------------------------------------------------");
-  for(uint64_t i = startAddress; i < (startAddress + uCount); ++i)
+  uint64_t counter = 0;
+  uint64_t currOffset = 0;
+  printf("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
+  printf("--------------------------------------------------------\n");
+  
+  char buff[16];
+  while(counter < (startAddress + uCount))
   {
-    if(lineByteCount == 0)
+    memset(buff, 0, sizeof(buff));
+    uint8_t i = 0;
+
+    while(i < 0x10) // Write upto 16 bytes into the buffer at both end.
     {
-      printf("\n0x%08x ", startAddress + i);
+      buff[i] = p_mem[counter];
+      counter++;
+      i++;
     }
-    ++lineByteCount;
-    printf("|%02x ", p_mem[startAddress + i]);
-     /* Reset at end of loop. */
-    if(lineByteCount == 0x10)
+
+    for(int a = 0; a < 2; a++)
     {
-      lineByteCount = 0;
+      for(int b = 0; b < 0x10; b++)
+      {
+        if(a == 0)
+        {
+          uint8_t byte = buff[b];
+          if(b == 0)
+          {
+            printf("%08x ", startAddress + currOffset);
+          }
+          printf("%02x ", byte);
+          if(b == 0xF)
+          {
+            printf(" ");
+          }
+        }
+        else
+        {
+          if(b == 0)
+          {
+            printf("|");
+          }
+
+          if(buff[b] >= 33 && buff[b] <= 126)
+          {
+            // Check if it's a printable character.
+            printf("%c", buff[b]);
+
+          }
+          else
+          {
+            printf(".");
+          }
+
+          if(b == 0xF)
+          {
+            printf("|\n");
+          }
+        }
+      }
     }
-    
+    currOffset += 0x10;
   }
-  printf("\n");
+  
   return SUCCESS;
 }
 
-int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, uint64_t uCount)
+int8_t dumpHexBytesFromFileFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, uint64_t uCount)
 {
   uint8_t *pMem;
   uint64_t sz;
@@ -318,7 +367,7 @@ int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, 
   if(handle == NULL || handle->p_data == NULL)
   {
     #ifdef DEBUG
-    perror("ERROR, NULL data, in dumpHexBytes()");
+    perror("ERROR, NULL data, in dumpHexBytesFromFile()");
     #endif
     return FAILED;
   }
@@ -326,7 +375,7 @@ int8_t dumpHexBytesFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, 
   if(startAddress > handle->st.st_size || startAddress + uCount > handle->st.st_size)
   {
     #ifdef DEBUG
-    perror("ERROR, illegal offset, in dumpHexBytes()");
+    perror("ERROR, illegal offset, in dumpHexBytesFromFile()");
     #endif
     printf("Offset exceeds file size.");
     return FAILED;

@@ -130,11 +130,15 @@ int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
 uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName);
 
-/* Definitions for which function symbol names to print. */
+/* 
+ * Definitions for which function symbol names to print. 
+ * Definitions used to dictate which symbols are printed
+ * with printSymbolTableData
+*/
 #define LOCAL   0
 #define IMPORTS 1
 #define ALL     2
 int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports);
 
 
-#endif
+#endif /* _ELF_INFO_ */
