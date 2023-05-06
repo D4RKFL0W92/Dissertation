@@ -116,6 +116,10 @@ int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
   if(munmap(handle->p_data, handle->st.st_size) == 0)
   {
     handle->p_data = NULL;
+    if(close(handle->fd) != 0)
+    {
+      return ERR_FILE_OPERATION_FAILED;
+    }
     return ERR_NONE;
   }
   #ifdef DEBUG
@@ -266,9 +270,9 @@ int8_t scanForStrings(char* filepath, uint16_t len)
   return ERR_NONE;
 }
 
-int8_t dumpHexBytesFromOffset(uint8_t* pOffset, uint64_t uCount, uint64_t startOffset)
+int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t startAddress, uint64_t uCount)
 {
-  
+  // TODO: Refactor the printing of hex bytes into this function.
 }
 
 int8_t dumpHexBytesFromFile(char* filepath, uint64_t startAddress, uint64_t uCount)

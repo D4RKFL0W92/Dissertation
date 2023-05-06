@@ -16,6 +16,7 @@
 #define ERR_NO_MEMORY             2
 #define ERR_FORMAT_NOT_SUPPORTED  3
 #define ERR_NULL_ARGUMENT         4
+#define ERR_FILE_OPERATION_FAILED 5
 
 
 #define TRUE_STR         "TRUE"
