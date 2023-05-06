@@ -10,9 +10,9 @@ static int8_t attachToProcess(pid_t pid)
     #ifdef DEBUG
     perror("ERROR CALLING: ptrace(PTRACE_ATTACH, pid, 0, 0)");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 static int8_t detachFromProcess(pid_t pid)
@@ -24,9 +24,9 @@ static int8_t detachFromProcess(pid_t pid)
     #ifdef DEBUG
     perror("ERROR CALLING: ptrace(PTRACE_DETACH, pid, 0, 0)");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 static int8_t getRegisterValues(int pid, struct user_regs_struct* regs)
@@ -162,7 +162,7 @@ int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** 
     #ifdef DEGUG
     perror("ERROR: Cannot map executable to memory.")
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
     
 
@@ -171,7 +171,7 @@ int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** 
     #ifdef DEBUG
     perror("ERROR forking process.");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   if(pid == 0) /* Child process */
@@ -181,7 +181,7 @@ int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** 
       #ifdef DEBUG
       perror("ERROR calling PTRACE_TRACEME");
       #endif
-      return FAILED;
+      return ERR_UNKNOWN;
     }
     // execve the process we intend to trace.
     execve(p_procName, argv, envp);
@@ -190,10 +190,10 @@ int16_t beginProcessTrace(const char* p_procName, int argc, char** argv, char** 
   
   else
   {
-    if(wait(&child_state) == FAILED) /* Wait for state change of child process. */
+    if(wait(&child_state) == ERR_UNKNOWN) /* Wait for state change of child process. */
     {
       perror("ERROR calling wait from parent.");
-      exit(FAILED);
+      exit(ERR_UNKNOWN);
     }
 
     do
@@ -227,7 +227,7 @@ int8_t dump_memory(pid_t pid, uint64_t startAddr, uint64_t uCount)
   uint64_t tmp;
   uint64_t iterations;
 
-  if(uCount == 0) { return FAILED; }
+  if(uCount == 0) { return ERR_UNKNOWN; }
 
   tmp = uCount / 8; /* Divide by intel word size rounding down */
   iterations = \
@@ -237,7 +237,7 @@ int8_t dump_memory(pid_t pid, uint64_t startAddr, uint64_t uCount)
   if( (pMem = malloc(uCount)) == NULL)
   {
     perror("ERROR allocating memory for read.");
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   /* Print top of grid. */
@@ -245,10 +245,10 @@ int8_t dump_memory(pid_t pid, uint64_t startAddr, uint64_t uCount)
 
   for(uint64_t i = 0; i < iterations; ++i)
   {
-    if(ptrace(PTRACE_PEEKDATA, pid, startAddr + (i*8), pMem + (i*8)) == FAILED)
+    if(ptrace(PTRACE_PEEKDATA, pid, startAddr + (i*8), pMem + (i*8)) == ERR_UNKNOWN)
     {
       perror("ERROR calling PTRACE_PEEKDATA");
-      return FAILED;
+      return ERR_UNKNOWN;
     }
     printf("0x%016x %02x %02x %02x %02x, %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", startAddr + (i*8), \
       *(pMem + (i*8)), *(pMem + (i*8) + 1), *(pMem + (i*8) + 2), *(pMem + (i*8) + 3), *(pMem + (i*8) + 4), \
@@ -258,5 +258,5 @@ int8_t dump_memory(pid_t pid, uint64_t startAddr, uint64_t uCount)
   }
 
   free(pMem); /* Deallocate memory. */
-  return SUCCESS;
+  return ERR_NONE;
 }

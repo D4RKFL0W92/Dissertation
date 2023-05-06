@@ -99,7 +99,7 @@ int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABL
 {
   if(fileHandle == NULL)
   {
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   /* TODO: Check it is definitely Elf64_Phdr before proceeding. */
@@ -109,14 +109,14 @@ int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABL
   elfHandle->phdr     = (Elf32_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
   elfHandle->shdr     = (Elf32_Shdr *) &fileHandle->p_data[ elfHandle->ehdr->e_shoff ];
 
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle)
 {
   if(fileHandle == NULL)
   {
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   /* TODO: Check it is definitely Elf64_Phdr before proceeding. */
@@ -126,7 +126,7 @@ int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABL
   elfHandle->phdr     = (Elf64_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
   elfHandle->shdr     = (Elf64_Shdr *) &fileHandle->p_data[ elfHandle->ehdr->e_shoff ];
 
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 uint64_t getELFEntry(char* filepath)
@@ -398,7 +398,7 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
 
   if(fileHandle->p_data == NULL)
   {
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   strncpy(MAGIC, fileHandle->p_data, 6);
@@ -456,10 +456,10 @@ int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
     case T_NO_ELF:
     default:
       printf("File <%s> is not an ELF\n", fileHandle->path);
-      return FAILED;
+      return ERR_UNKNOWN;
 
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
 {
@@ -468,7 +468,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
     #ifdef DEBUG
     perror("ERROR, NULL pointer in printElf32ElfHeader()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   printf("Elf 64 Header Size:\t0x%08x\n", ehdr->e_ehsize);
   /* Print endianess of binary. */
@@ -675,7 +675,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
   printf("Number Of Section Headers:\t0x%08x\n", ehdr->e_shnum);
   printf("Section Header Entry Size:\t0x%08x\n", ehdr->e_shentsize);
   printf("Section Header STRNDX:\t0x%08x\n", ehdr->e_shstrndx);
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
@@ -686,7 +686,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
     #ifdef DEBUG
     perror("ERROR, NULL pointer in printElf32ElfHeader()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   printf("Elf 32 Header Size:\t0x%08x\n", ehdr->e_ehsize);
   /* Print endianess of binary. */
@@ -894,7 +894,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
   printf("Section Header Entry Size:\t0x%08x\n", ehdr->e_shentsize);
   printf("Section Header STRNDX:\t0x%08x\n", ehdr->e_shstrndx);
 
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 
@@ -909,7 +909,7 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     #ifdef DEBUG
     perror("ERROR NULL pointer in printELF64ProgramHeaders()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   if(executableHandle->ehdr->e_phnum == 0 || executableHandle->ehdr->e_phentsize == 0)
@@ -917,7 +917,7 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     #ifdef DEBUG
     perror("ERROR, NO PHDRS in printELF64ProgramHeaders()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   
   phdrSize = (uint32_t)executableHandle->ehdr->e_phentsize;
@@ -1009,7 +1009,7 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     puts("-------------------------------------------------------------------------------------");
     printf("\n\n");
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
@@ -1022,7 +1022,7 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     #ifdef DEBUG
     perror("ERROR NULL pointer in printELF64ProgramHeaders()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   if(executableHandle->ehdr->e_phnum == 0 || executableHandle->ehdr->e_phentsize == 0)
@@ -1030,7 +1030,7 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     #ifdef DEBUG
     perror("ERROR, NO PHDRS in printELF64ProgramHeaders()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   
   phdrSize = (uint32_t)executableHandle->ehdr->e_phentsize;
@@ -1120,7 +1120,7 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     puts("-------------------------------------------------------------------------------------");
     printf("\n\n");
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
@@ -1133,14 +1133,14 @@ int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     #ifdef DEBUG
     perror("NULL Pointer In printELF32SectionHeaders()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   if(executableHandle->ehdr->e_shentsize == 0 || executableHandle->ehdr->e_shnum == 0 ||
     executableHandle->ehdr->e_shoff == 0 || executableHandle->ehdr->e_shstrndx == 0)
   {
     printf("%s is stripped.\n", executableHandle->fileHandle.path);
-    return SUCCESS;
+    return ERR_NONE;
   }
 
   sectionHeaderSize = executableHandle->ehdr->e_shentsize;
@@ -1264,7 +1264,7 @@ int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     printf("SH_ADDRALIGN:\t0x%08x\n", executableHandle->shdr[i].sh_addralign);
     printf("SH_ENTSIZE:\t0x%08x\n", executableHandle->shdr[i].sh_offset);
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
@@ -1277,14 +1277,14 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     #ifdef DEBUG
     perror("NULL Pointer In printELF64SectionHeaders()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   if(executableHandle->ehdr->e_shentsize == 0 || executableHandle->ehdr->e_shnum == 0 ||
     executableHandle->ehdr->e_shoff == 0 || executableHandle->ehdr->e_shstrndx == 0)
   {
     printf("%s is stripped.\n", executableHandle->fileHandle.path);
-    return SUCCESS;
+    return ERR_NONE;
   }
 
   sectionHeaderSize = executableHandle->ehdr->e_shentsize;
@@ -1408,7 +1408,7 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
     printf("SH_ADDRALIGN:\t0x%08x\n", executableHandle->shdr[i].sh_addralign);
     printf("SH_ENTSIZE:\t0x%08x\n", executableHandle->shdr[i].sh_offset);
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t printELFSectionHeaders(FILE_HANDLE_T* fileHandle)
@@ -1432,17 +1432,17 @@ int8_t printELFSectionHeaders(FILE_HANDLE_T* fileHandle)
   {
     case T_64:
       ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == FAILED)
+      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
       {
-        exit(FAILED);
+        exit(ERR_UNKNOWN);
       }
       err = printELF64SectionHeaders(&elfHandle64);
       break;
     case T_32:
       ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == FAILED)
+      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
       {
-        exit(FAILED);
+        exit(ERR_UNKNOWN);
       }
       err = printELF32SectionHeaders(&elfHandle32);
       break;
@@ -1465,15 +1465,15 @@ int8_t printElfStringTable(FILE_HANDLE_T * fileHandle)
       ELF64_EXECUTABLE_HANDLE_T elfHandle64;
       mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64);
       printELF64StrTable(&elfHandle64);
-      return SUCCESS;
+      return ERR_NONE;
     case T_32:
       ELF32_EXECUTABLE_HANDLE_T elfHandle32;
       mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
       printELF32StrTable(&elfHandle32);
-      return SUCCESS;
+      return ERR_NONE;
     default:
     case T_NO_ELF:
-      return FAILED;
+      return ERR_UNKNOWN;
   }
 }
 
@@ -1481,7 +1481,7 @@ int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
 {
   if(!executableHandle || !executableHandle->fileHandle.p_data)
   {
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   /* Get the sh_offset of the shstrndx. */
   executableHandle->fileHandle.p_data_seekPtr =
@@ -1492,7 +1492,7 @@ int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
     printf("[Entry: %2d] %s\n", i, executableHandle->fileHandle.p_data_seekPtr + executableHandle->shdr[i].sh_name);
   }
   executableHandle->fileHandle.p_data_seekPtr = executableHandle->fileHandle.p_data;
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 /* TODO: Change this to print the actual strtab (null proceeded & terminated list of strings). */
@@ -1500,7 +1500,7 @@ int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
   if(!executableHandle || !executableHandle->fileHandle.p_data)
   {
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   /* 
    * Get the sh_offset of the shstrndx. The shstrndx is a table of strings
@@ -1515,7 +1515,7 @@ int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
   }
   /* Reset the seek pointer in the executable handle structure. */
   executableHandle->fileHandle.p_data_seekPtr = executableHandle->fileHandle.p_data;
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 
@@ -1635,17 +1635,17 @@ uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
   {
     case T_64:
       ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == FAILED)
+      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
       {
-        exit(FAILED);
+        exit(ERR_UNKNOWN);
       }
       address = lookupSymbolAddressELF64(&elfHandle64, symbolName);
       break;
     case T_32:
       ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == FAILED)
+      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
       {
-        exit(FAILED);
+        exit(ERR_UNKNOWN);
       }
       address = lookupSymbolAddressELF32(&elfHandle32, symbolName);
       break;
@@ -1669,7 +1669,7 @@ static uint64_t printSymbolTableDataElf64(ELF64_EXECUTABLE_HANDLE_T* executableH
   numSections = executableHandle->ehdr->e_shnum;
   if(numSections == 0)
   {
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   for(int i = 0; i < numSections; i++)
@@ -1751,9 +1751,9 @@ int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports)
   {
     case T_64:
       ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == FAILED)
+      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
       {
-        exit(FAILED);
+        exit(ERR_UNKNOWN);
       }
       if(printImports)
         err = printSymbolTableDataElf64(&elfHandle64, TRUE);
@@ -1762,9 +1762,9 @@ int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports)
       break;
     case T_32:
       ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == FAILED)
+      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
       {
-        exit(FAILED);
+        exit(ERR_UNKNOWN);
       }
       // TODO: Print symbol Table.
       break;

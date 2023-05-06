@@ -9,8 +9,13 @@
 
 #define TRUE             1
 #define FALSE            0
-#define SUCCESS          1
-#define FAILED          -1
+
+/* Definitions of different error values. */
+#define ERR_NONE                  0
+#define ERR_UNKNOWN               1
+#define ERR_NO_MEMORY             2
+#define ERR_FORMAT_NOT_SUPPORTED  3
+#define ERR_NULL_ARGUMENT         4
 
 
 #define TRUE_STR         "TRUE"

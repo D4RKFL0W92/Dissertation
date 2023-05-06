@@ -36,13 +36,13 @@ int main(int argc, char *argv[], char *envp[])
     */
     if(strcmp(argv[i], "-E") == 0)
     {
-      if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
+      if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
       {
         printf("Unable map %s into memory\n", argv[argc-1]);
         exit(-1);
       }
 
-      if(printElfInfoVerbose(&fileHandle) == FAILED)
+      if(printElfInfoVerbose(&fileHandle) == ERR_UNKNOWN)
       {
         printf("Unable to get ELF info from %s\n", argv[argc-1]);
         exit(-1);
@@ -57,7 +57,7 @@ int main(int argc, char *argv[], char *envp[])
     {
       enum BITS arch;
       
-      if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
+      if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
       {
         printf("Unable map %s into memory\n", argv[argc-1]);
         exit(-1);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[], char *envp[])
     {
       enum BITS arch;
       
-      if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
+      if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
       {
         printf("Unable map %s into memory\n", argv[argc-1]);
         exit(-1);
@@ -93,7 +93,7 @@ int main(int argc, char *argv[], char *envp[])
     if(!strcmp(argv[i], "-lookup"))
     {
       uint64_t addr;
-      if(mapFileToStruct(argv[argc-1], &fileHandle) == FAILED)
+      if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
       {
         printf("Unable map %s into memory.\n", argv[argc-1]);
         exit(-1);
@@ -111,7 +111,7 @@ int main(int argc, char *argv[], char *envp[])
     /* Option: Print SHA1 of given file. */
     if(!strcmp(argv[i], "-sha1"))
     {
-      if(printSHA1OfFile(argv[argc-1]) == FAILED)
+      if(printSHA1OfFile(argv[argc-1]) == ERR_UNKNOWN)
       {
         printf("Unable to calculate hash for %s.\n", argv[argc-1]);
         exit(-1);
@@ -122,39 +122,25 @@ int main(int argc, char *argv[], char *envp[])
     /* Option: Dump hex bytes from given offset.*/
     if(!strcmp(argv[i], "-hd"))
     {
-      uint8_t ret = 0;
+      uint8_t err = ERR_NONE;
       uint64_t start = 0;
       uint64_t uCount = 0;
 
-      if(argv[i+1][0] == '0' && argv[i+1][1] == 'x' || argv[i+1][1] == 'X')
+      err = stringToInteger(argv[i+1], &start);
+
+      if(err != ERR_NONE)
       {
-        start = hexToDecimal(argv[i+1], &start);
-        if(start == FAILED)
-        {
-          printf("Zero Offset Was Given.");
-          exit(-1);
-        }
-      }
-      else
-      {
-        /* TODO: Add some error checking here. (check if it's definitely a number.) */
-        start = atol(argv[i+1]);
+        printf("Byte Offset Provided In Incorrect Format.");
+        exit(1);
       }
 
-      if(argv[i+2][0] == '0' && argv[i+2][1] == 'x' || argv[i+2][1] == 'X')
+      err = stringToInteger(argv[i+2], &uCount);
+
+      if(err != ERR_NONE)
       {
-        start = hexToDecimal(argv[i+2], &uCount);
-        if(start == FAILED)
-        {
-          printf("Zero Byte Count Was Given.");
-          exit(-1);
-        }
+        printf("Byte Offset Provided In Incorrect Format.");
+        exit(1);
       }
-      else
-      {
-        uCount = atol(argv[i+2]);
-      }
-      
       
       dumpHexBytesFromFile(argv[argc-1], start, uCount);
     }

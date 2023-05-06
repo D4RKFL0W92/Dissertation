@@ -25,7 +25,7 @@
     becomes the tracee. (Sends a SIGSTOP to the tracee process).
 
     Param_1: The process ID (PID) of the tracee thread.
-    Return:  Returns FAILED or SUCCESS (1 / -1) Macro.
+    Return:  Returns ERR_UNKNOWN or ERR_NONE (1 / -1) Macro.
 */
 static int8_t attachToProcess(pid_t pid);
 static int8_t detachFromProcess(pid_t pid);

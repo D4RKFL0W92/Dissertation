@@ -57,14 +57,14 @@ int8_t mapFileToStruct(const char* filepath, FILE_HANDLE_T* handle)
     #ifdef DEBUG
     perror("Null pointer passed as parameter in mapFileToStruct()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   if( (handle->fd = open(filepath, O_RDONLY)) == -1)
   {
     #ifdef DEBUG
     perror("ERROR opening file.");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   if(fstat(handle->fd, &handle->st) == -1)
@@ -86,12 +86,12 @@ int8_t mapFileToStruct(const char* filepath, FILE_HANDLE_T* handle)
   handle->p_data_seekPtr = handle->p_data;
   strncpy(handle->path, filepath, PATH_MAX);
 
-  return SUCCESS;
+  return ERR_NONE;
 
   cleanup:
   {
     close(handle->fd);
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 }
 
@@ -102,26 +102,26 @@ int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
     #ifdef DEBUG
     perror("NULL handle passed as argument to unmapFileFromStruct()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   if(!handle->p_data || handle->st.st_size == 0)
   {
     #ifdef DEBUG
     perror("Non-mapped memory passed to unmapFileFromStruct()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   handle->p_data_seekPtr = NULL;
   if(munmap(handle->p_data, handle->st.st_size) == 0)
   {
     handle->p_data = NULL;
-    return SUCCESS;
+    return ERR_NONE;
   }
   #ifdef DEBUG
   perror("Unable to unmap memory in unmapFileFromStruct()");
   #endif
-  return FAILED;
+  return ERR_UNKNOWN;
 }
 
 uint8_t* sha1File(const char* filepath)
@@ -133,7 +133,7 @@ uint8_t* sha1File(const char* filepath)
   int fd;
   uint64_t bytesRead = 0;
 
-  if( (fd = open(filepath, O_RDONLY)) == FAILED)
+  if( (fd = open(filepath, O_RDONLY)) == ERR_UNKNOWN)
   {
     #ifdef DEBUG
     perror("ERROR opening file in sha1File()");
@@ -141,7 +141,7 @@ uint8_t* sha1File(const char* filepath)
     return NULL;
   }
 
-  if( (fstat(fd, &st)) == FAILED)
+  if( (fstat(fd, &st)) == ERR_UNKNOWN)
   {
     #ifdef DEBUG
     perror("ERROR caling fstat in sah1File()");
@@ -206,7 +206,7 @@ int8_t printSHA1OfFile(const char* filepath)
     #ifdef DEBUG
     perror("ERROR calculating sha1 of file in printSHA1OfFile()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
   printf("SHA1: ");
   for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
@@ -219,7 +219,7 @@ int8_t printSHA1OfFile(const char* filepath)
   {
     free(messageDigest);
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t scanForStrings(char* filepath, uint16_t len)
@@ -234,7 +234,7 @@ int8_t scanForStrings(char* filepath, uint16_t len)
     perror("Error mapping file in scanForStrings()");
     #endif
     logEvent(LOG_FILE, "scanForStrings()", "Unable to map file.");
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   for(uint64_t i = 0; i < sz; i++)
@@ -263,7 +263,7 @@ int8_t scanForStrings(char* filepath, uint16_t len)
       }
     }   
   }
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t dumpHexBytesFromOffset(uint8_t* pOffset, uint64_t uCount, uint64_t startOffset)
@@ -281,7 +281,7 @@ int8_t dumpHexBytesFromFile(char* filepath, uint64_t startAddress, uint64_t uCou
     #ifdef DEBUG
     perror("ERROR mapping file in dumpHexBytesFromFile()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   if(startAddress > sz || startAddress + uCount > sz)
@@ -290,7 +290,7 @@ int8_t dumpHexBytesFromFile(char* filepath, uint64_t startAddress, uint64_t uCou
     perror("ERROR, illegal offset, in dumpHexBytesFromFile()");
     #endif
     printf("Offset exceeds file size."); // Useful feedback to the user.
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   uint64_t counter = 0;
@@ -356,7 +356,7 @@ int8_t dumpHexBytesFromFile(char* filepath, uint64_t startAddress, uint64_t uCou
     currOffset += 0x10;
   }
   
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 int8_t dumpHexBytesFromFileFromFileHandle(FILE_HANDLE_T* handle, uint64_t startAddress, uint64_t uCount)
@@ -369,7 +369,7 @@ int8_t dumpHexBytesFromFileFromFileHandle(FILE_HANDLE_T* handle, uint64_t startA
     #ifdef DEBUG
     perror("ERROR, NULL data, in dumpHexBytesFromFile()");
     #endif
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   if(startAddress > handle->st.st_size || startAddress + uCount > handle->st.st_size)
@@ -378,7 +378,7 @@ int8_t dumpHexBytesFromFileFromFileHandle(FILE_HANDLE_T* handle, uint64_t startA
     perror("ERROR, illegal offset, in dumpHexBytesFromFile()");
     #endif
     printf("Offset exceeds file size.");
-    return FAILED;
+    return ERR_UNKNOWN;
   }
 
   uint8_t lineByteCount = 0;
@@ -400,7 +400,7 @@ int8_t dumpHexBytesFromFileFromFileHandle(FILE_HANDLE_T* handle, uint64_t startA
     
   }
   printf("\n");
-  return SUCCESS;
+  return ERR_NONE;
 }
 
 
@@ -439,7 +439,7 @@ void test_mapFileToStruct_null_filepath()
   FILE_HANDLE_T handle = {0};
   int ret = mapFileToStruct(NULL, &handle);
 
-  assert(ret == FAILED);
+  assert(ret == ERR_UNKNOWN);
   assert(handle.fd == 0);
   assert(handle.p_data == NULL);
   assert(handle.p_data_seekPtr == NULL);
@@ -451,7 +451,7 @@ void test_mapFileToStruct_null_filehandle()
   const char *filepath = "garbage";
   int ret = mapFileToStruct(filepath, NULL);
 
-  assert(ret == FAILED);
+  assert(ret == ERR_UNKNOWN);
   assert(strncmp(filepath, "garbage", 7) == 0);
 }
 
@@ -477,7 +477,7 @@ void test_mapFileToStruct_legitimate_parameters()
   FILE_HANDLE_T handle = {0};
   int ret = mapFileToStruct(pathname, &handle);
 
-  assert(ret == SUCCESS);
+  assert(ret == ERR_NONE);
   assert(handle.fd > 0);
   assert(handle.p_data != NULL);
   assert(handle.p_data_seekPtr != NULL);
@@ -512,7 +512,7 @@ void test_unmapFileFromStruct()
 
   int ret = mapFileToStruct(pathname, &fileHandle);
   
-  assert(ret == SUCCESS);
+  assert(ret == ERR_NONE);
 
   unmapFileFromStruct(&fileHandle);
 
