@@ -1,0 +1,365 @@
+Tickets
+
+20/07/2022
+New Tickets:
+•	Check a given file is actually an executable, (check for ELF magic number/bytes.
+•	Retrieve the Elf_ENhdr from an executable
+•	Retrieve the Elf_PNhdr from the executable (this gives the offsets of other information needed to load the binary into memory at runtime).
+•	Create a remote repository (GitHub) and pushing my project directory there after initializing it as a git repository.
+
+In Progress Tickets:
+Finished Tickets:
+
+29/07/2022
+
+New Tickets:
+•	Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries.
+•	Write a function to map an executable to memory (mmap), this will make the data easier to analyze in completeness. (the binary should be a reasonable size to map to memory, as this needs to happen for execution.) Sanity checks should be made before mapping the executable to memory.
+•	Write test for function that maps ELF to memory.
+•	Update isELF() to check all six bytes of ELF magic number as opposed to five.
+In Progress Tickets:
+•	Check a given file is actually an executable.
+•	Retrieve the Elf_PNhdr from the executable (this gives the offsets of other information needed to load the binary into memory at runtime).
+•	Write logging function to write debug information to a file for analysis.
+Finished Tickets:
+•	Check a given file is actually an executable, (check for ELF magic number/bytes).
+•	Retrieve the Elf_ENhdr from an executable.
+•	Create a remote repository (GitHub) and pushing my project directory there after initializing it as a git repository.
+
+
+31/07/2022
+
+New Tickets:
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries.
+•	Write test for function that maps ELF to memory.
+•	Incorporate logging function for errors in other function. (better than using perror()). Also make logging optional in the build by using macros.
+•	[T2] Write function to output information related to a binary (i.e architecture, ELF type, endianness etc).
+In Progress Tickets:
+•	Update isELF() to check all six bytes of ELF magic number as opposed to five.
+Finished Tickets:
+•	Write logging function to write debug information to a file for analysis.
+•	Write a function to map an executable to memory (mmap), this will make the data easier to analyze in completeness. (the binary should be a reasonable size to map to memory, as this needs to happen for execution.) Sanity checks should be made before mapping the executable to memory.
+
+Backlog notes:
+Research should be done into ways to tell if an ELF binary is stripped, has areas of PIC (position independent code), has a stack canary, architecture, etc….
+
+02/08/2022
+
+New Tickets:
+•	Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries.
+In Progress Tickets:
+•	Update isELF() to check all six bytes of ELF magic number as opposed to five.
+•	Retrieve the Elf_PNhdr from the executable (this gives the offsets of other information needed to load the binary into memory at runtime).
+•	Incorporate logging function for errors in other function. (better than using perror(), also clearer). Also make logging optional in the build by using macros.
+•	Write function to output information related to a binary (i.e architecture, ELF type, endianness etc).
+Finished Tickets:
+•	Retrieve the Elf_PNhdr from the executable (this gives the offsets of other information needed to load the binary into memory at runtime).
+Backlog notes:
+I have chosen not to decompose the task of printing the Binary information relevant to an ELF executable into many functions. My reasoning for this is if I reduce the number of separate function calls, this will increase performance as there with be less resulting work used for setting up the stack for each one. The only issue in this is, the work involved in this single ticket will take considerably more work. (maybe 5 – 7 days). Another issue is that one could argue it is more error prone but given that all information in this function comes from the same structure (Elf_ENhdr) it makes sense as decomposition would require the constant passing of the same structure through more unnecessary function calls requiring many more stack frames to be assembled.
+
+
+
+06/08/2022
+
+New Tickets
+•	[T7] Research how to read a running ELF executables process address space.
+•	[T8] Write a regex function to hard search for strings embedded within a binary.
+•	[T9] Write a function to read processor registers at the point of calling.
+•	[T10] Add a second parameter to printELFInfo() for optionally writing the output to a file.
+
+In Progress Tickets:
+•	[T4] Retrieve the Elf_PNhdr from the executable (this gives the offsets of other information needed to load the binary into memory at runtime).
+•	[T3] Incorporate logging function for errors in other function. (better than using perror(), also clearer). Also make logging optional in the build by using macros.
+•	[T2] Write function to output information related to a binary (i.e architecture, ELF type, endianness etc).
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries. (More research required at this point).
+
+Finished Tickets
+•	[T6] Update isELF() to check six bytes of ELF magic number as opposed to five. (The rest aren’t really significant for now)
+
+Backlog Notes.
+It would be good to add an optional argument to printELFInfo() in order to allow writing the data to a as file as opposed to the terminal, the reasoning is that in the future we could automate batch file scanning, the results could then be written to a file for easier analysis later.
+
+07/08/2022
+
+New Tickets
+•	Research ways to identify if an executables entry point has been tampered with.
+•	Investigate ElfN_Phdr structure to see what useful forensics information can be obtained.
+•	[T11] Write a function to print virtual addresses that binary phdrs will be mapped to at runtime.
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file.
+Ongoing Tickets
+•	[T2] Write function to output information related to a binary (i.e architecture, ELF type, endianness etc). (Mostly done but more could most likely be added once my understanding of the file format is more complete)
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries. (More research required at this point).
+•	[T7] Research how to read a running ELF executables process address space.
+•	[T8] Write a regex function to hard search for strings embedded within a binary.
+•	[T9] Write a function to read processor registers at the point of calling.
+•	[T10] Add a second parameter to printELFInfo() for optionally writing the output to a file.
+
+Finished Tickets
+•	[T10] Add a second parameter to printELFInfo() for optionally writing the output to a file.
+•	[T3] Incorporate logging function for errors in other function. (better than using perror(), also clearer). Also make logging optional in the build by using macros.
+•	[T4] Retrieve the Elf_PNhdr from the executable (this gives the offsets of other information needed to load the binary into memory at runtime).
+•	[T9] Write a function to read processor registers at the point of calling. (return user_regs_struct)
+
+Backlog Notes
+A functional test will have to be created for any new functions. Accurate documentation should be maintained.
+
+12/08/2022
+
+New Tickets
+•	[T13] Write a BITS unspecific function to print out Phdr information relating to a binary. (The platform specific versions should be declare static so as to prevent calling from other modules.
+In Progress Tickets
+•	Research ways to identify if an executables entry point has been tampered with.
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file.
+•	[T8] Write a regex function to hard search for strings embedded within a binary.
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries. (More research required at this point).
+•	
+Finished Tickets
+•	[T11] Write a function to print virtual addresses that binary phdrs will be mapped to at runtime.
+•	[T9] Write a function to read processor registers at the point of calling.
+•	[T2] Write function to output information related to a binary (i.e architecture, ELF type, endianness etc). (Mostly done but more could most likely be added once my understanding of the file format is more complete)
+•	[T10] Add a second parameter to printELFInfo() for optionally writing the output to a file.
+•	[T7] Research how to read a running ELF executables process address space. (ptrace ADD REFERENCE)
+
+
+Backlog Notes
+At this point more research is required into the ELF specification and how it can be used to retrieve forensic information related to a static binary. I know that the ptrace syscall can be used to read the memory address space of a running process but I will need to attempt some testing as I am unfamiliar with its use.
+
+14/08/2022
+New Tickets
+•	[T14] Create a separate file with a main function in order to more easily logically separate and test modules.
+•	[T15] Create a launch.json file for VSCode.
+
+In Progress Tickets
+•	Research ways to identify if an executables entry point has been tampered with.
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file.
+•	[T8] Write a regex function to hard search for strings embedded within a binary.
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries. (More research required at this point).
+
+Finished Tickets
+•	[T13] Write a BITS unspecific function to print out Phdr information relating to a binary. (The platform specific versions should be declare static so as to prevent calling from other modules.
+•	
+Backlog Notes
+It may be a good idea to create a build script for the project at this point. Doing this will mean I need to create a launch.json file for debugging the code base within VSCode.
+
+
+
+12/09/2022
+News Tickets
+•	[T16] Add a function in logging.c to clear the log file, this can be called at the start of execution.
+•	[T17] Add a timestamp to logging function.
+In Progress Tickets
+•	Research ways to identify if an executables entry point has been tampered with. After some research it seems that the lowest legal entry point for an ELF executable is 0x8048000. This could however only apply to 32 bit binaries. (https://stackoverflow.com/questions/12488010/why-is-the-entry-point-address-in-my-executable-0x8048330-0x330-being-the-offs), a more reliable source should be found.
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file.
+•	[T8] Write a regex function to hard search for strings embedded within a binary.
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries. (More research required at this point).
+Finished Tickets
+•	[T14] Create a separate file with a main function in order to more easily logically separate and test modules.
+•	[T15] Create a launch.json file for VSCode.
+Backlog Notes
+In rearranging the project, I had to do some git revisions. This resulted in me losing some of the code written in previous sprints. This will have to be fixed. I should also try to finish some more of the in progress tickets before opening more. This will also result in some trial and error as I learn/research how to accomplish these tasks.
+It may also be worth running some tests on mapELFToMemory with larger binaries. This is because if the binary is very large it could be a performance issue (causing the analysis to seemingly hang as the mapping takes place).
+
+
+
+
+08/10/22
+New Tickets
+•	[T16] Add a function in logging.c to clear the log file, this can be called at the start of execution.
+•	[T17] Add a timestamp to logging function.
+In Progress Tickets
+•	[T18] Add Elf symbol lookup function that works for binaries containing debug information.
+•	Research ways to identify if an executables entry point has been tampered with. After some research it seems that the lowest legal entry point for an ELF executable is 0x8048000. This could however only apply to 32 bit binaries. (https://stackoverflow.com/questions/12488010/why-is-the-entry-point-address-in-my-executable-0x8048330-0x330-being-the-offs), a more reliable source should be found. (THIS SOURCCE WAS FOUND TO BE INCORRECT, AN ELF ENTRY POINT CAN THEORETICALLY BE ANY ADDRESS)
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file.
+•	[T8] Write a regex function to hard search for strings embedded within a binary.
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries. (More research required at this point).
+Finished tickets
+Backlog Notes
+Upon trying to write a function to lookup symbols I ran into the issue of the section headers being malformed/unusable. I believe this has something to do with debug symbols not being included in the binary. I know stripped binaries do not have section headers at all, but I believe that not compiling the test binary with the gcc flag -ggdb will cause the binaries section header and symbol table to be incomplete.
+I have found that Binary Ninja’s raw view can be used to examine the test binary easily alongside debugging.
+
+22/10/2022
+
+New Tickets
+•	[T17] Add a timestamp to logging function.
+•	[T19] Write a function to return the SHA1 hash of a file. A third party library should be used for actually producing the hash value, (this will ensure correct implementation).
+•	[T20] Design & implement a CLI for the program.
+•	[T21] Write a function to lookup the address of the Global Offset Table (GOT).
+•	[T22] Write a function that can dump the given hex bytes at a given offset.
+In Progress Tickets
+•	[T18] Add Elf symbol lookup function that works for binaries containing debug information.
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file. (After some reading, these strings sound like symbol names among other things. Not strings coded into the program).
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries. (More research required at this point).
+Finished Tickets
+•	[T8] Write a regex function to hard search for strings embedded within a binary.
+•	[T16] Add a function in logging.c to clear the log file, this can be called at the start of execution.
+Backlog Notes
+I managed to write a function to search an entire static binary for ASCII strings, it was not possible to use regular expressions as they are not designed to work on binary data, only textual.
+
+05/11/2022
+New Tickets
+•	[T17] Add a timestamp to logging function.
+•	[T21] Create an automated test for the hashing function of the program, the output hash can be compared with the output of the command line tool sha1sum.
+•	[T22] Create functionality to open/seek/read/write at the byte level within a file.
+•	[T23] Add a SHA1 output to the information produced by printELFInfo()
+In Progress
+•	[T18] Add Elf symbol lookup function that works for binaries containing debug information.
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file.
+•	[T20] Design & implement a CLI for the program. (This will be ongoing)
+Finished Tickets
+•	[T19] Write a function to return the SHA1 hash of a file. A third party library should be used for actually producing the hash value, (this will ensure correct implementation).
+•	[T1] Design, write and test function for dumping the ascii strings stored in the .rodata section of a binary. (the first iteration of this functionality should only handle none stripped binaries. (More research required at this point).
+Backlog Notes
+I have managed to write a function to calculate and return the SHA1 hash of a file, I am however having difficulties printing the hash as for some bytes it seems to tack on preceding FFFF… bytes to the start of each byte of the message digest produced by the hash. I have done manual testing and it looks correct in memory whilst running the program (20 bytes long). I tried passing the value to a char variable before printing and printing each byte on a newline, the following is the result of one such run:
+
+1d
+22
+ffffff92
+71
+ffffff92
+ffffff8d
+3f
+ffffff9e
+2b
+ffffffb0
+37
+5b
+ffffffd6
+ffffffce
+5d
+ffffffb6
+ffffffc6
+ffffffd3
+48
+ffffffd9
+
+I eventually got around this issue by assigning each value to a uint8_t type variable.
+I think it would be good to delegate reading a file into a buffer into its own function. This will most likely be used by other functions.
+
+19/11/2022
+New Tickets
+•	[T17] Add a timestamp to logging function (is this even useful? Probably not, REMOVE THIS TICKET).
+•	[T22] Create functionality to open/seek/read/write at the byte level within a file.
+•	[T23] Add a SHA1 output to the information produced by printELFInfo()
+
+In Progress Tickets
+•	[T24] It would be better if the program could retrieve as much information as the readelf command with the argument -e (Elf header, Program Headers and Section headers.
+•	[T18] Add Elf symbol lookup function that works for binaries containing debug information.
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file.
+•	[T20] Design & implement a CLI for the program. (This will be ongoing)
+Finished Tickets
+•	[T21] Create an automated test for the hashing function of the program, the output hash can be compared with the output of the command line tool sha1sum.
+
+16/12/2022
+
+New Tickets
+•	[T22] Create functionality to open/seek/read/write at the byte level within a file.
+•	[T26] Create a functional test for the string dumping functionality of the tool.
+•	[T27] Begin adding unit tests to the code base for all functions that are reasonable for unit testing (functions that carry out a single specific job).
+•	[T28] Update the build.sh script to have the capability of doing optional debug and unit test builds
+In Progress Tickets
+•	[T18] Add Elf symbol lookup function that works for binaries containing debug information.
+•	[T20] Design & implement a CLI for the program. (This will be ongoing)
+Finished Tickets
+•	[T12] Reading the ELF specification it mentions string tables that are NULL terminated strings that describe the sections of the binary. It would be good to write a function to output these strings to the console or file.
+•	[T24] It would be better if the program could retrieve as much information as the readelf command with the argument -e (Elf header, Program Headers and Section headers.
+•	[T23] Add a SHA1 output to the information produced by printELFInfo()
+•	[T25] Create a string dumping option for the tool, the underlying functionality is already implemented.
+Backlog Notes
+In order to easily create a functional test for the string scanning feature of the tool, it makes sense to include spaces in the accepted range of ASCII characters.
+With the current design of the tool, it is not reasonable to create unit tests for the majority of the functions. This is mainly due to the fact that most functions rely on opening a file or using an already open file. For this reason I have used a macro to include full paths for very simple local test files, this enables me to unit test as much functionality as possible. I have decided to create an optional compile with unit tests included, I will achieve this with preprocessor macros. My intention is to create an automated build that runs unit tests by default. This will help ensure integrity of my product during development.
+After some more research: https://www.cs.cmu.edu/afs/cs/academic/class/15213-f00/docs/elf.pdf
+
+08/01/2023
+New Tickets
+•	[T22] Create functionality to open/seek/read/write at the byte level within a file.
+•	[T29] Add functionality to recognize & extract addresses passed to the software in hex.
+In Progress Tickets
+•	[T18] Add Elf symbol lookup function that works for binaries containing debug information.
+•	[T20] Design & implement a CLI for the program. (This will be ongoing)
+•	[T26] Create a functional test for the string dumping functionality of the tool.
+•	[T27] Begin adding unit tests to the code base for all functions that are reasonable for unit testing (functions that carry out a single specific job).
+•	[T28] Update the build.sh script to have the capability of doing optional debug and unit test builds
+Finished Tickets
+
+Backlog Notes
+I have decided to update the build script to make use of the preprocessor definitions I have used in the codebase to enable optional debug or unit test builds, the reason I have chosen to do this is that although it would be good to have this code during development To ensure integrity of the software. It would also be optimal to be able to build the project without this extra code that has no relevance to the end user and would make the end binary larger in size.
+
+17/02/2023
+
+New Tickets
+•	[T22] Create functionality to open/seek/read/write at the byte level within a file.
+In Progress
+•	[T18] Add Elf symbol lookup function that works for binaries containing debug information.
+•	[T20] Design & implement a CLI for the program. (This will be ongoing)
+•	[T26] Create a functional test for the string dumping functionality of the tool.
+•	[T27] Begin adding unit tests to the code base for all functions that are reasonable for unit testing (functions that carry out a single specific job).
+•	[T28] Update the build.sh script to have the capability of doing optional debug and unit test builds
+
+Finished Tickets
+•	[T29] Add functionality to recognize & extract addresses passed to the software in hex.
+Backlog Notes
+Looking at the library functions I have used across the project so far I believe it would not be too difficult to include the necessary changes to allow compilation of the project on a Windows system. This is due to the fact I have predominantly stuck to general libc functions. I will need to include an optional define of the ELF data types. I will also need to write a new compile script in python as bash is not standard on Windows systems. I would like to also include some extra logic in the compile script such as filtering expected compiler warnings. I could use a build manager such as Bazel but I think this would make it more difficult for an end user to compile the project themselves if I make the project open source.
+09/04/2023
+
+New Tickets
+•	[T22] Create functionality to open/seek/read/write at the byte level within a file.
+•	[T30] Write a new compile script in Python.
+•	[T31] Add optional definitions of the ELF headers and data types.
+•	[T32] Refactor function to print all symbols and their relevant information.
+•	[T33] Add functionality to print all functions of the provided binary (local/imported functions)
+In Progress
+•	[T20] Design & implement a CLI for the program. (This will be ongoing)
+•	[T26] Create a functional test for the string dumping functionality of the tool.
+•	[T27] Begin adding unit tests to the code base for all functions that are reasonable for unit testing (functions that carry out a single specific job).
+Finished Tickets
+•	[T28] Update the build.sh script to have the capability of doing optional debug and unit test builds.
+•	[T18] Add Elf symbol lookup function that works for binaries containing debug information.
+Backlog Notes
+Many of the functions in elfinfo.c are not suitable for unit testing entirely as it would require mocking up multiple ELF data structures to simulate. We could, however, test the failure conditions do operate as expected. Functionality of many of these functions will have to be covered by functional tests.
+Now that the symbol lookup functionality has been created, I think it should be extended to being able to print all symbols and their relevant information.
+Also after getting this functionality working correctly I see that the current functions I have for printing the symbol table data are incorrect. I will refactor this code to be essentially the same as lookupElfSymbol.
+It would be good to start making the architecture specific functions static and removing there declaration from the header file to simplify/secure the library structure.
+
+
+01/05/2023
+New Tickets
+•	[T22] Create functionality to open/seek/read/write at the byte level within a file.
+•	[T31] Add optional definitions of the ELF headers and data types.
+•	[T32] Refactor function to print all symbols and their relevant information.
+•	[T33] Start writing an automated functional testing infrastructure/framework.
+•	[T34] Update the hex dump functionality of the product to also print the ASCII representation of the hex bytes, similar to how other hex editors do.
+•	[T35] Update the hexdump functionality to handle taking offset and byte count in hex.
+•	[T36] Refactor some of the hexdumping functionality into its own function ‘dumpHexBytesFromOffset’. It can then be called from the functions that dump hex bytes from file or memory.
+•	[T37] The build script seems to not handle building with unit tests properly, refactor the script to build with debug/unit tests unless switches are provided excluding one or the other.
+•	[T38] Expand the defined error codes, making it possible to indicate what may have gone wrong (this will require reviewing old code to see where we could use these new definitions).
+In Progress
+•	[T20] Design & implement a CLI for the program. (This will be ongoing)
+•	[T26] Create a functional test for the string dumping functionality of the tool.
+•	[T27] Begin adding unit tests to the code base for all functions that are reasonable for unit testing (functions that carry out a single specific job).
+Finished Tickets
+•	[T33] Add functionality to print all functions of the provided binary (local/imported functions)
+•	[T30] Write a new compile script in Python.
+Backlog Notes
+It would be a good idea to start writing a basic testing infrastructure. I will write individual python scripts for each test, this will keep it modular, I can then write a central test script that will run all the separate tests. This will make it possible to run all tests as part of the build, streamlining the development process.
+
+
+06/05/2023
+New Tickets
+•	[T22] Create functionality to open/seek/read/write at the byte level within a file.
+•	[T31] Add optional definitions of the ELF headers and data types.
+•	[T32] Refactor function to print all symbols and their relevant information.
+•	[T36] Refactor some of the hexdumping functionality into its own function ‘dumpHexBytesFromOffset’. It can then be called from the functions that dump hex bytes from file or memory.
+•	[T38] Expand the defined error codes, making it possible to indicate what may have gone wrong (this will require reviewing old code to see where we could use these new definitions).
+•	[T39] Begin writing clear documentation for the header files as these could also be offered as a library.
+In Progress
+•	[T20] Design & implement a CLI for the program. (This will be ongoing)
+•	[T26] Create a functional test for the string dumping functionality of the tool.
+•	[T27] Begin adding unit tests to the code base for all functions that are reasonable for unit testing (functions that carry out a single specific job).
+•	[T33] Start writing an automated functional testing infrastructure/framework.
+
+Finished Tickets
+•	[T34] Update the hex dump functionality of the product to also print the ASCII representation of the hex bytes, similar to how other hex editors do.
+•	[T35] Update the hexdump functionality to handle taking offset and byte count in hex.
+•	[T37] The build script seems to not handle building with unit tests properly, refactor the script to build with debug/unit tests unless switches are provided excluding one or the other.
+Backlog Notes
+

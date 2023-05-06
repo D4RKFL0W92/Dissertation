@@ -23,6 +23,9 @@ class Hatch:
         self.stdout = ""
         self.stderr = ""
 
+        # Definitions of Path names to different teest scripts:
+        self.symbolScanTest = "../tests/symbol-scan/symbol-scan.py"
+
     def setFlags(self, flags):
         self.FLAGS = flags
         self.buildParameters.insert(0, self.FLAGS)
