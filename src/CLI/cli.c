@@ -52,7 +52,7 @@ int main(int argc, char *argv[], char *envp[])
 
     /* Function related options. */
     /* Option: Handle dumping of imported function names. */
-    if(strcmp(argv[i], "-i") == 0 ||
+    else if(strcmp(argv[i], "-i") == 0 ||
        strcmp(argv[i], "-imports") == 0)
     {
       enum BITS arch;
@@ -66,7 +66,7 @@ int main(int argc, char *argv[], char *envp[])
     }
 
     /* Option: Local function dumping. */
-    if(strcmp(argv[i], "-f") == 0 ||
+    else if(strcmp(argv[i], "-f") == 0 ||
        strcmp(argv[i], "-functions") == 0)
     {
       enum BITS arch;
@@ -76,6 +76,7 @@ int main(int argc, char *argv[], char *envp[])
         printf("Unable map %s into memory\n", argv[argc-1]);
         exit(-1);
       }
+
       if(strcmp(argv[i], "-v") == 0)
       {
         printSymbolTableData(&fileHandle, ALL);
@@ -90,7 +91,7 @@ int main(int argc, char *argv[], char *envp[])
      * Option:
      * Lookup address of ELF symbol.
     */
-    if(!strcmp(argv[i], "-lookup"))
+    else if(!strcmp(argv[i], "-lookup"))
     {
       uint64_t addr;
       if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
@@ -109,7 +110,7 @@ int main(int argc, char *argv[], char *envp[])
     }
 
     /* Option: Print SHA1 of given file. */
-    if(!strcmp(argv[i], "-sha1"))
+    else if(!strcmp(argv[i], "-sha1"))
     {
       if(printSHA1OfFile(argv[argc-1]) == ERR_UNKNOWN)
       {
@@ -120,7 +121,7 @@ int main(int argc, char *argv[], char *envp[])
     
 
     /* Option: Dump hex bytes from given offset.*/
-    if(!strcmp(argv[i], "-hd"))
+    else if(!strcmp(argv[i], "-hd"))
     {
       uint8_t err = ERR_NONE;
       uint64_t start = 0;
@@ -130,7 +131,7 @@ int main(int argc, char *argv[], char *envp[])
 
       if(err != ERR_NONE)
       {
-        printf("Byte Offset Provided In Incorrect Format.");
+        printf("Byte Offset Provided In Incorrect Format.\n");
         exit(1);
       }
 
@@ -138,21 +139,25 @@ int main(int argc, char *argv[], char *envp[])
 
       if(err != ERR_NONE)
       {
-        printf("Byte Offset Provided In Incorrect Format.");
+        printf("Count Provided In Incorrect Format.\n");
         exit(1);
+      }
+      if(uCount == 0)
+      {
+        printf("Count Must Be Greater Than Zero.\n");
       }
       
       dumpHexBytesFromFile(argv[argc-1], start, uCount);
     }
 
     /* Option: Dump ASCII strings. */
-    if(!strcmp(argv[i], "-s")) /* TODO: Adapt this functionality to handle searching for strings of a given size. */
+    else if(!strcmp(argv[i], "-s")) /* TODO: Adapt this functionality to handle searching for strings of a given size. */
     {
       scanForStrings(argv[argc-1], 3);
     }
 
     /* Option: Convert a hex passed as argument after switch value to decimal. */
-    if(!(strcmp(argv[i], "-h2d")))
+    else if(!(strcmp(argv[i], "-h2d")))
     {
       uint64_t result = 0;
       uint8_t ret = 0;
