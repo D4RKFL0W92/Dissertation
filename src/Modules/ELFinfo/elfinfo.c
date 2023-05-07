@@ -1852,7 +1852,7 @@ int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports)
 
  #ifdef UNITTEST
 
- void test_isELF()
+ static void test_isELF()
  {
   /* isElf() is only concerned with the first six bytes of the ELF header. */
   assert(isELF("\x7f\x45\x4c\x46\x01\x01") == T_32); // Test a real 32-bit ELF header Little Endian.

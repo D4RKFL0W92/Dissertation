@@ -471,6 +471,15 @@ static void test_unmapFileFromStruct_nullFileStruct()
   assert(err == ERR_NULL_ARGUMENT);
 }
 
+static void test_unmapFileFromStruct_invalidFileStruct()
+{
+  FILE_HANDLE_T fHandle = {0};
+  int8_t err = ERR_NONE;
+
+  err = unmapFileFromStruct(&fHandle);
+  assert(err == ERR_INVALID_ARGUMENT);
+}
+
 static void test_dumpHexBytesFromOffset_legitimateUsage()
 {
   uint8_t buff[] = {0x5f, 0x5f, 0x6c, 0x69, 0x62, 0x63, 0x5f, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x6d, 0x61, 0x69};
@@ -510,6 +519,7 @@ void fileOpsTestSuite()
   test_mapFileToStruct_null_filehandle();
 
   test_unmapFileFromStruct_nullFileStruct();
+  test_unmapFileFromStruct_invalidFileStruct();
 
   test_dumpHexBytesFromOffset_legitimateUsage();
   test_dumpHexBytesFromOffset_zeroCount();
