@@ -140,5 +140,8 @@ uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName);
 #define ALL     2
 int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports);
 
+#ifdef UNITTEST
+void elfInfoTestSuite();
+#endif /* UNITTEST */
 
 #endif /* _ELF_INFO_ */

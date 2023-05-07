@@ -102,14 +102,14 @@ int8_t unmapFileFromStruct(FILE_HANDLE_T* handle)
     #ifdef DEBUG
     perror("NULL handle passed as argument to unmapFileFromStruct()");
     #endif
-    return ERR_UNKNOWN;
+    return ERR_NULL_ARGUMENT;
   }
   if(!handle->p_data || handle->st.st_size == 0)
   {
     #ifdef DEBUG
     perror("Non-mapped memory passed to unmapFileFromStruct()");
     #endif
-    return ERR_UNKNOWN;
+    return ERR_INVALID_ARGUMENT;
   }
 
   handle->p_data_seekPtr = NULL;
@@ -418,11 +418,10 @@ int8_t dumpHexBytesFromFileFromFileHandle(FILE_HANDLE_T* handle, uint64_t startA
 /*
  * Unit tests for fileOps.c
  * This will be part of the automated testing subsystem.
- * Optionally included with the UNITTEST and LOCALTESTFILES
- * macros located in turtle_types.h
+ * Optionally included with the -DUNITTEST build flag.
  */
 #ifdef UNITTEST
-void test_basicFileMap_null_filepath()
+static void test_basicFileMap_null_filepath()
 {
   uint64_t fileSz = 0;
 
@@ -432,7 +431,7 @@ void test_basicFileMap_null_filepath()
   assert(fileSz == 0);
 }
 
-void test_basicFileMap_null_fileSize()
+static void test_basicFileMap_null_fileSize()
 {
   const char* filepath = "garbage";
 
@@ -443,7 +442,7 @@ void test_basicFileMap_null_fileSize()
   assert(strncmp(filepath, "garbage", 7) == 0);
 }
 
-void test_mapFileToStruct_null_filepath()
+static void test_mapFileToStruct_null_filepath()
 {
   FILE_HANDLE_T handle = {0};
   int ret = mapFileToStruct(NULL, &handle);
@@ -455,7 +454,7 @@ void test_mapFileToStruct_null_filepath()
   assert(handle.pathLen == 0);
 }
 
-void test_mapFileToStruct_null_filehandle()
+static void test_mapFileToStruct_null_filehandle()
 {
   const char *filepath = "garbage";
   int ret = mapFileToStruct(filepath, NULL);
@@ -464,16 +463,36 @@ void test_mapFileToStruct_null_filehandle()
   assert(strncmp(filepath, "garbage", 7) == 0);
 }
 
-void test_dumpHexBytesFromOffset_legitimateUsage()
+static void test_unmapFileFromStruct_nullFileStruct()
+{
+  int8_t err = ERR_NONE;
+
+  err = unmapFileFromStruct(NULL);
+  assert(err == ERR_NULL_ARGUMENT);
+}
+
+static void test_unmapFileFromStruct_invalidFileStruct()
+{
+  FILE_HANDLE_T fHandle = {0};
+  int8_t err = ERR_NONE;
+
+  err = unmapFileFromStruct(&fHandle);
+  assert(err == ERR_INVALID_ARGUMENT);
+}
+
+static void test_dumpHexBytesFromOffset_legitimateUsage()
 {
   uint8_t buff[] = {0x5f, 0x5f, 0x6c, 0x69, 0x62, 0x63, 0x5f, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x6d, 0x61, 0x69};
   int8_t err = ERR_NONE;
 
   err = dumpHexBytesFromOffset(buff, 0, 10);
   assert(err == ERR_NONE);
+
+  err = dumpHexBytesFromOffset(&buff[5], 5, 10);
+  assert(err == ERR_NONE);
 }
 
-void test_dumpHexBytesFromOffset_zeroCount()
+static void test_dumpHexBytesFromOffset_zeroCount()
 {
   uint8_t buff[] = {0x5f, 0x5f, 0x6c, 0x69, 0x62, 0x63, 0x5f, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x6d, 0x61, 0x69};
   int8_t err = ERR_NONE;
@@ -482,80 +501,13 @@ void test_dumpHexBytesFromOffset_zeroCount()
   assert(err == ERR_INVALID_ARGUMENT);
 }
 
-void test_dumpHexBytesFromOffset_nullMemoryPointer()
+static void test_dumpHexBytesFromOffset_nullMemoryPointer()
 {
   int8_t err = ERR_NONE;
 
   err = dumpHexBytesFromOffset(NULL, 0, 0);
   assert(err == ERR_NULL_ARGUMENT);
 }
-
-  #ifdef LOCALTESTFILES
-
-  void test_basicFileMap_null_legitimate_file()
-  {
-    const char* filepath = "/home/calum/Dissertation_Project/tests/files/text1.txt";
-    uint64_t fileSz = 0;
-
-    char* ret = basicFileMap(filepath, &fileSz);
-
-    assert(ret != NULL);
-    assert(strncmp(filepath, "/home/calum/Dissertation_Project/tests/files/text1.txt", 27) == 0);
-    assert(fileSz == 11);
-
-    munmap(ret, fileSz);
-  }
-
-  void test_mapFileToStruct_legitimate_parameters()
-  {
-    const char *pathname = "/home/calum/Dissertation_Project/tests/files/text1.txt";
-    FILE_HANDLE_T handle = {0};
-    int ret = mapFileToStruct(pathname, &handle);
-
-    assert(ret == ERR_NONE);
-    assert(handle.fd > 0);
-    assert(handle.p_data != NULL);
-    assert(handle.p_data_seekPtr != NULL);
-    assert(handle.st.st_size == 11);
-
-    munmap(handle.p_data, handle.st.st_size);
-  }
-
-  void test_sha1File_correctBehaivour()
-  {
-    const char *pathname = "/home/calum/Dissertation_Project/tests/files/text1.txt";
-    /* The SHA1 hash produced by sha1sum of the above file. */
-    const char *actualHash = "\xe9\x3c\xea\xc6\xfa\xc2\x08\x85\x98\x7a\xd2\xe8\x69\xd1\x6a\xf6\x23\xf6\x16\x99";
-    uint8_t* digest = NULL;
-    digest = sha1File(pathname);
-
-    for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
-    {
-      assert((char)actualHash[i] == (char)digest[i]);
-    }
-
-    if(digest == NULL)
-    {
-      free(digest);
-    }
-  }
-
-  void test_unmapFileFromStruct()
-  {
-    FILE_HANDLE_T fileHandle;
-    const char *pathname = "/home/calum/Dissertation_Project/tests/files/text1.txt";
-
-    int ret = mapFileToStruct(pathname, &fileHandle);
-    
-    assert(ret == ERR_NONE);
-
-    unmapFileFromStruct(&fileHandle);
-
-    assert(fileHandle.p_data == NULL);
-    assert(fileHandle.p_data_seekPtr == NULL);
-  }
-
-  #endif /* LOCALTESTFILES */
 
 void fileOpsTestSuite()
 {
@@ -566,16 +518,12 @@ void fileOpsTestSuite()
   test_mapFileToStruct_null_filepath();
   test_mapFileToStruct_null_filehandle();
 
+  test_unmapFileFromStruct_nullFileStruct();
+  test_unmapFileFromStruct_invalidFileStruct();
+
   test_dumpHexBytesFromOffset_legitimateUsage();
   test_dumpHexBytesFromOffset_zeroCount();
   test_dumpHexBytesFromOffset_nullMemoryPointer();
 
-  /* Tests that a reliant on local test files using complete paths. */
-  #ifdef LOCALTESTFILES
-  // test_basicFileMap_null_legitimate_file();
-  // test_mapFileToStruct_legitimate_parameters();
-  // test_sha1File_correctBehaivour();
-  // test_unmapFileFromStruct();
-  #endif
 }
 #endif /*UNITTEST */

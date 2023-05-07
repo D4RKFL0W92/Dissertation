@@ -7,7 +7,7 @@ cli="../src/CLI/cli.c"
 memory="../src/Memory/turtle_memory.c"
 io="../src/Modules/IO/io.c"
 
-FLAGS='-DDEBUG -DUNITTEST -DLOCALTESTFILES'
+FLAGS='-DDEBUG -DUNITTEST'
 SSLLIB='/usr/bin/openssl -lssl -lcrypto'            # These may not always be in the same place
 SSLINCLUDES='/usr/local/src/openssl-3.0.7/include'  # maybe we can locate these dynamically.
 
@@ -15,7 +15,7 @@ if [ $# -eq 1 ]; then
   echo '1 Arg Provided'
   if [ $1 = '-d' ]; then
     echo 'Building Without Debug Symbols'
-    FLAGS='-DUNITTEST -DLOCALTESTFILES'
+    FLAGS='-DUNITTEST'
   elif [ $1 = '-u' ]; then
     echo 'Building Without Unit Tests'
     FLAGS='-DDEBUG'
