@@ -1656,15 +1656,87 @@ uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
   return address;
 }
 
+static uint64_t printSymbolTableDataElf32(ELF32_EXECUTABLE_HANDLE_T* executableHandle, uint8_t mode)
+{
+  Elf32_Sym*   symTable = NULL;
+  Elf32_Sym*   pSymbol  = NULL;
+  char*        strTable = NULL;
+  uint64_t     strTableOffset = 0;
+  uint64_t     symTableOffset = 0;
+  uint8_t      numSymbols   = 0;
+  uint8_t      numSections  = 0;
+
+  numSections = executableHandle->ehdr->e_shnum;
+  if(numSections == 0)
+  {
+    return ERR_UNKNOWN;
+  }
+
+  for(int i = 0; i < numSections; i++)
+  {
+    if(executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+    {
+      symTableOffset = executableHandle->shdr[i].sh_offset;
+      symTable = (Elf32_Sym *) &executableHandle->fileHandle.p_data[symTableOffset];
+
+      strTableOffset = executableHandle->shdr[executableHandle->shdr[i].sh_link].sh_offset;
+      strTable = (char *) &executableHandle->fileHandle.p_data[strTableOffset];
+
+      numSymbols = executableHandle->shdr[i].sh_size / sizeof(Elf32_Sym);
+      if(numSymbols == 0)
+      {
+        return 0;
+      }
+
+      pSymbol = symTable;
+      for(int j = 0; j < numSymbols; j++)
+      {
+        // We are only interested in function symbols in this case.
+        if(pSymbol->st_info != STT_FILE && pSymbol->st_info != STT_OBJECT &&
+           pSymbol->st_info != STT_NOTYPE && pSymbol->st_info)
+        {
+
+          switch(mode)
+          {
+            case IMPORTS:
+              if(pSymbol->st_shndx == 0 && pSymbol->st_size == 0 && pSymbol->st_value == 0)
+              {
+                // TODO: What happens if a function name is longer than 45 characters??
+                printf("%s\n", &strTable[pSymbol->st_name]);
+              }
+              break;
+
+            case LOCAL:
+              // TODO: Do we want to detect '_start' as local??
+              if(pSymbol->st_shndx != 0 && pSymbol->st_size != 0 && pSymbol->st_value != 0)
+              {
+                printf("%s\t\033[45G0x%016lx\n", &strTable[pSymbol->st_name], pSymbol->st_value);
+              }
+              break;
+
+            default:
+              printf("%s\t\033[45G0x%016lx\n", &strTable[pSymbol->st_name], pSymbol->st_value);
+              break;
+          }
+
+        }
+
+        pSymbol++;
+      }
+    }
+  }
+  return ERR_NONE;
+}
+
 static uint64_t printSymbolTableDataElf64(ELF64_EXECUTABLE_HANDLE_T* executableHandle, uint8_t mode)
 {
   Elf64_Sym*   symTable = NULL;
   Elf64_Sym*   pSymbol  = NULL;
-  char*    strTable = NULL;
-  uint64_t   strTableOffset = 0;
-  uint64_t   symTableOffset = 0;
-  uint8_t    numSymbols   = 0;
-  uint8_t    numSections  = 0;
+  char*        strTable = NULL;
+  uint64_t     strTableOffset = 0;
+  uint64_t     symTableOffset = 0;
+  uint8_t      numSymbols   = 0;
+  uint8_t      numSections  = 0;
 
   numSections = executableHandle->ehdr->e_shnum;
   if(numSections == 0)
@@ -1721,13 +1793,11 @@ static uint64_t printSymbolTableDataElf64(ELF64_EXECUTABLE_HANDLE_T* executableH
 
         }
 
-        // printf("%s\n", &strTable[pSymbol->st_name]);
-        //TODO: Print symbol + data
         pSymbol++;
       }
     }
   }
-
+  return ERR_NONE;
 }
 
 int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports)
@@ -1760,14 +1830,19 @@ int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports)
       else
         err = printSymbolTableDataElf64(&elfHandle64, FALSE);
       break;
+    
     case T_32:
       ELF32_EXECUTABLE_HANDLE_T elfHandle32;
       if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
       {
         exit(ERR_UNKNOWN);
       }
-      // TODO: Print symbol Table.
+      if(printImports)
+        err = printSymbolTableDataElf32(&elfHandle32, TRUE);
+      else
+        err = printSymbolTableDataElf32(&elfHandle32, FALSE);
       break;
+
     default:
     case T_NO_ELF:
       break;

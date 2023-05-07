@@ -3,25 +3,21 @@
 
 #include <assert.h>
 
-// #define DEBUG // Used in all .c files for optional debug build that runs tests.
-// #define UNITTEST
-// #define LOCALTESTFILES // Used for unit tests, enables use of complete path names for files.
-
 #define TRUE             1
 #define FALSE            0
 
 /* Definitions of different error values. */
-#define ERR_NONE                   0
-#define ERR_UNKNOWN                1
+#define ERR_NONE                     0
+#define ERR_UNKNOWN                  1
 
-#define ERR_FORMAT_NOT_SUPPORTED   3
+#define ERR_FORMAT_NOT_SUPPORTED     3
 
-#define ERR_INVALID_ARGUMENT       5
-#define ERR_NULL_ARGUMENT          6
+#define ERR_INVALID_ARGUMENT         5
+#define ERR_NULL_ARGUMENT            6
 
-#define ERR_NO_MEMORY             10
+#define ERR_NO_MEMORY               10
 
-#define ERR_FILE_OPERATION_FAILED 20
+#define ERR_FILE_OPERATION_FAILED   20
 
 
 #define TRUE_STR         "TRUE"
