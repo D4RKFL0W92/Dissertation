@@ -93,10 +93,7 @@ int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABL
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle);
 
 
-uint64_t getELFEntry(char* filepath);
-static Elf32_Addr getELF32Entry(uint8_t* p_mem);
-static Elf64_Addr getELF64Entry(uint8_t* p_mem);
-
+uint64_t getELFEntryFromFile(char* filepath);
 
 /*
  * Prints information relevant to static analysis of the binary ELF file.
@@ -115,18 +112,13 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 /* TODO: Write a functional test for the print functions, unit tests will not be realistic. */
 int8_t printElfInfoVerbose(FILE_HANDLE_T* handle);
 
-int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr);
-int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr);
+int8_t printElfEHeader(FILE_HANDLE_T * fileHandle);
 
-int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
-int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
+int8_t printELFProgramHeaders(FILE_HANDLE_T * fileHandle);
 
-int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
-int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
+int8_t printELFSectionHeaders(FILE_HANDLE_T * fileHandle);
 
 int8_t printElfStringTable(FILE_HANDLE_T * fileHandle);
-int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle);
-int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle);
 
 uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName);
 
