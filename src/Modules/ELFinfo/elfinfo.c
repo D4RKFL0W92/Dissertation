@@ -1,152 +1,5 @@
 #include "elfinfo.h"
 
-enum BITS isELF(char* arch)
-{
-  // int i = strlen(arch);
-  /* We check 6 bytes but the last one can be NULL according to the specification (Only for encoding type NONE so shouldn't matter). */
-  if(arch == NULL || strlen(arch) < 5)
-    return T_NO_ELF;
-
-  if(arch[0] != 0x7f || arch[1] != (uint8_t)'E' ||
-    arch[2] != (uint8_t)'L' || arch[3] != (uint8_t)'F')
-    return T_NO_ELF;
-
-
-  if(arch[5] != ELFDATANONE && arch[5] != ELFDATA2LSB && arch[5] != ELFDATA2MSB)
-    return T_NO_ELF; // We don't check for DATANONE as there would be no way to interpret it anyway.
-
-  // Check and return intended architecture for the binary.
-  unsigned char arch_bit = arch[4];
-  if(ELFCLASS32 == arch_bit)
-  {
-    return T_32;
-  }
-  else if(ELFCLASS64 == arch_bit)
-  {
-    return T_64;
-  }
-}
-
-char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
-{
-  #ifdef DEBUG
-  char* func_name = "mapELFToMemory()";
-  #endif
-  ssize_t bytes_read;
-  char MAGIC[6];
-  char* file_mem;
-  int fd, ret;
-  struct stat st;
-
-  if( (fd = open(filepath, O_RDONLY)) < 0)
-  {
-    // Should really log errors/failures.
-    #ifdef DEBUG
-    perror("Unable to open() file inside mapELFToMemory().");
-    #endif
-    return NULL;
-  }
-
-  if(fstat(fd, &st) < 0)
-  {
-    #ifdef DEBUG
-    perror("Unable to fstat() file inside mapELFToMemory().");
-    #endif
-    goto cleanup;
-  }
-
-  // Check is an ELF file before mapping into memory.
-  if( (bytes_read = read(fd, MAGIC, 6)) < 6)
-  {
-    #ifdef DEBUG
-    perror("Unable to read() file inside mapELFToMemory().");
-    #endif
-    
-    goto cleanup;
-  }
-  
-  // if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
-  // {
-  //   #ifdef DEBUG
-  //   perror("File being read is not an ELF file.");
-  //   #endif
-    
-  //   return NULL;
-  // }
-
-  *map_sz = st.st_size; // Store size of ELF file for later use.
-
-  if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
-  {
-    #ifdef DEBUG
-    perror("Unable to mmap() in mapELFToMemory().");
-    #endif
-    return NULL;
-  }
-
-  close(fd);
-  return file_mem;
-
-  /* goto acceptable to use for cleanup. */
-  cleanup:
-  {
-    close(fd);
-    return NULL;
-  }
-}
-
-int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T* elfHandle)
-{
-  if(fileHandle == NULL)
-  {
-    return ERR_UNKNOWN;
-  }
-
-  /* TODO: Check it is definitely Elf64_Phdr before proceeding. */
-
-  elfHandle->fileHandle = *fileHandle;
-  elfHandle->ehdr     = (Elf32_Ehdr *) &fileHandle->p_data[0];
-  elfHandle->phdr     = (Elf32_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
-  elfHandle->shdr     = (Elf32_Shdr *) &fileHandle->p_data[ elfHandle->ehdr->e_shoff ];
-
-  return ERR_NONE;
-}
-
-int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle)
-{
-  if(fileHandle == NULL)
-  {
-    return ERR_UNKNOWN;
-  }
-
-  /* TODO: Check it is definitely Elf64_Phdr before proceeding. */
-
-  elfHandle->fileHandle = *fileHandle;
-  elfHandle->ehdr     = (Elf64_Ehdr *) &fileHandle->p_data[0];
-  elfHandle->phdr     = (Elf64_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
-  elfHandle->shdr     = (Elf64_Shdr *) &fileHandle->p_data[ elfHandle->ehdr->e_shoff ];
-
-  return ERR_NONE;
-}
-
-uint64_t getELFEntry(char* filepath)
-{
-  uint8_t* p_mem;
-  enum BITS arch;
-  uint64_t file_sz;
-
-  p_mem = mapELFToMemory(filepath, &arch, &file_sz);
-
-  if(arch == T_64)
-  {
-    return getELF64Entry(p_mem);
-  }
-  else if(arch == T_32)
-  {
-    return getELF32Entry(p_mem);
-  }
-}
-
 static Elf32_Addr getELF32Entry(uint8_t* p_mem)
 {
   Elf32_Ehdr* ehdr = (Elf32_Ehdr *) p_mem;
@@ -159,309 +12,7 @@ static Elf64_Addr getELF64Entry(uint8_t* p_mem)
   return ehdr->e_entry;
 }
 
-
-uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
-{
-  #ifdef DEBUG
-  const char *func_name = "printELFInfo()";
-  #endif
-
-  char ehdr_buf[ sizeof(Elf64_Ehdr) ];
-  char MAGIC[6];
-
-  char class[4];
-  char endian[8];
-  char elf_type[16];
-  char arch[16];
-  char stripped[8];
-
-  struct stat st;
-  
-  uint32_t e32_entry = 0;
-  uint64_t e64_entry = 0;
-
-  enum BITS bits;
-  int fd;
-  ssize_t read_ret;
-
-  if(elf_filepath == NULL) return FALSE;
-
-  if( (fd = open(elf_filepath, O_RDONLY)) < 0)
-  {
-    #ifdef DEBUG
-    perror("Unable to open() file in printELFInfo().");
-    #endif
-
-    close(fd);
-    return FALSE;
-  }
-
-  if(fstat(fd, &st) == -1)
-  {
-    #ifdef DEBUG
-    perror("Unable to stat() ELF file in printELFInfo().");
-    #endif
-
-    close(fd);
-    return FALSE;
-  }
-
-  printSHA1OfFile(elf_filepath);
-
-  if(read(fd, MAGIC, sizeof(MAGIC)) == -1)
-  {
-    #ifdef DEBUG
-    perror("Unable to read() magic bytes of file in printELFInfo().");
-    #endif
-    
-    close(fd);
-    return FALSE;
-  }
-
-  /*
-    Reset the file cursor to read in the ELF header.
-  */
-  if(lseek(fd, 0, SEEK_SET) < 0) // Return to start of the file
-  {
-    #ifdef DEBUG
-    perror("Unable to lseek() to start of file in printELFInfo().");
-    #endif
-    close(fd);
-    return FALSE;
-  }
-
-  /* Only read sizeof elf MAGIC number until we are sure it's an ELF */
-  bits = isELF(MAGIC);
-
-  /*
-    Get endianess of the ELF file. This is alwas stored in the sixth byte of the file.
-  */
-  switch(MAGIC[5])
-  {
-    case ELFDATA2LSB:
-      strcpy(endian, ENDIAN_LITTLE);
-      break;
-
-    case ELFDATA2MSB:
-      strcpy(endian, ENDIAN_BIG);
-      break;
-
-    case ELFDATANONE:
-      close(fd); 
-      return FALSE;
-  }
-
-  /*
-    We can extract the ELF header now (32/64-bit) dependent on the return of isELF().
-  */
-  if(bits == T_32)
-  {
-    strcpy(class, CLASS32); // Assign bit size to a string for printing.
-
-    Elf32_Ehdr* ehdr;
-    read_ret = read(fd, ehdr_buf, sizeof(Elf32_Ehdr));
-
-    if(read_ret == -1 || read_ret < sizeof(Elf32_Ehdr))
-    {
-      #ifdef DEBUG
-      perror("Error reading Elf32_Ehdr in printELFInfo()");
-      #endif
-      close(fd);
-      return FALSE;
-    }
-    ehdr = (Elf32_Ehdr *)ehdr_buf;
-    switch(ehdr->e_type)
-    {
-      case ET_REL:
-        strcpy(elf_type, ELF_REL_T);
-        break;
-
-      case ET_EXEC:
-        strcpy(elf_type, ELF_EXEC_T);
-        break;
-
-      case ET_DYN:
-        strcpy(elf_type, ELF_DYN_T);
-        break;
-
-      case ET_CORE:
-        strcpy(elf_type, ELF_CORE_T);
-        break;
-
-      case ET_NONE:
-        strcpy(elf_type, ELF_UNKNOWN_T);
-        break;
-    }
-    /* Check if the binary is stripped by checking for a section header */
-    if(ehdr->e_shoff == 0)
-      strcpy(stripped, TRUE_STR);
-    else
-      strcpy(stripped, FALSE_STR);
-
-    e32_entry = ehdr->e_entry;
-    
-  }
-  else if(bits == T_64)
-  {
-    strcpy(class, CLASS64); // Assign bit size to a string for printing.
-    Elf64_Ehdr* ehdr;
-    read_ret = read(fd, ehdr_buf, sizeof(Elf64_Ehdr));
-
-    if(read_ret == -1 || read_ret < sizeof(Elf64_Ehdr))
-    {
-      #ifdef DEBUG
-      perror("Error reading Elf64_Ehdr in printELFInfo()");
-      #endif
-      close(fd);
-      return FALSE;
-    }
-    ehdr = (Elf64_Ehdr *)ehdr_buf;
-    switch(ehdr->e_type)
-    {
-      case ET_REL:
-        strcpy(elf_type, ELF_REL_T);
-        break;
-
-      case ET_EXEC:
-        strcpy(elf_type, ELF_EXEC_T);
-        break;
-
-      case ET_DYN:
-        strcpy(elf_type, ELF_DYN_T);
-        break;
-
-      case ET_CORE:
-        strcpy(elf_type, ELF_CORE_T);
-        break;
-
-      case ET_NONE:
-        strcpy(elf_type, ELF_UNKNOWN_T);
-        break;
-    }
-    /* Check if the binary is stripped by checking for a section header */
-    if(ehdr->e_shoff == 0)
-      strcpy(stripped, TRUE_STR);
-    else
-      strcpy(stripped, FALSE_STR);
-
-    e64_entry = ehdr->e_entry;
-  }
-  else
-  {
-    close(fd);
-    return FALSE;
-  }
-  /* Print tablized ELF binary iinformation */
-  
-
-  if(output_filepath != NULL)
-  {
-    FILE* out = fopen(output_filepath, "a+");
-    if(fopen == NULL)
-    {
-      #ifdef DEBUG
-      perror("Unable to open file in printELFInfo()");
-      #endif
-      goto failed_file_open; // Resonable use of goto to reduce code duplication (A break could probably be used but this is explicit)
-    }
-    fprintf(out, "------------------------------- ELF Binary Information -------------------------------\n\n");
-    if(e32_entry == 0) // Must be 64-bit
-      fprintf(out, "\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
-        class, endian, elf_type, stripped, e64_entry, st.st_size);
-    else
-      fprintf(out, "\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
-        class, endian, elf_type, stripped, e32_entry, st.st_size);
-    fclose(out);
-    close(fd);
-    return TRUE;
-  }
-  else
-  {
-    failed_file_open:
-    puts("------------------------------- ELF Binary Information -------------------------------\n\n");
-    if(e32_entry == 0) // Must be 64-bit
-      printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
-        class, endian, elf_type, stripped, e64_entry, st.st_size);
-    else
-      printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
-        class, endian, elf_type, stripped, e32_entry, st.st_size);
-    
-    close(fd);
-    return TRUE;
-  }
-}
-
-int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
-{
-  enum BITS arch;
-  char MAGIC[6];
-
-  if(fileHandle->p_data == NULL)
-  {
-    return ERR_UNKNOWN;
-  }
-
-  strncpy(MAGIC, fileHandle->p_data, 6);
-  arch = isELF(MAGIC);
-  printSHA1OfFile(fileHandle->path);
-  switch(arch)
-  {
-    /* Find out what size Elf header the binary is. */
-    case T_32:
-      ELF32_EXECUTABLE_HANDLE_T elfHandle32 = {0};
-
-      elfHandle32.ehdr = (Elf32_Ehdr *) fileHandle->p_data;
-      mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
-
-      puts("Elf Header:\n");
-      dumpHexBytesFromFileFromFileHandle(fileHandle, 0, elfHandle32.ehdr->e_ehsize);
-
-      puts("Class:\t32 BIT\n");
-      printElf32ElfHeader(elfHandle32.ehdr);
-
-      puts("\n\nProgram Headers:\n");
-      printELF32ProgramHeaders(&elfHandle32);
-
-      puts("Section Headers:\n");
-      // printELF32SectionHeaders(&elfHandle32); // TODO: Define this function
-
-      puts("\n\nElf String Table Entries:\n");
-      printELF32StrTable(&elfHandle32);
-
-      break;
-
-    case T_64:
-      ELF64_EXECUTABLE_HANDLE_T elfHandle = {0};
-
-      elfHandle.ehdr = (Elf64_Ehdr *) fileHandle->p_data;
-      mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle);
-
-      puts("Elf Header:\n");
-      dumpHexBytesFromFileFromFileHandle(fileHandle, 0, elfHandle.ehdr->e_ehsize);
-
-      puts("Class:\t64 BIT\n");
-      printElf64ElfHeader(elfHandle.ehdr);
-
-      puts("\n\nProgram Headers:\n");
-      printELF64ProgramHeaders(&elfHandle);
-
-      puts("Section Headers:\n");
-      printELF64SectionHeaders(&elfHandle);
-
-      puts("\n\nElf String Table Entries:\n");
-      printELF64StrTable(&elfHandle);
-
-      break;
-
-    case T_NO_ELF:
-    default:
-      printf("File <%s> is not an ELF\n", fileHandle->path);
-      return ERR_UNKNOWN;
-
-  }
-  return ERR_NONE;
-}
-int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
+static int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
 {
   if(ehdr== NULL)
   {
@@ -478,7 +29,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
     case ELFDATA2LSB:
       printf("      LITTLE\n");
       break;
-    
+
     case ELFDATA2MSB:
       printf("         BIG\n");
       break;
@@ -678,7 +229,7 @@ int8_t printElf64ElfHeader(Elf64_Ehdr* ehdr)
   return ERR_NONE;
 }
 
-int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
+static int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
 {
 
   if(ehdr== NULL)
@@ -897,8 +448,7 @@ int8_t printElf32ElfHeader(Elf32_Ehdr* ehdr)
   return ERR_NONE;
 }
 
-
-int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
+static int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
   char flags[PHDR_FLAG_LEN];
   Elf64_Phdr* phdrIter;
@@ -1012,7 +562,7 @@ int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
   return ERR_NONE;
 }
 
-int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
+static int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
 {
   char flags[] = "-------";
   uint32_t phdrSize;
@@ -1123,7 +673,7 @@ int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
   return ERR_NONE;
 }
 
-int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
+static int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
 {
   char flags[SHDR_FLAG_LEN+1];
   uint16_t sectionHeaderSize;
@@ -1267,7 +817,7 @@ int8_t printELF32SectionHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
   return ERR_NONE;
 }
 
-int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
+static int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
   char flags[SHDR_FLAG_LEN+1];
   uint16_t sectionHeaderSize;
@@ -1411,73 +961,7 @@ int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
   return ERR_NONE;
 }
 
-int8_t printELFSectionHeaders(FILE_HANDLE_T* fileHandle)
-{
-  char    magic[6];
-  enum BITS arch;
-  int8_t err = 0;
-
-  if(fileHandle == NULL)
-  {
-    #ifdef DEBUG
-    perror("Null pointer passed to printSymbolTableData()");
-    #endif
-    return 0;
-  }
-
-  strncpy(magic, fileHandle->p_data, 6);
-  arch = isELF(magic);
-
-  switch(arch)
-  {
-    case T_64:
-      ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
-      {
-        exit(ERR_UNKNOWN);
-      }
-      err = printELF64SectionHeaders(&elfHandle64);
-      break;
-    case T_32:
-      ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
-      {
-        exit(ERR_UNKNOWN);
-      }
-      err = printELF32SectionHeaders(&elfHandle32);
-      break;
-    default:
-    case T_NO_ELF:
-      break;
-  }
-  return err;
-}
-
-int8_t printElfStringTable(FILE_HANDLE_T * fileHandle)
-{
-  enum BITS arch;
-
-  arch = isELF(fileHandle->p_data);
-
-  switch(arch)
-  {
-    case T_64:
-      ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-      mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64);
-      printELF64StrTable(&elfHandle64);
-      return ERR_NONE;
-    case T_32:
-      ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-      mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
-      printELF32StrTable(&elfHandle32);
-      return ERR_NONE;
-    default:
-    case T_NO_ELF:
-      return ERR_UNKNOWN;
-  }
-}
-
-int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
+static int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
 {
   if(!executableHandle || !executableHandle->fileHandle.p_data)
   {
@@ -1495,8 +979,7 @@ int8_t printELF32StrTable(ELF32_EXECUTABLE_HANDLE_T* executableHandle)
   return ERR_NONE;
 }
 
-/* TODO: Change this to print the actual strtab (null proceeded & terminated list of strings). */
-int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
+static int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
 {
   if(!executableHandle || !executableHandle->fileHandle.p_data)
   {
@@ -1517,7 +1000,6 @@ int8_t printELF64StrTable(ELF64_EXECUTABLE_HANDLE_T* executableHandle)
   executableHandle->fileHandle.p_data_seekPtr = executableHandle->fileHandle.p_data;
   return ERR_NONE;
 }
-
 
 static uint32_t lookupSymbolAddressELF32(ELF32_EXECUTABLE_HANDLE_T* executableHandle, char* symbolName)
 {
@@ -1613,47 +1095,73 @@ static uint64_t lookupSymbolAddressELF64(ELF64_EXECUTABLE_HANDLE_T* executableHa
   return 0; // This is resonable as zero is not a legal user space address.
 }
 
-uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
+static uint64_t printSymbolTableDataElf32(ELF32_EXECUTABLE_HANDLE_T* executableHandle, uint8_t mode)
 {
-  uint64_t  address = 0;
-  char    magic[6];
-  enum BITS arch;
+  Elf32_Sym*   symTable = NULL;
+  Elf32_Sym*   pSymbol  = NULL;
+  char*    strTable = NULL;
+  uint64_t   strTableOffset = 0;
+  uint64_t   symTableOffset = 0;
+  uint8_t    numSymbols   = 0;
+  uint8_t    numSections  = 0;
 
-  if(fileHandle == NULL || symbolName == NULL)
+  numSections = executableHandle->ehdr->e_shnum;
+  if(numSections == 0)
   {
-    #ifdef DEBUG
-    perror("Null pointer passed to lookupSymbolAddress()");
-    #endif
-    return 0;
+    return ERR_UNKNOWN;
   }
 
-  strncpy(magic, fileHandle->p_data, 6);
-  arch = isELF(magic);
-
-  /* TODO: Finish implementing for 32 bit. */
-  switch(arch)
+  for(int i = 0; i < numSections; i++)
   {
-    case T_64:
-      ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
+    if(executableHandle->shdr[i].sh_type == SHT_SYMTAB)
+    {
+      symTableOffset = executableHandle->shdr[i].sh_offset;
+      symTable = (Elf32_Sym *) &executableHandle->fileHandle.p_data[symTableOffset];
+
+      strTableOffset = executableHandle->shdr[executableHandle->shdr[i].sh_link].sh_offset;
+      strTable = (char *) &executableHandle->fileHandle.p_data[strTableOffset];
+
+      numSymbols = executableHandle->shdr[i].sh_size / sizeof(Elf32_Sym);
+      if(numSymbols == 0)
       {
-        exit(ERR_UNKNOWN);
+        return 0;
       }
-      address = lookupSymbolAddressELF64(&elfHandle64, symbolName);
-      break;
-    case T_32:
-      ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
+
+      pSymbol = symTable;
+      for(int j = 0; j < numSymbols; j++)
       {
-        exit(ERR_UNKNOWN);
+        // We are only interested in function symbols in this case.
+        if(pSymbol->st_info != STT_FILE && pSymbol->st_info != STT_OBJECT &&
+           pSymbol->st_info != STT_NOTYPE && pSymbol->st_info)
+        {
+
+          switch(mode)
+          {
+            case IMPORTS:
+              if(pSymbol->st_shndx == 0 && pSymbol->st_size == 0 && pSymbol->st_value == 0)
+              {
+                // TODO: What happens if a function name is longer than 45 characters??
+                printf("%s\n", &strTable[pSymbol->st_name]);
+              }
+              break;
+
+            case LOCAL:
+              // TODO: Do we want to detect '_start' as local??
+              if(pSymbol->st_shndx != 0 && pSymbol->st_size != 0 && pSymbol->st_value != 0)
+              {
+                printf("%s\t\033[45G0x%016lx\n", &strTable[pSymbol->st_name], pSymbol->st_value);
+              }
+              break;
+
+            default:
+              printf("%s\t\033[45G0x%016lx\n", &strTable[pSymbol->st_name], pSymbol->st_value);
+              break;
+          }
+        }
+        pSymbol++;
       }
-      address = lookupSymbolAddressELF32(&elfHandle32, symbolName);
-      break;
-    default:
-    case T_NO_ELF:
-      break;
+    }
   }
-  return address;
 }
 
 static uint64_t printSymbolTableDataElf64(ELF64_EXECUTABLE_HANDLE_T* executableHandle, uint8_t mode)
@@ -1718,16 +1226,646 @@ static uint64_t printSymbolTableDataElf64(ELF64_EXECUTABLE_HANDLE_T* executableH
               printf("%s\t\033[45G0x%016lx\n", &strTable[pSymbol->st_name], pSymbol->st_value);
               break;
           }
-
         }
-
-        // printf("%s\n", &strTable[pSymbol->st_name]);
-        //TODO: Print symbol + data
         pSymbol++;
       }
     }
   }
+}
 
+enum BITS isELF(char* arch)
+{
+  // int i = strlen(arch);
+  /* We check 6 bytes but the last one can be NULL according to the specification (Only for encoding type NONE so shouldn't matter). */
+  if(arch == NULL || strlen(arch) < 5)
+    return T_NO_ELF;
+
+  if(arch[0] != 0x7f || arch[1] != (uint8_t)'E' ||
+    arch[2] != (uint8_t)'L' || arch[3] != (uint8_t)'F')
+    return T_NO_ELF;
+
+
+  if(arch[5] != ELFDATANONE && arch[5] != ELFDATA2LSB && arch[5] != ELFDATA2MSB)
+    return T_NO_ELF; // We don't check for DATANONE as there would be no way to interpret it anyway.
+
+  // Check and return intended architecture for the binary.
+  unsigned char arch_bit = arch[4];
+  if(ELFCLASS32 == arch_bit)
+  {
+    return T_32;
+  }
+  else if(ELFCLASS64 == arch_bit)
+  {
+    return T_64;
+  }
+}
+
+char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
+{
+  #ifdef DEBUG
+  char* func_name = "mapELFToMemory()";
+  #endif
+  ssize_t bytes_read;
+  char MAGIC[6];
+  char* file_mem;
+  int fd, ret;
+  struct stat st;
+
+  if( (fd = open(filepath, O_RDONLY)) < 0)
+  {
+    // Should really log errors/failures.
+    #ifdef DEBUG
+    perror("Unable to open() file inside mapELFToMemory().");
+    #endif
+    return NULL;
+  }
+
+  if(fstat(fd, &st) < 0)
+  {
+    #ifdef DEBUG
+    perror("Unable to fstat() file inside mapELFToMemory().");
+    #endif
+    goto cleanup;
+  }
+
+  // Check is an ELF file before mapping into memory.
+  if( (bytes_read = read(fd, MAGIC, 6)) < 6)
+  {
+    #ifdef DEBUG
+    perror("Unable to read() file inside mapELFToMemory().");
+    #endif
+    
+    goto cleanup;
+  }
+  
+  // if( (*arch = isELF(MAGIC)) == T_NO_ELF) // Store the architecture of the binary for use later.
+  // {
+  //   #ifdef DEBUG
+  //   perror("File being read is not an ELF file.");
+  //   #endif
+    
+  //   return NULL;
+  // }
+
+  *map_sz = st.st_size; // Store size of ELF file for later use.
+
+  if( (file_mem = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+  {
+    #ifdef DEBUG
+    perror("Unable to mmap() in mapELFToMemory().");
+    #endif
+    return NULL;
+  }
+
+  close(fd);
+  return file_mem;
+
+  /* goto acceptable to use for cleanup. */
+  cleanup:
+  {
+    close(fd);
+    return NULL;
+  }
+}
+
+int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T* elfHandle)
+{
+  if(fileHandle == NULL)
+  {
+    return ERR_UNKNOWN;
+  }
+
+  /* TODO: Check it is definitely Elf64_Phdr before proceeding. */
+
+  elfHandle->fileHandle = *fileHandle;
+  elfHandle->ehdr     = (Elf32_Ehdr *) &fileHandle->p_data[0];
+  elfHandle->phdr     = (Elf32_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
+  elfHandle->shdr     = (Elf32_Shdr *) &fileHandle->p_data[ elfHandle->ehdr->e_shoff ];
+
+  return ERR_NONE;
+}
+
+int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle)
+{
+  if(fileHandle == NULL)
+  {
+    return ERR_UNKNOWN;
+  }
+
+  /* TODO: Check it is definitely Elf64_Phdr before proceeding. */
+
+  elfHandle->fileHandle = *fileHandle;
+  elfHandle->ehdr     = (Elf64_Ehdr *) &fileHandle->p_data[0];
+  elfHandle->phdr     = (Elf64_Phdr *) &fileHandle->p_data[ elfHandle->ehdr->e_phoff ];
+  elfHandle->shdr     = (Elf64_Shdr *) &fileHandle->p_data[ elfHandle->ehdr->e_shoff ];
+
+  return ERR_NONE;
+}
+
+uint64_t getELFEntryFromFile(char* filepath)
+{
+  uint8_t* p_mem;
+  enum BITS arch;
+  uint64_t file_sz;
+
+  p_mem = mapELFToMemory(filepath, &arch, &file_sz);
+
+  if(arch == T_64)
+  {
+    return getELF64Entry(p_mem);
+  }
+  else if(arch == T_32)
+  {
+    return getELF32Entry(p_mem);
+  }
+}
+
+uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath)
+{
+  #ifdef DEBUG
+  const char *func_name = "printELFInfo()";
+  #endif
+
+  char ehdr_buf[ sizeof(Elf64_Ehdr) ];
+  char MAGIC[6];
+
+  char class[4];
+  char endian[8];
+  char elf_type[16];
+  char arch[16];
+  char stripped[8];
+
+  struct stat st;
+  
+  uint32_t e32_entry = 0;
+  uint64_t e64_entry = 0;
+
+  enum BITS bits;
+  int fd;
+  ssize_t read_ret;
+
+  if(elf_filepath == NULL) return FALSE;
+
+  if( (fd = open(elf_filepath, O_RDONLY)) < 0)
+  {
+    #ifdef DEBUG
+    perror("Unable to open() file in printELFInfo().");
+    #endif
+
+    close(fd);
+    return FALSE;
+  }
+
+  if(fstat(fd, &st) == -1)
+  {
+    #ifdef DEBUG
+    perror("Unable to stat() ELF file in printELFInfo().");
+    #endif
+
+    close(fd);
+    return FALSE;
+  }
+
+  printSHA1OfFile(elf_filepath);
+
+  if(read(fd, MAGIC, sizeof(MAGIC)) == -1)
+  {
+    #ifdef DEBUG
+    perror("Unable to read() magic bytes of file in printELFInfo().");
+    #endif
+    
+    close(fd);
+    return FALSE;
+  }
+
+  /*
+    Reset the file cursor to read in the ELF header.
+  */
+  if(lseek(fd, 0, SEEK_SET) < 0) // Return to start of the file
+  {
+    #ifdef DEBUG
+    perror("Unable to lseek() to start of file in printELFInfo().");
+    #endif
+    close(fd);
+    return FALSE;
+  }
+
+  /* Only read sizeof elf MAGIC number until we are sure it's an ELF */
+  bits = isELF(MAGIC);
+
+  /*
+    Get endianess of the ELF file. This is alwas stored in the sixth byte of the file.
+  */
+  switch(MAGIC[5])
+  {
+    case ELFDATA2LSB:
+      strcpy(endian, ENDIAN_LITTLE);
+      break;
+
+    case ELFDATA2MSB:
+      strcpy(endian, ENDIAN_BIG);
+      break;
+
+    case ELFDATANONE:
+      close(fd); 
+      return FALSE;
+  }
+
+  /*
+    We can extract the ELF header now (32/64-bit) dependent on the return of isELF().
+  */
+  if(bits == T_32)
+  {
+    strcpy(class, CLASS32); // Assign bit size to a string for printing.
+
+    Elf32_Ehdr* ehdr;
+    read_ret = read(fd, ehdr_buf, sizeof(Elf32_Ehdr));
+
+    if(read_ret == -1 || read_ret < sizeof(Elf32_Ehdr))
+    {
+      #ifdef DEBUG
+      perror("Error reading Elf32_Ehdr in printELFInfo()");
+      #endif
+      close(fd);
+      return FALSE;
+    }
+    ehdr = (Elf32_Ehdr *)ehdr_buf;
+    switch(ehdr->e_type)
+    {
+      case ET_REL:
+        strcpy(elf_type, ELF_REL_T);
+        break;
+
+      case ET_EXEC:
+        strcpy(elf_type, ELF_EXEC_T);
+        break;
+
+      case ET_DYN:
+        strcpy(elf_type, ELF_DYN_T);
+        break;
+
+      case ET_CORE:
+        strcpy(elf_type, ELF_CORE_T);
+        break;
+
+      case ET_NONE:
+        strcpy(elf_type, ELF_UNKNOWN_T);
+        break;
+    }
+    /* Check if the binary is stripped by checking for a section header */
+    if(ehdr->e_shoff == 0)
+      strcpy(stripped, TRUE_STR);
+    else
+      strcpy(stripped, FALSE_STR);
+
+    e32_entry = ehdr->e_entry;
+    
+  }
+  else if(bits == T_64)
+  {
+    strcpy(class, CLASS64); // Assign bit size to a string for printing.
+    Elf64_Ehdr* ehdr;
+    read_ret = read(fd, ehdr_buf, sizeof(Elf64_Ehdr));
+
+    if(read_ret == -1 || read_ret < sizeof(Elf64_Ehdr))
+    {
+      #ifdef DEBUG
+      perror("Error reading Elf64_Ehdr in printELFInfo()");
+      #endif
+      close(fd);
+      return FALSE;
+    }
+    ehdr = (Elf64_Ehdr *)ehdr_buf;
+    switch(ehdr->e_type)
+    {
+      case ET_REL:
+        strcpy(elf_type, ELF_REL_T);
+        break;
+
+      case ET_EXEC:
+        strcpy(elf_type, ELF_EXEC_T);
+        break;
+
+      case ET_DYN:
+        strcpy(elf_type, ELF_DYN_T);
+        break;
+
+      case ET_CORE:
+        strcpy(elf_type, ELF_CORE_T);
+        break;
+
+      case ET_NONE:
+        strcpy(elf_type, ELF_UNKNOWN_T);
+        break;
+    }
+    /* Check if the binary is stripped by checking for a section header */
+    if(ehdr->e_shoff == 0)
+      strcpy(stripped, TRUE_STR);
+    else
+      strcpy(stripped, FALSE_STR);
+
+    e64_entry = ehdr->e_entry;
+  }
+  else
+  {
+    close(fd);
+    return FALSE;
+  }
+
+  if(output_filepath != NULL)
+  {
+    FILE* out = fopen(output_filepath, "a+");
+    if(fopen == NULL)
+    {
+      #ifdef DEBUG
+      perror("Unable to open file in printELFInfo()");
+      #endif
+      goto failed_file_open; // Resonable use of goto to reduce code duplication (A break could probably be used but this is explicit)
+    }
+    fprintf(out, "------------------------------- ELF Binary Information -------------------------------\n\n");
+    if(e32_entry == 0) // Must be 64-bit
+      fprintf(out, "\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
+        class, endian, elf_type, stripped, e64_entry, st.st_size);
+    else
+      fprintf(out, "\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
+        class, endian, elf_type, stripped, e32_entry, st.st_size);
+    fclose(out);
+    close(fd);
+    return TRUE;
+  }
+  else
+  {
+    failed_file_open:
+    puts("------------------------------- ELF Binary Information -------------------------------\n\n");
+    if(e32_entry == 0) // Must be 64-bit
+      printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
+        class, endian, elf_type, stripped, e64_entry, st.st_size);
+    else
+      printf("\nELF Class:\t%s-BIT\nEndianess:\t%s\nELF Type:\t%s\nStripped:\t%s\nEntry:\t\t0x%08x\nFile Size:\t0x%08x\n",
+        class, endian, elf_type, stripped, e32_entry, st.st_size);
+    
+    close(fd);
+    return TRUE;
+  }
+}
+
+int8_t printElfInfoVerbose(FILE_HANDLE_T* fileHandle)
+{
+  enum BITS arch;
+  char MAGIC[6];
+
+  if(fileHandle->p_data == NULL)
+  {
+    return ERR_UNKNOWN;
+  }
+
+  strncpy(MAGIC, fileHandle->p_data, 6);
+  arch = isELF(MAGIC);
+  printSHA1OfFile(fileHandle->path);
+  switch(arch)
+  {
+    /* Find out what size Elf header the binary is. */
+    case T_32:
+      ELF32_EXECUTABLE_HANDLE_T elfHandle32 = {0};
+
+      elfHandle32.ehdr = (Elf32_Ehdr *) fileHandle->p_data;
+      mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
+
+      puts("Elf Header:\n");
+      dumpHexBytesFromFileFromFileHandle(fileHandle, 0, elfHandle32.ehdr->e_ehsize);
+
+      puts("Class:\t32 BIT\n");
+      printElf32ElfHeader(elfHandle32.ehdr);
+
+      puts("\n\nProgram Headers:\n");
+      printELF32ProgramHeaders(&elfHandle32);
+
+      puts("Section Headers:\n");
+      // printELF32SectionHeaders(&elfHandle32); // TODO: Define this function
+
+      puts("\n\nElf String Table Entries:\n");
+      printELF32StrTable(&elfHandle32);
+
+      break;
+
+    case T_64:
+      ELF64_EXECUTABLE_HANDLE_T elfHandle = {0};
+
+      elfHandle.ehdr = (Elf64_Ehdr *) fileHandle->p_data;
+      mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle);
+
+      puts("Elf Header:\n");
+      dumpHexBytesFromFileFromFileHandle(fileHandle, 0, elfHandle.ehdr->e_ehsize);
+
+      puts("Class:\t64 BIT\n");
+      printElf64ElfHeader(elfHandle.ehdr);
+
+      puts("\n\nProgram Headers:\n");
+      printELF64ProgramHeaders(&elfHandle);
+
+      puts("Section Headers:\n");
+      printELF64SectionHeaders(&elfHandle);
+
+      puts("\n\nElf String Table Entries:\n");
+      printELF64StrTable(&elfHandle);
+
+      break;
+
+    case T_NO_ELF:
+    default:
+      printf("File <%s> is not an ELF\n", fileHandle->path);
+      return ERR_UNKNOWN;
+
+  }
+  return ERR_NONE;
+}
+
+int8_t printElfEHeader(FILE_HANDLE_T* fileHandle)
+{
+  char    magic[6];
+  enum BITS arch;
+  int8_t err = 0;
+
+  if(fileHandle == NULL)
+  {
+    #ifdef DEBUG
+    perror("Null pointer passed to printElfEHeader()");
+    #endif
+    return 0;
+  }
+
+  arch = isELF(fileHandle->p_data);
+  switch(arch)
+  {
+    case T_64:
+      ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
+      {
+        exit(ERR_UNKNOWN);
+      }
+      err = printElf64ElfHeader(elfHandle64.ehdr);
+      break;
+    case T_32:
+      ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
+      {
+        exit(ERR_UNKNOWN);
+      }
+      err = printElf32ElfHeader(elfHandle32.ehdr);
+      break;
+    default:
+    case T_NO_ELF:
+      break;
+  }
+  return err;
+}
+
+int8_t printELFProgramHeaders(FILE_HANDLE_T* fileHandle)
+{
+  char    magic[6];
+  enum BITS arch;
+  int8_t err = 0;
+
+  if(fileHandle == NULL)
+  {
+    #ifdef DEBUG
+    perror("Null pointer passed to printELFProgramHeaders()");
+    #endif
+    return 0;
+  }
+
+  arch = isELF(fileHandle->p_data);
+  switch(arch)
+  {
+    case T_64:
+      ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
+      {
+        exit(ERR_UNKNOWN);
+      }
+      err = printELF64ProgramHeaders(&elfHandle64);
+      break;
+    case T_32:
+      ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
+      {
+        exit(ERR_UNKNOWN);
+      }
+      err = printELF32ProgramHeaders(&elfHandle32);
+      break;
+    default:
+    case T_NO_ELF:
+      break;
+  }
+  return err;
+}
+
+
+int8_t printELFSectionHeaders(FILE_HANDLE_T* fileHandle)
+{
+  char    magic[6];
+  enum BITS arch;
+  int8_t err = 0;
+
+  if(fileHandle == NULL)
+  {
+    #ifdef DEBUG
+    perror("Null pointer passed to printELFSectionHeaders()");
+    #endif
+    return 0;
+  }
+
+  arch = isELF(fileHandle->p_data);
+  switch(arch)
+  {
+    case T_64:
+      ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
+      {
+        exit(ERR_UNKNOWN);
+      }
+      err = printELF64SectionHeaders(&elfHandle64);
+      break;
+    case T_32:
+      ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
+      {
+        exit(ERR_UNKNOWN);
+      }
+      err = printELF32SectionHeaders(&elfHandle32);
+      break;
+    default:
+    case T_NO_ELF:
+      break;
+  }
+  return err;
+}
+
+int8_t printElfStringTable(FILE_HANDLE_T * fileHandle)
+{
+  enum BITS arch;
+
+  arch = isELF(fileHandle->p_data);
+
+  switch(arch)
+  {
+    case T_64:
+      ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+      mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64);
+      printELF64StrTable(&elfHandle64);
+      return ERR_NONE;
+    case T_32:
+      ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+      mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32);
+      printELF32StrTable(&elfHandle32);
+      return ERR_NONE;
+    default:
+    case T_NO_ELF:
+      return ERR_UNKNOWN;
+  }
+}
+
+uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName)
+{
+  uint64_t  address = 0;
+  char    magic[6];
+  enum BITS arch;
+
+  if(fileHandle == NULL || symbolName == NULL)
+  {
+    #ifdef DEBUG
+    perror("Null pointer passed to lookupSymbolAddress()");
+    #endif
+    return 0;
+  }
+
+  strncpy(magic, fileHandle->p_data, 6);
+  arch = isELF(magic);
+
+  /* TODO: Finish implementing for 32 bit. */
+  switch(arch)
+  {
+    case T_64:
+      ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+      if( (mapELF64ToHandleFromFileHandle(fileHandle, &elfHandle64)) == ERR_UNKNOWN)
+      {
+        exit(ERR_UNKNOWN);
+      }
+      address = lookupSymbolAddressELF64(&elfHandle64, symbolName);
+      break;
+    case T_32:
+      ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+      if( (mapELF32ToHandleFromFileHandle(fileHandle, &elfHandle32)) == ERR_UNKNOWN)
+      {
+        exit(ERR_UNKNOWN);
+      }
+      address = lookupSymbolAddressELF32(&elfHandle32, symbolName);
+      break;
+    default:
+    case T_NO_ELF:
+      break;
+  }
+  return address;
 }
 
 int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports)
