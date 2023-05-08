@@ -153,7 +153,7 @@ int main(int argc, char *argv[], char *envp[])
     /* Option: Dump ASCII strings. */
     else if(!strcmp(argv[i], "-s")) /* TODO: Adapt this functionality to handle searching for strings of a given size. */
     {
-      scanForStrings(argv[argc-1], 3);
+      scanFileForStrings(argv[argc-1], 3);
     }
 
     /* Option: Convert a hex passed as argument after switch value to decimal. */
