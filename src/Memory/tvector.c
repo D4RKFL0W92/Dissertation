@@ -54,7 +54,21 @@ int8_t TVector_addElement(TVector * vec, void * element)
     return ERR_NONE;
 }
 
-int8_t TVector_getFirst(TVector * vec, void * element)
+int8_t TVector_getElement(const TVector * vec, void * element, uint32_t index)
+{
+    if(vec == NULL || element == NULL)
+    {
+        return ERR_NULL_ARGUMENT;
+    }
+    if(index >= vec->numElements || vec->elementSize < 1 || vec->numElements < 1 )
+    {
+        return ERR_INVALID_ARGUMENT;
+    }
+    memcpy(element, &vec->pData[index * vec->elementSize], vec->elementSize);
+    return ERR_NONE;
+}
+
+int8_t TVector_getFirst(const TVector * vec, void * element)
 {
     if(vec == NULL || element == NULL)
     {
@@ -66,6 +80,25 @@ int8_t TVector_getFirst(TVector * vec, void * element)
     }
 
     memcpy(element, vec->pData, vec->elementSize);
+    return ERR_NONE;
+}
+
+int8_t TVector_removeElement(TVector * vec, uint32_t index)
+{
+    if(vec == NULL)
+    {
+        return ERR_NULL_ARGUMENT;
+    }
+    if(index >= vec->numElements || vec->elementSize < 1 || vec->numElements < 1)
+    {
+        return ERR_INVALID_ARGUMENT;
+    }
+
+    for(uint32_t i = index; i < vec->numElements - 1; i++)
+    {
+        memcpy(&vec->pData[i * vec->elementSize], &vec->pData[(i + 1) * vec->elementSize], vec->elementSize);
+        memset(&vec->pData[(i + 1) * vec->elementSize], 0, vec->elementSize);
+    }
     return ERR_NONE;
 }
 
@@ -198,6 +231,85 @@ static void test_TVector_addElement_validUsage_nullArguments()
     assert(err == ERR_NULL_ARGUMENT);
 }
 
+static void test_TVector_getElement_validUsage()
+{
+    TVector vec = {0};
+    int buff[] = {1, 2, 3};
+
+    vec.elementSize = sizeof(int);
+    vec.numElements = 3;
+    vec.totalFreeElements = 3;
+    vec.pData = &buff;
+
+    int result = 0;
+    int8_t err = ERR_NONE;
+
+    err = TVector_getElement(&vec, &result, 0);
+    assert(err == ERR_NONE);
+    assert(result == 1);
+
+    result = 0;
+    err = TVector_getElement(&vec, &result, 1);
+    assert(err == ERR_NONE);
+    assert(result == 2);
+
+    result = 0;
+    err = TVector_getElement(&vec, &result, 1);
+    assert(err == ERR_NONE);
+    assert(result == 2);
+}
+
+static void test_TVector_getElement_nullArguments()
+{
+    TVector vec = {0};
+    int buff[] = {1, 2, 3};
+
+    vec.elementSize = sizeof(int);
+    vec.numElements = 3;
+    vec.totalFreeElements = 3;
+    vec.pData = &buff;
+
+    int result = 0;
+    int8_t err = ERR_NONE;
+
+    err = TVector_getElement(NULL, &result, 0);
+    assert(err == ERR_NULL_ARGUMENT);
+
+    err = TVector_getElement(&vec, NULL, 0);
+    assert(err == ERR_NULL_ARGUMENT);
+}
+
+static void test_TVector_getElement_invalidVetorStructure()
+{
+    TVector vec = {0};
+    int buff[] = {1, 2, 3};
+
+    vec.elementSize = 0;
+    vec.numElements = 3;
+    vec.totalFreeElements = 3;
+    vec.pData = &buff;
+
+    int result = 0;
+    int8_t err = ERR_NONE;
+
+    err = TVector_getElement(NULL, &result, 0);
+    assert(err == ERR_NULL_ARGUMENT);
+
+    vec.elementSize = sizeof(int);
+    vec.numElements = 0;
+    vec.totalFreeElements = 3;
+    vec.pData = &buff;
+    err = TVector_getElement(&vec, NULL, 0);
+    assert(err == ERR_NULL_ARGUMENT);
+
+    vec.elementSize = sizeof(int);
+    vec.numElements = 3;
+    vec.totalFreeElements = 3;
+    vec.pData = &buff;
+    err = TVector_getElement(&vec, &result, 100);
+    assert(err == ERR_INVALID_ARGUMENT);
+}
+
 static void test_TVector_getFirst_validUsage()
 {
     TVector vec = {0};
@@ -241,6 +353,66 @@ static void test_TVector_getFirst_nullArguments()
     assert(err == ERR_NULL_ARGUMENT);    
 }
 
+static void test_TVector_removeElement_validUsage()
+{
+    TVector vec = {0};
+    int buff[] = {1, 2, 3};
+
+    vec.elementSize = sizeof(int);
+    vec.numElements = 3;
+    vec.totalFreeElements = 3;
+    vec.pData = &buff;
+
+    int result = 0;
+    int8_t err = ERR_NONE;
+
+    err = TVector_getElement(&vec, &result, 0);
+    assert(err == ERR_NONE);
+    assert(result == 1);
+    result = 0;
+    err = TVector_removeElement(&vec, 0);
+    assert(err == ERR_NONE);
+    err = TVector_getElement(&vec, &result, 0);
+    assert(err == ERR_NONE);
+    assert(result == 2);
+}
+
+static void test_TVector_removeElement_invalidArguments()
+{
+    TVector vec = {0};
+    int buff[] = {1, 2, 3};
+
+    vec.elementSize = sizeof(int);
+    vec.numElements = 3;
+    vec.totalFreeElements = 3;
+    vec.pData = &buff;
+
+    int result = 0;
+    int8_t err = ERR_NONE;
+
+    err = TVector_removeElement(NULL, 0);
+    assert(err == ERR_NULL_ARGUMENT);
+
+
+    vec.elementSize = sizeof(int);
+    vec.numElements = 3;
+    vec.totalFreeElements = 3;
+    err = TVector_removeElement(&vec, 10);
+    assert(err == ERR_INVALID_ARGUMENT);
+
+    vec.elementSize = 0;
+    vec.numElements = 3;
+    vec.totalFreeElements = 3;
+    err = TVector_removeElement(&vec, 0);
+    assert(err == ERR_INVALID_ARGUMENT);
+
+    vec.elementSize = sizeof(int);
+    vec.numElements = 0;
+    vec.totalFreeElements = 3;
+    err = TVector_removeElement(&vec, 10);
+    assert(err == ERR_INVALID_ARGUMENT);
+}
+
 void TVectorTestSuite()
 {
     test_TVector_initVector_zeroInitialSize();
@@ -251,7 +423,14 @@ void TVectorTestSuite()
     test_TVector_addElement_validUsage_triggerResize();
     test_TVector_addElement_validUsage_nullArguments();
 
+    test_TVector_getElement_validUsage();
+    test_TVector_getElement_nullArguments();
+    test_TVector_getElement_invalidVetorStructure();
+
     test_TVector_getFirst_validUsage();
     test_TVector_getFirst_nullArguments();
+
+    test_TVector_removeElement_validUsage();
+    test_TVector_removeElement_invalidArguments();
 }
 #endif /* UNITTEST */

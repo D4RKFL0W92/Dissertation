@@ -18,11 +18,9 @@ typedef struct VECTOR
 
 int8_t TVector_initVector(TVector * vec, size_t elementSize, uint32_t initialElementCount);
 int8_t TVector_addElement(TVector * vec, void * element);
-int8_t TVector_getElement(TVector * vec, void * element, uint32_t index);
-int8_t TVector_getFirst(TVector * vec, void * element);
-
-// int8_t TVector_getNext(TVector * vec, void * element);
-
+int8_t TVector_getElement(const TVector * vec, void * element, uint32_t index);
+int8_t TVector_getFirst(const TVector * vec, void * element);
+int8_t TVector_removeElement(TVector * vec, uint32_t index);
 
 int8_t TVector_deinitVector(TVector * vec);
 
