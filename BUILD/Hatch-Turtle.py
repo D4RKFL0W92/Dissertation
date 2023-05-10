@@ -11,13 +11,14 @@ class Hatch:
         self.fileops = "../src/FileOperations/fileOps.c"
         self.cli = "../src/CLI/cli.c"
         self.memory = "../src/Memory/turtle_memory.c"
+        self.vector = "../src/Memory/tvector.c"
         self.io = "../src/Modules/IO/io.c"
 
         self.FLAGS = ""
         self.SSLLIB = "/usr/bin/openssl"            # These may not always be in the same place
         self.SSLINCLUDES = "/usr/local/src/openssl-3.0.7/include"  # maybe we can locate these dynamically.
         
-        self.buildParameters = [self.elfInfo, self.elfdynamic, self.logging, self.fileops, self.cli, self.memory, self.io, "-L", self.SSLLIB, "-lssl", "-lcrypto", "-I", self.SSLINCLUDES, "-lm"]
+        self.buildParameters = [self.elfInfo, self.elfdynamic, self.logging, self.fileops, self.cli, self.memory, self.vector, self.io, "-L", self.SSLLIB, "-lssl", "-lcrypto", "-I", self.SSLINCLUDES, "-lm"]
 
         self.process = None
         self.stdout = ""

@@ -5,6 +5,7 @@ logging="../src/Logging/logging.c"
 fileops="../src/FileOperations/fileOps.c"
 cli="../src/CLI/cli.c"
 memory="../src/Memory/turtle_memory.c"
+vector="../src/Memory/tvector.c"
 io="../src/Modules/IO/io.c"
 
 FLAGS='-DDEBUG -DUNITTEST'
@@ -32,7 +33,7 @@ elif [ $# -eq 2 ]; then
 fi
 
 gcc $FLAGS $elfinfo $elfdynamic $cli $logging \
-$fileops $memory $io \
+$fileops $memory $vector $io \
 -L$SSLLIB -I$SSLINCLUDES -lm -ggdb -o Turtle-Scan
 
 # Run the unit tests for the project on each build.

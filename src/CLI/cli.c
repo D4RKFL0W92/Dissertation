@@ -5,6 +5,7 @@
 #include "../Modules/IO/io.h"
 #include "../FileOperations/fileOps.h"
 #include "../Memory/turtle_memory.h"
+#include "../Memory/tvector.h"
 #include "../Help/help.h"
 
 #define TEST32 "/home/calum/Test_Files/while32"
@@ -175,6 +176,7 @@ int main(int argc, char *argv[], char *envp[])
         fileOpsTestSuite();
         elfInfoTestSuite();
         // ioTestSuite();
+        TVectorTestSuite();
         printf("Unit Tests Successful.\n");
       }
     #endif
