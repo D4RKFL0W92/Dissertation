@@ -89,8 +89,8 @@ enum BITS isELF(char* MAG);
 */
 char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 
-int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T* elfHandle);
-int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T* elfHandle);
+int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T** elfHandle);
+int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T** elfHandle);
 
 
 uint64_t getELFEntryFromFile(char* filepath);
@@ -118,9 +118,9 @@ int8_t printELFProgramHeaders(FILE_HANDLE_T * fileHandle);
 
 int8_t printELFSectionHeaders(FILE_HANDLE_T * fileHandle);
 
-int8_t printElfStringTable(FILE_HANDLE_T * fileHandle);
+int8_t printElfStringTable(void * elfHandle);
 
-uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName);
+uint64_t lookupSymbolAddress(void * elfHandle, char* symbolName);
 
 /* 
  * Definitions for which function symbol names to print. 
@@ -130,7 +130,7 @@ uint64_t lookupSymbolAddress(FILE_HANDLE_T* fileHandle, char* symbolName);
 #define LOCAL   0
 #define IMPORTS 1
 #define ALL     2
-int8_t printSymbolTableData(FILE_HANDLE_T* fileHandle, uint8_t printImports);
+int8_t printSymbolTableData(void* elfHandle, uint8_t printImports);
 
 #ifdef UNITTEST
 void elfInfoTestSuite();
