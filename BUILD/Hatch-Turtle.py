@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 from subprocess import Popen, PIPE
+import os
 
 class Hatch:
 
@@ -24,12 +25,52 @@ class Hatch:
         self.stdout = ""
         self.stderr = ""
 
-        # Definitions of Path names to different teest scripts:
+        # Definitions of Path names to different test scripts:
+        self.tests = [
+            "../tests/symbol-scan/symbol-scan.py"
+        ]
         self.symbolScanTest = "../tests/symbol-scan/symbol-scan.py"
 
     def setFlags(self, flags):
         self.FLAGS = flags
         self.buildParameters.insert(0, self.FLAGS)
+
+    def runTest(self, testPath):
+        startDir = os.getcwd()
+        dirs = testPath.split('/')
+        sep = '/'
+        path = []
+        for j in range(0, len(dirs)-1):
+            path.append(dirs[j])
+
+        dir = sep.join(path)
+        os.chdir(dir)
+
+        buildParameters = ["python3", dirs[len(dirs)-1]]
+        print("Running Test: " + str(dirs[len(dirs)-1]))
+        process = Popen(buildParameters, stdout=PIPE, stderr=PIPE)
+        stdout, stderr = process.communicate()
+        if process.returncode != 0:
+            print("TEST FAILED: " + str(dirs[len(dirs)-1]))
+        else:
+            print("TEST SUCCEEDED: " + str(dirs[len(dirs)-1]))
+
+        # Write log to file in the test directory.
+        logFile = dirs[len(dirs)-1].split('.')[0]
+        self.writeFormattedLog(logFile, stdout, stderr)
+        
+        os.chdir(startDir)
+
+    def writeFormattedLog(self, logFile, out, err):
+        out = str(out)
+        outLines = out.split("\\n")
+        err = str(err)
+        errLines = out.split("\\n")
+        with open(logFile + ".log", 'w') as f:
+            for line in outLines:
+                f.write(line + '\n') 
+            for line in errLines:
+                f.write(line + '\n') 
 
     def hatchTurtle(self):
         self.buildParameters.insert(0, "gcc")
@@ -42,9 +83,8 @@ class Hatch:
         # TODO: Process stdout/stderr.
         print(self.stdout, self.stderr)
 
-
-
-
+        for i in range(0, len(self.tests)):
+            self.runTest(self.tests[i])
 
 if __name__ == "__main__":
     turtle = Hatch()
