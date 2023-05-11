@@ -18,7 +18,6 @@ class SymbolExtractionTest:
         self.objdumpLocalSyms       = {}
         self.objdumpImportSyms      = {}
         self.objdumpLocalSymNames   = []
-        self.objdumpImportSymNames  = []
         
         self.turtleLocalSyms      = {}
         self.turtleImportSyms     = {}
@@ -85,10 +84,10 @@ class SymbolExtractionTest:
             objdumpAddr = str(self.objdumpLocalSyms.get(sym))
             command = ["../../BUILD/Turtle-Scan", "-lookup", sym, self.testBin]
             print("Looking Up Address Of: ", sym)
-            result = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
+            process = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
             # time.sleep(.5)
-            out, err = result.communicate()
-            if result.returncode != 0 or out == None:
+            out, err = process.communicate()
+            if process.returncode != 0 or out == None:
                 print("A Failure Has Occured In Lookup Symbols.\n")
                 print(out + err)
                 return 1
@@ -103,7 +102,18 @@ class SymbolExtractionTest:
                 return 1
             
         return 0
-            
+
+    # Runs the test for -i (imports)    
+    def runImportedSymbolScan(self):
+        command = ["../../BUILD/Turtle-Scan", "-i", self.testBin]
+        print("Comparing Imported Symbols To objdump: ")
+        process = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
+        out, err = process.communicate()
+        outLines = str(out).strip('\\n')
+        errLines = str(err).strip('\\n')
+        print("Turtle-Scan Results:\n" + outLines + errLines)
+
+
     # TODO: Add function for testing for -functions -v options,
     # (This should cover all functionality of symbol table parsing)
 
@@ -121,8 +131,9 @@ class SymbolExtractionTest:
                 print("Turtle-Scan Lookup Test Failed.")
             print("Lookup Test Successful.\n")
 
+        print("Testing -i Option Of Turtle-Scan.\n")
+        self.runImportedSymbolScan()
 
 if __name__ == "__main__":
     test = SymbolExtractionTest()
     test.runTest()
-    # test.printLogToConsole()
