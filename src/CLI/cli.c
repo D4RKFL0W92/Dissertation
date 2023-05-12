@@ -18,13 +18,42 @@
 
 int main(int argc, char *argv[], char *envp[])
 {
-  FILE_HANDLE_T fileHandle;
+  FILE_HANDLE_T fileHandle = {0};
+  void * elfHandle = NULL;
+  enum BITS arch;
   int i = 1;
+  uint8_t err = ERR_NONE;
 
   if(argc < 2 || strcmp(argv[1], "-h") == 0)
   {
     printf(helpMenu);
     exit(-1);
+  }
+
+  // We only need to write code to determine the ELF architecture once.
+  if(argc >= 3)
+  {
+    if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
+    {
+      printf("Unable map %s into memory\n", argv[argc-1]);
+      exit(-1);
+    }
+    arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
+
+    switch(arch)
+    {
+      case T_64:
+        mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T *) &elfHandle);
+        break;
+
+      case T_32:
+        mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) elfHandle);
+        break;
+
+      case T_NO_ELF:
+      default:
+        break;
+    }
   }
 
   do
@@ -54,37 +83,23 @@ int main(int argc, char *argv[], char *envp[])
     /* Function related options. */
     /* Option: Handle dumping of imported function names. */
     else if(strcmp(argv[i], "-i") == 0 ||
-       strcmp(argv[i], "-imports") == 0)
+            strcmp(argv[i], "-imports") == 0)
     {
-      enum BITS arch;
-      
-      if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
-      {
-        printf("Unable map %s into memory\n", argv[argc-1]);
-        exit(-1);
-      }
-      printSymbolTableData(&fileHandle, IMPORTS);
+      printSymbolTableData(elfHandle, IMPORTS);
     }
 
     /* Option: Local function dumping. */
     else if(strcmp(argv[i], "-f") == 0 ||
-       strcmp(argv[i], "-functions") == 0)
+            strcmp(argv[i], "-functions") == 0)
     {
-      enum BITS arch;
-      
-      if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
-      {
-        printf("Unable map %s into memory\n", argv[argc-1]);
-        exit(-1);
-      }
 
       if(strcmp(argv[i], "-v") == 0)
       {
-        printSymbolTableData(&fileHandle, ALL);
+        printSymbolTableData(elfHandle, ALL);
       }
       else
       {
-        printSymbolTableData(&fileHandle, LOCAL);
+        printSymbolTableData(elfHandle, LOCAL);
       }
     }
 
@@ -95,18 +110,13 @@ int main(int argc, char *argv[], char *envp[])
     else if(!strcmp(argv[i], "-lookup"))
     {
       uint64_t addr;
-      if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
-      {
-        printf("Unable map %s into memory.\n", argv[argc-1]);
-        exit(-1);
-      }
 
       if(argv[i + 1] == NULL) // TODO: Could we make some check that it is a sensical name
       {
         printf("Please Provide A Symbol Name To Lookup.\n");
         exit(0);
       }
-      addr = lookupSymbolAddress(&fileHandle, argv[i + 1]);
+      addr = lookupSymbolAddress(elfHandle, argv[i + 1]);
       printf("<%s>\t0x%016lx", argv[i + 1], addr);
     }
 
@@ -183,6 +193,7 @@ int main(int argc, char *argv[], char *envp[])
 
   }while(i++ < argc-1);
   
+  free(elfHandle);
   /* Check if fileHandle needs cleaning up. */
   if(fileHandle.p_data && fileHandle.st.st_size > 0)
   {
