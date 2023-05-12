@@ -64,6 +64,12 @@ typedef struct ELF64_EXECUTABLE
     int         pid;
 }ELF64_EXECUTABLE_HANDLE_T;
 
+typedef union ELF_EXECUTABLE
+{
+    ELF32_EXECUTABLE_HANDLE_T elfHandle32;
+    ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+} ELF_EXECUTABLE_T;
+
 /*
  * Checks the first five bytes of the file to see if they are in accourdance with
  * an ELF file.
@@ -112,15 +118,15 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 /* TODO: Write a functional test for the print functions, unit tests will not be realistic. */
 int8_t printElfInfoVerbose(FILE_HANDLE_T* handle);
 
-int8_t printElfEHeader(FILE_HANDLE_T * fileHandle);
+int8_t printElfEHeader(ELF_EXECUTABLE_T * fileHandle);
 
-int8_t printELFProgramHeaders(FILE_HANDLE_T * fileHandle);
+int8_t printELFProgramHeaders(ELF_EXECUTABLE_T * fileHandle);
 
-int8_t printELFSectionHeaders(FILE_HANDLE_T * fileHandle);
+int8_t printELFSectionHeaders(ELF_EXECUTABLE_T * fileHandle);
 
-int8_t printElfStringTable(void * elfHandle);
+int8_t printElfStringTable(ELF_EXECUTABLE_T * elfHandle);
 
-uint64_t lookupSymbolAddress(void * elfHandle, char* symbolName);
+uint64_t lookupSymbolAddress(ELF_EXECUTABLE_T * elfHandle, char* symbolName);
 
 /* 
  * Definitions for which function symbol names to print. 
@@ -130,7 +136,7 @@ uint64_t lookupSymbolAddress(void * elfHandle, char* symbolName);
 #define LOCAL   0
 #define IMPORTS 1
 #define ALL     2
-int8_t printSymbolTableData(void* elfHandle, uint8_t printImports);
+int8_t printSymbolTableData(ELF_EXECUTABLE_T * elfHandle, uint8_t printImports);
 
 #ifdef UNITTEST
 void elfInfoTestSuite();

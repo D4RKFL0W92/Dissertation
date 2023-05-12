@@ -83,14 +83,14 @@ int main(int argc, char *argv[], char *envp[])
     /* Function related options. */
     /* Option: Handle dumping of imported function names. */
     else if(strcmp(argv[i], "-i") == 0 ||
-       strcmp(argv[i], "-imports") == 0)
+            strcmp(argv[i], "-imports") == 0)
     {
       printSymbolTableData(elfHandle, IMPORTS);
     }
 
     /* Option: Local function dumping. */
     else if(strcmp(argv[i], "-f") == 0 ||
-       strcmp(argv[i], "-functions") == 0)
+            strcmp(argv[i], "-functions") == 0)
     {
 
       if(strcmp(argv[i], "-v") == 0)
