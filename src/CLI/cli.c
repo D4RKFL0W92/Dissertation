@@ -79,6 +79,16 @@ int main(int argc, char *argv[], char *envp[])
       }
 
     }
+    /* Option: Prints the program header info contained in the binary. */
+    else if(strcmp(argv[i], "-phdrs") == 0)
+    {
+      err = printELFProgramHeaders(elfHandle);
+    }
+    /* Option: Prints the section header info contained in the binary. */
+    else if(strcmp(argv[i], "-shdrs") == 0)
+    {
+      err = printELFSectionHeaders(elfHandle);
+    }
 
     /* Function related options. */
     /* Option: Handle dumping of imported function names. */

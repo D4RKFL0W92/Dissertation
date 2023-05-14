@@ -479,15 +479,11 @@ static int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHand
   for(uint8_t i = 0; i < executableHandle->ehdr->e_phnum; i++)
   {
 
-    printf("Program Header:\t%d\n", i+1);
+    printf("Program Header:\033[45G%d\n", i);
 
-    dumpHexBytesFromFileFromFileHandle(&executableHandle->fileHandle,
-      executableHandle->ehdr->e_phoff + (executableHandle->ehdr->e_phentsize * i), sizeof(Elf64_Phdr));
-    printf("\n\n");
-      
     /* Print the data held in each Phdr in a human readable form. */
 
-    printf("Program Header Type:\t");
+    printf("Program Header Type:\033[39G");
     /* First get the program header type. */
     switch(executableHandle->phdr[i].p_type)
     {
@@ -550,14 +546,14 @@ static int8_t printELF64ProgramHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHand
     }
     flags[7] = '\0';
 
-    printf("Flags:\t%s\n", flags);
+    printf("Flags:\033[39G%s\n", flags);
     /* Static offset, seems incorrect. */
-    printf("Static Offset:\t0x%08x\n", executableHandle->phdr[i].p_offset);
-    printf("Virtual Address:\t0x%08x\n", executableHandle->phdr[i].p_vaddr);
-    printf("Physical Address:\t0x%08x\n", executableHandle->phdr[i].p_paddr);
+    printf("Static Offset:\033[36G0x%08x\n", executableHandle->phdr[i].p_offset);
+    printf("Virtual Address:\033[36G0x%08x\n", executableHandle->phdr[i].p_vaddr);
+    printf("Physical Address:\033[36G0x%08x\n", executableHandle->phdr[i].p_paddr);
 
-    printf("Header File Image Size:\t0x%08x\n", executableHandle->phdr[i].p_filesz);
-    printf("Header Memory Image Size:\t0x%08x\n", executableHandle->phdr[i].p_memsz);
+    printf("Header File Image Size:\033[36G0x%08x\n", executableHandle->phdr[i].p_filesz);
+    printf("Header Memory Image Size:\033[36G0x%08x\n", executableHandle->phdr[i].p_memsz);
 
     puts("-------------------------------------------------------------------------------------");
     printf("\n\n");
@@ -590,15 +586,11 @@ static int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHand
 
   for(uint8_t i = 0; i < executableHandle->ehdr->e_phnum; i++)
   {
-    printf("Program Header:\t%d\n", i+1);
+    printf("Program Header:\033[45G%d\n", i);
 
-    dumpHexBytesFromFileFromFileHandle(&executableHandle->fileHandle,
-      executableHandle->ehdr->e_phoff + (executableHandle->ehdr->e_phentsize * i), sizeof(Elf64_Phdr));
-    printf("\n\n");
-      
     /* Print the data held in each Phdr in a human readable form. */
 
-    printf("Program Header Type:\t");
+    printf("Program Header Type:\033[39G");
     /* First get the program header type. */
     switch(executableHandle->phdr[i].p_type)
     {
@@ -661,14 +653,14 @@ static int8_t printELF32ProgramHeaders(ELF32_EXECUTABLE_HANDLE_T* executableHand
     }
     flags[7] = '\0';
 
-    printf("Flags:\t%s\n", flags);
+    printf("Flags:\033[39G%s\n", flags);
     /* Static offset, seems incorrect. */
-    printf("Static Offset:\t0x%08x\n", executableHandle->phdr[i].p_offset);
-    printf("Virtual Address:\t0x%08x\n", executableHandle->phdr[i].p_vaddr);
-    printf("Physical Address:\t0x%08x\n", executableHandle->phdr[i].p_paddr);
+    printf("Static Offset:\033[36G0x%08x\n", executableHandle->phdr[i].p_offset);
+    printf("Virtual Address:\033[36G0x%08x\n", executableHandle->phdr[i].p_vaddr);
+    printf("Physical Address:\033[36G0x%08x\n", executableHandle->phdr[i].p_paddr);
 
-    printf("Header File Image Size:\t0x%08x\n", executableHandle->phdr[i].p_filesz);
-    printf("Header Memory Image Size:\t0x%08x\n", executableHandle->phdr[i].p_memsz);
+    printf("Header File Image Size:\033[36G0x%08x\n", executableHandle->phdr[i].p_filesz);
+    printf("Header Memory Image Size:\033[36G0x%08x\n", executableHandle->phdr[i].p_memsz);
 
     puts("-------------------------------------------------------------------------------------");
     printf("\n\n");
@@ -846,7 +838,7 @@ static int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHand
   for(int i = 0; i < executableHandle->ehdr->e_shnum; i++)
   {
     puts("----------------------------------------------------------\n");
-    printf("Section Header:\t%d\n", i+1);
+    printf("Section Header:\t%d\n", i);
 
     // dumpHexBytesFromFileFromFileHandle(&executableHandle->fileHandle,
     //   executableHandle->ehdr->e_shoff + (executableHandle->ehdr->e_shentsize * i), executableHandle->ehdr->e_shentsize);
@@ -913,46 +905,42 @@ static int8_t printELF64SectionHeaders(ELF64_EXECUTABLE_HANDLE_T* executableHand
     }
     /* Get the flags of the section. */
     // TODO: There are more possible values here to take into account.
-    switch(executableHandle->shdr[i].sh_flags)
+    strncpy(flags, "---------------", sizeof(flags));
+    if(executableHandle->shdr[i].sh_flags & SHF_WRITE)
     {
-      case 1:
-        strncpy(flags, "W-------", SHDR_FLAG_LEN); /* (1 << 0) */
-        break;
-      case 2:
-        strncpy(flags, "-A------", SHDR_FLAG_LEN); /* (1 << 1) */
-        break;
-      case 3:
-        strncpy(flags, "WA------", SHDR_FLAG_LEN);
-        break;
-      case 4:
-        strncpy(flags, "--X-----", SHDR_FLAG_LEN); /* (1 << 2) */
-        break;
-      case 5:
-        strncpy(flags, "W-X-----", SHDR_FLAG_LEN);
-        break;
-      case 6:
-        strncpy(flags, "-AX-----", SHDR_FLAG_LEN);
-        break;
-      case 16:
-        strncpy(flags, "---M----", SHDR_FLAG_LEN); /* (1 << 4) */
-        break;
-      case 32:
-        strncpy(flags, "----S---", SHDR_FLAG_LEN); /* (1 << 5) */
-        break;
-      case 64:
-        strncpy(flags, "-----I--", SHDR_FLAG_LEN); /* (1 << 6) */
-        break;
-      case 128:
-        strncpy(flags, "------P-", SHDR_FLAG_LEN); /* (1 << 7) */
-        break;
-      case 256:
-        strncpy(flags, "-------N", SHDR_FLAG_LEN); /* (1 << 8) */
-        break;
-      case 0:
-      default:
-        strncpy(flags, "--------", SHDR_FLAG_LEN); /* NOFLAGS */
-        break;
+      flags[0] = 'W';
     }
+    if(executableHandle->shdr[i].sh_flags & SHF_ALLOC)
+    {
+      flags[2] = 'A';
+    }
+    if(executableHandle->shdr[i].sh_flags & SHF_EXECINSTR)
+    {
+      flags[4] = 'X';
+    }
+    if(executableHandle->shdr[i].sh_flags & SHF_MERGE)
+    {
+      flags[6] = 'M';
+    }
+    if(executableHandle->shdr[i].sh_flags & SHF_STRINGS)
+    {
+      flags[8] = 'S';
+    }
+    if(executableHandle->shdr[i].sh_flags & SHF_INFO_LINK)
+    {
+      flags[10] = 'L';
+    }
+    if(executableHandle->shdr[i].sh_flags & SHF_LINK_ORDER)
+    {
+      flags[12] = 'P'; /* Preserve order after combining */
+    }
+    if(executableHandle->shdr[i].sh_flags & SHF_OS_NONCONFORMING)
+    {
+      flags[14] = 'P'; /* Non-standard OS specific handling */
+    }
+// #define SHF_OS_NONCONFORMING (1 << 8)	
+
+    flags[SHDR_FLAG_LEN] = '\0';
     printf("%s\n", flags);
 
     printf("SH_ADDR:\t0x%08x\n", executableHandle->shdr[i].sh_addr);

@@ -16,9 +16,7 @@
 #include "../../Types/turtle_types.h"
 #include "../../Logging/logging.h"
 #include "../../FileOperations/fileOps.h"
-
-
-
+#include "../../Memory/tvector.h"
 
 
 #define CLASS32           "32"
@@ -39,7 +37,7 @@
 #define ARCH_Intel64      "X_64"
 
 #define PHDR_FLAG_LEN       7
-#define SHDR_FLAG_LEN       8
+#define SHDR_FLAG_LEN      15
 
 #define MIN_ELF32_ENTRY     0x8048000 // Is this correct??
 
@@ -118,11 +116,11 @@ uint8_t printELFInfo(const char* elf_filepath, const char* output_filepath);
 /* TODO: Write a functional test for the print functions, unit tests will not be realistic. */
 int8_t printElfInfoVerbose(FILE_HANDLE_T* handle);
 
-int8_t printElfEHeader(ELF_EXECUTABLE_T * fileHandle);
+int8_t printElfEHeader(ELF_EXECUTABLE_T * elfHandle);
 
-int8_t printELFProgramHeaders(ELF_EXECUTABLE_T * fileHandle);
+int8_t printELFProgramHeaders(ELF_EXECUTABLE_T * elfHandle);
 
-int8_t printELFSectionHeaders(ELF_EXECUTABLE_T * fileHandle);
+int8_t printELFSectionHeaders(ELF_EXECUTABLE_T * elfHandle);
 
 int8_t printElfStringTable(ELF_EXECUTABLE_T * elfHandle);
 

@@ -7,6 +7,8 @@ const char helpMenu[] = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%-Turtle-Scan-%%%%%%%%%%%%
                         "Header Related Options:\n" \
                         "-------------------------------------------------------------------------\n\n\n" \
                         "\t-E\n\t"            "Prints useful information about an ELF executable, (given as final argument).\n\n" \
+                        "\t-phdrs\n\t"        "Prints all program header data in the ELF executable, (given as final argument).\n\n" \
+                        "\t-shdrs\n\t"        "Prints all section header data in the ELF executable, (given as final argument).\n\n" \
 
                         "Function Related Options:\n" \
                         "-------------------------------------------------------------------------\n\n\n" \
