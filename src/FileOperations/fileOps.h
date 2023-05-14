@@ -84,6 +84,8 @@ uint8_t* sha1File(const char* filepath);
 */
 int8_t printSHA1OfFile(const char* filepath);
 
+int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen);
+
 /* A simple function that scans a given file for ASCII
  * printable strings.
  *
@@ -93,7 +95,7 @@ int8_t printSHA1OfFile(const char* filepath);
  * Return:  Returns an error code indicating the success or
  *          failure of the function.
 */
-int8_t scanForStrings(char* filepath, uint16_t len);
+int8_t scanFileForStrings(char* filepath, uint16_t toFindLen);
 
 /* Dumps a given amount of bytes in hex from a given offset.
  * Prints the bytes and the ASCII representation if there is one.

@@ -226,34 +226,47 @@ int8_t printSHA1OfFile(const char* filepath)
   return ERR_NONE;
 }
 
-int8_t scanForStrings(char* filepath, uint16_t len)
+int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen)
 {
   char strBuff[8192];
-  char* p_mem;
-  uint64_t sz;
-  
-  if( (p_mem = basicFileMap(filepath, &sz)) == NULL)
+
+  if(pMem == NULL)
   {
-    #ifdef DEBUG
-    perror("Error mapping file in scanForStrings()");
+    #ifndef DEBUG
+    perror("NULL Ptr Passed To scanMemForStrings().");
     #endif
-    logEvent(LOG_FILE, "scanForStrings()", "Unable to map file.");
-    return ERR_UNKNOWN;
+    return  ERR_NULL_ARGUMENT;
   }
 
-  for(uint64_t i = 0; i < sz; i++)
+  if(memLen == 0)
+  {
+    #ifndef DEBUG
+    perror("Invalid Memory Length Passed To scanMemForStrings().");
+    #endif
+    return  ERR_NULL_ARGUMENT;
+  }
+
+  if(toFindLen <= 1) // Would pick up every ASCII representable byte otherwise.
+  {
+    #ifndef DEBUG
+    perror("Invalid Memory Length Passed To scanMemForStrings().");
+    #endif
+    return  ERR_NULL_ARGUMENT;
+  }
+
+  for(uint64_t i = 0; i < memLen; i++)
   {
     uint16_t strLen = 0;
     /* In the ASCII range (acount for spaces). */
-    if((p_mem[i] > 0x21 && p_mem[i] < 0x7E) || p_mem[i] == 0x20)
+    if((pMem[i] > 0x21 && pMem[i] < 0x7E) || pMem[i] == 0x20)
     {
-      strBuff[strLen++] = p_mem[i++];
-      while((p_mem[i] > 0x21 && p_mem[i] < 0x7E) || p_mem[i] == 0x20)
+      strBuff[strLen++] = pMem[i++];
+      while((pMem[i] > 0x21 && pMem[i] < 0x7E) || pMem[i] == 0x20)
       {
-        strBuff[strLen++] = p_mem[i++];
+        strBuff[strLen++] = pMem[i++];
       }
 
-      if(strLen >= len)
+      if(strLen >= toFindLen)
       {
         printf("%s\n", strBuff);
       }
@@ -268,6 +281,24 @@ int8_t scanForStrings(char* filepath, uint16_t len)
     }   
   }
   return ERR_NONE;
+}
+
+int8_t scanFileForStrings(char* filepath, uint16_t toFindLen)
+{
+  char* p_mem;
+  uint64_t sz;
+  int8_t err = ERR_NONE;
+
+  if( (p_mem = basicFileMap(filepath, &sz)) == NULL)
+  {
+    #ifdef DEBUG
+    perror("Error mapping file in scanFileForStrings()");
+    #endif
+    return ERR_UNKNOWN;
+  }
+
+  err = scanMemForStrings(p_mem, sz, toFindLen);
+  return err;
 }
 
 int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t offsetIntoMemory, uint64_t uCount)
