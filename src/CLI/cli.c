@@ -6,15 +6,9 @@
 #include "../FileOperations/fileOps.h"
 #include "../Memory/turtle_memory.h"
 #include "../Memory/tvector.h"
+#include "../Modules/Disassembly/x64_disassembly.h"
 #include "../Help/help.h"
 
-#define TEST32 "/home/calum/Test_Files/while32"
-#define TEST64 "/home/calum/Test_Files/while64"
-
-#define TEST32_2 "/home/calum/Test_Bins/while2_32"
-#define TEST64_2 "/home/calum/Test_Bins/while2_64"
-
-#define TEST_STRINGS "/home/calum/Test_Files/strings"
 
 int main(int argc, char *argv[], char *envp[])
 {
@@ -197,6 +191,7 @@ int main(int argc, char *argv[], char *envp[])
         elfInfoTestSuite();
         // ioTestSuite();
         TVectorTestSuite();
+        x64_DisassemblyTestSuite();
         printf("Unit Tests Successful.\n");
       }
     #endif

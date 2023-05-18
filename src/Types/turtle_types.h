@@ -1,6 +1,8 @@
 #ifndef _TURTLE_TYPES_
 #define _TURTLE_TYPES_
 
+#include <stdint.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #define TRUE             1
