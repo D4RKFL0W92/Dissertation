@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-import sys
-import time
 import re
 import subprocess
 from subprocess import PIPE
-sys.path.append("../")
-import commonFunctionality
 
 class SymbolExtractionTest:
 
@@ -85,7 +81,6 @@ class SymbolExtractionTest:
             command = ["../../BUILD/Turtle-Scan", "-lookup", sym, self.testBin]
             print("Looking Up Address Of: ", sym)
             process = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
-            # time.sleep(.5)
             out, err = process.communicate()
             if process.returncode != 0 or out == None:
                 print("A Failure Has Occured In Lookup Symbols.\n")
