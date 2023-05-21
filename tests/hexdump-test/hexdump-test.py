@@ -30,7 +30,9 @@ class HexdumpTest:
         
         tmpTurtleReadBytes = re.findall("\\b[0-9a-f]{2}\\b", str(out))
 
-        # Strip off the offset bytes from Turtle-Scan output
+        # Strip off the offset bytes from Turtle-Scan output, we only
+        # need to remove the first 00-09 bytes as the other 0A-0F
+        # are not picked up by the regex due to capitalisation.
         for i in range(10, len(tmpTurtleReadBytes)):
             self.turtleReadBytes.append(tmpTurtleReadBytes[i])
         print("Turtle Read Bytes:")

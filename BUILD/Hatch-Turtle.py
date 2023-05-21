@@ -25,6 +25,7 @@ class Hatch:
         self.stderr = ""
 
         # Definitions of Path names to different test scripts:
+        # Any new tests should be added here to include them in the automated CI.
         self.tests = [
             "../tests/symbol-scan/symbol-scan.py",
             "../tests/hexdump-test/hexdump-test.py"
@@ -89,7 +90,7 @@ if __name__ == "__main__":
     turtle = Hatch()
 
     if len(sys.argv) < 2:
-        turtle.FLAGS=""
+        turtle.setFlags("")
     elif len(sys.argv) == 2:
         if "-d" in sys.argv[1]:
             print("Building With Debug Logic Enabled.")
