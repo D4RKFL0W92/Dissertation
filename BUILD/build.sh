@@ -6,6 +6,7 @@ fileops="../src/FileOperations/fileOps.c"
 cli="../src/CLI/cli.c"
 memory="../src/Memory/turtle_memory.c"
 vector="../src/Memory/tvector.c"
+disas="../src/Modules/Disassembly/x64_disassembly.c"
 io="../src/Modules/IO/io.c"
 
 FLAGS='-DDEBUG -DUNITTEST'
@@ -33,7 +34,7 @@ elif [ $# -eq 2 ]; then
 fi
 
 gcc $FLAGS $elfinfo $elfdynamic $cli $logging \
-$fileops $memory $vector $io \
+$fileops $memory $vector $disas $io \
 -L$SSLLIB -I$SSLINCLUDES -lm -ggdb -o Turtle-Scan
 
 # Run the unit tests for the project on each build.
