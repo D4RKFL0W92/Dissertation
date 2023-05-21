@@ -26,9 +26,9 @@ class Hatch:
 
         # Definitions of Path names to different test scripts:
         self.tests = [
-            "../tests/symbol-scan/symbol-scan.py"
+            "../tests/symbol-scan/symbol-scan.py",
+            "../tests/hexdump-test/hexdump-test.py"
         ]
-        self.symbolScanTest = "../tests/symbol-scan/symbol-scan.py"
 
     def setFlags(self, flags):
         self.FLAGS = flags
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     turtle = Hatch()
 
     if len(sys.argv) < 2:
-        self.FLAGS=""
+        turtle.FLAGS=""
     elif len(sys.argv) == 2:
         if "-d" in sys.argv[1]:
             print("Building With Debug Logic Enabled.")
