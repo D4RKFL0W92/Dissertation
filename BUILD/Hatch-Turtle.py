@@ -93,7 +93,9 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         turtle.setFlags("")
-    elif len(sys.argv) > 2:
+        turtle.hatchTurtle(True)
+        exit(0)
+    elif len(sys.argv) >= 2:
         if "-d" in sys.argv:
             print("Building With Debug Logic Enabled.")
             turtle.setFlags("-DDEBUG")
@@ -105,7 +107,7 @@ if __name__ == "__main__":
             turtle.setFlags("-ggdb")
             turtle.setFlags("-DUNITTEST -DLOCALTESTFILES")
 
-        if "-notests" in sys.argv:
-            turtle.hatchTurtle(False)
+    if "-notests" in sys.argv:
+        turtle.hatchTurtle(False)
     else:
         turtle.hatchTurtle(True)
