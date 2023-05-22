@@ -26,6 +26,7 @@ class Hatch:
         self.stderr = ""
 
         # Definitions of Path names to different test scripts:
+        # Any new tests should be added here to include them in the automated CI.
         self.tests = [
             "../tests/symbol-scan/symbol-scan.py",
             "../tests/hexdump-test/hexdump-test.py"
@@ -72,7 +73,7 @@ class Hatch:
             for line in errLines:
                 f.write(line + '\n') 
 
-    def hatchTurtle(self):
+    def hatchTurtle(self, runFunctionalTests):
         self.buildParameters.insert(0, "gcc")
         self.buildParameters.append("-o")
         self.buildParameters.append("Turtle-Scan")
@@ -83,24 +84,31 @@ class Hatch:
         # TODO: Process stdout/stderr.
         print(self.stdout, self.stderr)
 
-        for i in range(0, len(self.tests)):
-            self.runTest(self.tests[i])
+        # Optionally run functional tests
+        if runFunctionalTests == True:
+            for i in range(0, len(self.tests)):
+                self.runTest(self.tests[i])
 
 if __name__ == "__main__":
     turtle = Hatch()
 
     if len(sys.argv) < 2:
-        turtle.FLAGS=""
-    elif len(sys.argv) == 2:
-        if "-d" in sys.argv[1]:
+        turtle.setFlags("")
+        turtle.hatchTurtle(True)
+        exit(0)
+    elif len(sys.argv) >= 2:
+        if "-d" in sys.argv:
             print("Building With Debug Logic Enabled.")
             turtle.setFlags("-DDEBUG")
             turtle.setFlags("-ggdb")
 
-        elif "-u" in sys.argv[1]:
+        elif "-u" in sys.argv:
             print("Building With Unit Tests Enabled.")
             turtle.setFlags("-DDEBUG")
             turtle.setFlags("-ggdb")
             turtle.setFlags("-DUNITTEST -DLOCALTESTFILES")
 
-    turtle.hatchTurtle()
+    if "-notests" in sys.argv:
+        turtle.hatchTurtle(False)
+    else:
+        turtle.hatchTurtle(True)
