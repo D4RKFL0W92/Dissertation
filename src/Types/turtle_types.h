@@ -8,6 +8,8 @@
 #define TRUE             1
 #define FALSE            0
 
+typedef enum BOOL {false, true} BOOL_T;
+
 /* Definitions of different error values. */
 #define ERR_NONE                     0
 #define ERR_UNKNOWN                  1

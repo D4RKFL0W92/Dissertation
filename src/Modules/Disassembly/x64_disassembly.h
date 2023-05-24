@@ -3,7 +3,7 @@
 
 #include "../../Types/turtle_types.h"
 
-typedef struct IntelX64Instruction
+typedef struct IntelX64InstructionData
 {
   uint8_t  legacyPrefix;      /* Optional */
   uint8_t  rexPrefix;         /* Optional: used in 64bit mode for addressing. */
@@ -13,8 +13,15 @@ typedef struct IntelX64Instruction
   uint8_t  sibByte;
   uint32_t displacement;
   uint32_t immediateData;
-} IntelX64Instruction_T;
+} IntelX64InstructionData_T;
 
+typedef struct IntelX64Instruction
+{
+   char instructionOpcode[4];
+   char instMnemonic [80];     // Arbitrary Length.
+   BOOL_T arch64Mode;          // true/false
+   BOOL_TarchLegacyMode;       // true/false
+} IntelX64Instruction_T;
 /* Definitions of optional instruction prefixes. */
 /* Group 1 Prefixes */
 #define INST_PREFIX_LOCK            0xF0
