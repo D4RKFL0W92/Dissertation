@@ -19,7 +19,7 @@
 int main(int argc, char *argv[], char *envp[])
 {
   FILE_HANDLE_T fileHandle = {0};
-  void * elfHandle = NULL;
+  ELF_EXECUTABLE_T * elfHandle = NULL;
   enum BITS arch;
   int i = 1;
   uint8_t err = ERR_NONE;
@@ -47,7 +47,7 @@ int main(int argc, char *argv[], char *envp[])
         break;
 
       case T_32:
-        mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) elfHandle);
+        mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
         break;
 
       case T_NO_ELF:
@@ -128,6 +128,13 @@ int main(int argc, char *argv[], char *envp[])
       }
       addr = lookupSymbolAddress(elfHandle, argv[i + 1]);
       printf("<%s>\t0x%016lx", argv[i + 1], addr);
+    }
+
+    /* Option: Trace execution of an executable file. */
+    else if(strcmp(argv[i], "-trace") == 0)
+    {
+      // TODO: Add some sanity checks
+      launchTraceProgram(elfHandle, argc, argv, envp);
     }
 
     /* Option: Print SHA1 of given file. */
