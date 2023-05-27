@@ -3,15 +3,18 @@
 
 int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int argc, char** argv, char** envp)
 {
-  char** childArgs = NULL;
-  pid_t pid = 0;
-  int status = 0;
-  int8_t err = ERR_NONE;
+  struct ptrace_syscall_info syscallInfo = {0};
+  struct user_regs_struct regs = {0};
+  char** childArgs   = NULL;
+  long syscallNumber = 0;
+  int status         = 0;
+  pid_t pid          = 0;
+  int8_t err         = ERR_NONE;
 
   if(executableHandle == NULL)
   {
     #ifdef DEBUG
-    perror("ERROR CALLING: ptrace(PTRACE_ATTACH, pid, 0, 0)");
+    perror("ERROR null parameter passed to launchTraceProgram()");
     #endif
     return ERR_NULL_ARGUMENT;
   }
@@ -21,6 +24,9 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int argc, char** 
     childArgs = malloc(argc - 2);
     if(childArgs == NULL)
     {
+      #ifdef DEBUG
+      perror("ERROR allocating memory in launchTraceProgram()");
+      #endif
       err = ERR_MEMORY_ALLOCATION_FAILED;
       goto cleanup;
     }
@@ -32,22 +38,43 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int argc, char** 
 
   if( (pid = fork()) < 0)
   {
+    #ifdef DEBUG
+    perror("ERROR unable to fork process in launchTraceProgram()");
+    #endif
     err = ERR_PROCESS_OPERATION_FAILED;
     goto cleanup;
   }
 
+  /*
+   * Child process tells the parent it wants to be traced
+   * and executes the new program so we can trace its execution.
+   */
   if(pid == 0)
   {
+    printf("Calling PTRACE_TRACEME\n");
     if(ptrace(PTRACE_TRACEME, pid, NULL, NULL) < 0)
     {
+      #ifdef DEBUG
+      perror("ERROR CALLING: PTRACE_TRACEME in launchTraceProgram()");
+      #endif
       err = ERR_PROCESS_OPERATION_FAILED;
       goto cleanup;
     }
-    execve(childArgs[0], childArgs, envp);
+
+    printf("Starting new process\n");
+    execl(childArgs[0], childArgs, envp);
+
+    err = ERR_NONE;
     goto cleanup; // Cleanup after child process finishes executing traced process.
   }
-
-  wait(&status);
+  else
+  {
+    wait(&status);
+    syscallNumber = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
+    printf("Syscall number: %d\n", regs.rax);
+    ptrace(PTRACE_CONT, pid, NULL, NULL);
+  }
+  
 
   cleanup:
   free(childArgs);

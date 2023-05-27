@@ -7,20 +7,13 @@
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
-
+#include <linux/ptrace.h>
 #include "../../Logging/logging.h"
 #include "../../Types/turtle_types.h"
 #include "../ELFinfo/elfinfo.h"
 
-#define PRINT_GRID_TOP printf("                  0   2   3   4   5   6   7   8   9   A   B   C   D   E   F\n")
-#define PRINT_GRID_ROW(startAddr, pMem, i) \
-        printf("0x%016x %02x %02x %02x %02x, %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", startAddr + (i*8), \
-            *(pMem + (i*8)), *(pMem + (i*8) + 1), *(pMem + (i*8) + 2), *(pMem + (i*8) + 3), *(pMem + (i*8) + 4), \
-            *(pMem + (i*8) + 5), *(pMem + (i*8) + 6), *(pMem + (i*8) + 7), *(pMem + (i*8) + 8), *(pMem + (i*8) + 9), \
-            *(pMem + (i*8) + 10), *(pMem + (i*8) + 11), *(pMem + (i*8) + 12), *(pMem + (i*8) +13), *(pMem + (i*8) + 14), \
-            *(pMem + (i*8) + 15))
 
-int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int argc, char** argv, char** envp);
+int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, char** childArgv, char** envp);
 
 static int8_t detachFromProcess(pid_t pid);
 static int8_t getRegisterValues(int pid, struct user_regs_struct* regs);
