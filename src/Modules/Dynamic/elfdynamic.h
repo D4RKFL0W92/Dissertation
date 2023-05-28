@@ -6,6 +6,7 @@
 #include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/user.h>
+#include <sys/reg.h>
 #include <sys/wait.h>
 #include <linux/ptrace.h>
 #include "../../Logging/logging.h"

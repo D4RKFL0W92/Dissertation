@@ -22,6 +22,7 @@ int main(int argc, char *argv[], char *envp[])
   ELF_EXECUTABLE_T * elfHandle = NULL;
   enum BITS arch;
   int i = 1;
+  int targetFileIndex = 0;
   uint8_t err = ERR_NONE;
 
   if(argc < 2 || strcmp(argv[1], "-h") == 0)
@@ -33,9 +34,17 @@ int main(int argc, char *argv[], char *envp[])
   // We only need to write code to determine the ELF architecture once.
   if(argc >= 3)
   {
-    if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
+    for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
     {
-      printf("Unable map %s into memory\n", argv[argc-1]);
+      if(strncmp(argv[j], "-", 1) != 0) // Firts argument that doesn't start with -
+      {
+        found = TRUE;
+        targetFileIndex = j;
+      }
+    }
+    if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
+    {
+      printf("Unable map %s into memory\n", argv[targetFileIndex]);
       exit(-1);
     }
     arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
@@ -66,15 +75,15 @@ int main(int argc, char *argv[], char *envp[])
     */
     if(strcmp(argv[i], "-E") == 0)
     {
-      if(mapFileToStruct(argv[argc-1], &fileHandle) == ERR_UNKNOWN)
+      if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
       {
-        printf("Unable map %s into memory\n", argv[argc-1]);
+        printf("Unable map %s into memory\n", argv[targetFileIndex]);
         exit(-1);
       }
 
       if(printElfInfoVerbose(&fileHandle) == ERR_UNKNOWN)
       {
-        printf("Unable to get ELF info from %s\n", argv[argc-1]);
+        printf("Unable to get ELF info from %s\n", argv[targetFileIndex]);
         exit(-1);
       }
 
@@ -134,15 +143,16 @@ int main(int argc, char *argv[], char *envp[])
     else if(strcmp(argv[i], "-trace") == 0)
     {
       // TODO: Add some sanity checks
-      launchTraceProgram(elfHandle, argc, argv, envp);
+      launchTraceProgram(elfHandle, argc-targetFileIndex, &argv[targetFileIndex], envp);
+
     }
 
     /* Option: Print SHA1 of given file. */
     else if(!strcmp(argv[i], "-sha1"))
     {
-      if(printSHA1OfFile(argv[argc-1]) == ERR_UNKNOWN)
+      if(printSHA1OfFile(argv[targetFileIndex]) == ERR_UNKNOWN)
       {
-        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
+        printf("Unable to calculate hash for %s.\n", argv[targetFileIndex]);
         exit(-1);
       }
     }
@@ -175,13 +185,13 @@ int main(int argc, char *argv[], char *envp[])
         printf("Count Must Be Greater Than Zero.\n");
       }
       
-      dumpHexBytesFromFile(argv[argc-1], start, uCount);
+      dumpHexBytesFromFile(argv[targetFileIndex], start, uCount);
     }
 
     /* Option: Dump ASCII strings. */
     else if(!strcmp(argv[i], "-s")) /* TODO: Adapt this functionality to handle searching for strings of a given size. */
     {
-      scanFileForStrings(argv[argc-1], 3);
+      scanFileForStrings(argv[targetFileIndex], 3);
     }
 
     /* Option: Convert a hex passed as argument after switch value to decimal. */
@@ -208,7 +218,7 @@ int main(int argc, char *argv[], char *envp[])
       }
     #endif
 
-  }while(i++ < argc-1);
+  }while(i++ < targetFileIndex);
   
   free(elfHandle);
   /* Check if fileHandle needs cleaning up. */
