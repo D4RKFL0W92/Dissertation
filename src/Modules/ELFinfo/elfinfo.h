@@ -50,7 +50,7 @@ typedef struct ELF32_EXECUTABLE
     Elf32_Ehdr* ehdr;
     Elf32_Phdr* phdr;
     Elf32_Shdr* shdr;
-    int         pid;
+    pid_t       pid;
 }ELF32_EXECUTABLE_HANDLE_T;
 
 typedef struct ELF64_EXECUTABLE
@@ -59,7 +59,7 @@ typedef struct ELF64_EXECUTABLE
     Elf64_Ehdr* ehdr;
     Elf64_Phdr* phdr;
     Elf64_Shdr* shdr;
-    int         pid;
+    pid_t       pid;
 }ELF64_EXECUTABLE_HANDLE_T;
 
 typedef union ELF_EXECUTABLE

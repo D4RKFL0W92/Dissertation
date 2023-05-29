@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <signal.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/user.h>
@@ -15,6 +16,8 @@
 
 
 int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, char** childArgv, char** envp);
+static int8_t launchTraceProgram64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, int childArgc, char** childArgv, char** envp);
+static int8_t launchTraceProgram32(ELF_EXECUTABLE_T * executableHandle, int childArgc, char** childArgv, char** envp);
 
 static int8_t detachFromProcess(pid_t pid);
 static int8_t getRegisterValues(int pid, struct user_regs_struct* regs);

@@ -2,6 +2,7 @@
 #define _TURTLE_TYPES_
 
 #include <assert.h>
+#include <unistd.h>
 
 #define TRUE             1
 #define FALSE            0
@@ -21,6 +22,8 @@
 #define ERR_FILE_OPERATION_FAILED      20
 
 #define ERR_PROCESS_OPERATION_FAILED   30
+
+#define ERR_TRACE_OPERATION_FAILED     35
 
 #define TRUE_STR         "TRUE"
 #define FALSE_STR        "FALSE"
