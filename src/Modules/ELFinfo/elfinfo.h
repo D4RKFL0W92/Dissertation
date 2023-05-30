@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <elf.h>
+#include <sys/user.h>
+#include <sys/reg.h>
 #include <unistd.h>
 #include <assert.h>
 #include <sys/stat.h>
@@ -46,20 +48,24 @@ enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
 
 typedef struct ELF32_EXECUTABLE
 {
-    FILE_HANDLE_T fileHandle;
-    Elf32_Ehdr* ehdr;
-    Elf32_Phdr* phdr;
-    Elf32_Shdr* shdr;
-    pid_t       pid;
+    FILE_HANDLE_T             fileHandle;
+    Elf32_Ehdr*               ehdr;
+    Elf32_Phdr*               phdr;
+    Elf32_Shdr*               shdr;
+    struct user_regs_struct   regs;
+    pid_t                     pid;
+    int8_t                    isExecuting;
 }ELF32_EXECUTABLE_HANDLE_T;
 
 typedef struct ELF64_EXECUTABLE
 {
-    FILE_HANDLE_T fileHandle;
-    Elf64_Ehdr* ehdr;
-    Elf64_Phdr* phdr;
-    Elf64_Shdr* shdr;
-    pid_t       pid;
+    FILE_HANDLE_T           fileHandle;
+    Elf64_Ehdr*             ehdr;
+    Elf64_Phdr*             phdr;
+    Elf64_Shdr*             shdr;
+    struct user_regs_struct regs;
+    pid_t                   pid;
+    int8_t                  isExecuting;
 }ELF64_EXECUTABLE_HANDLE_T;
 
 typedef union ELF_EXECUTABLE
