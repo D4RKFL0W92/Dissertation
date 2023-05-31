@@ -1,6 +1,54 @@
 #include "elfdynamic.h"
 
-static void* readProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset, uint64_t uCount)
+static void * readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset)
+{
+  uint16_t allocationSize = 40;
+  void *   data       = NULL;
+  char *   pChar      = NULL;
+  int8_t   err        = ERR_NONE;
+  long     wordRead   = 0;
+  uint8_t  nullRead   = FALSE;
+  uint8_t  charCount  = 0;
+  uint8_t  cpySize    = 0;
+
+  if( (data = malloc(allocationSize)) == NULL)
+  {
+    return NULL;
+  }
+  memset(data, 0, allocationSize);
+
+  while(nullRead == FALSE)
+  {
+    
+    wordRead = 0;
+    wordRead = ptrace(PTRACE_PEEKDATA, executableHandle->pid, offset + charCount * sizeof(long), NULL);
+    pChar = (char *)& wordRead;
+    for(uint8_t i = 0; i < sizeof(long); i++)
+    {
+      if(*pChar == '\0')
+      {
+        cpySize = i;
+      }
+      else
+      {
+        cpySize = sizeof(long);
+      }
+    }
+
+    memcpy(data + charCount * sizeof(long), &wordRead, cpySize);
+
+    charCount += sizeof(long);
+    if(charCount >= allocationSize)
+    {
+      realloc(data, (allocationSize + 40));
+      memset(data + allocationSize, 0, allocationSize);
+      allocationSize += 40;
+    }
+  }
+  return data;
+}
+
+static void * readProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset, uint64_t uCount)
 {
   void *   data       = NULL;
   uint16_t iterations = 0;
@@ -32,9 +80,11 @@ static int printSyscallInfo64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
   switch(executableHandle->regs.orig_rax)
   {
     case SYS_read:
-      // TODO: Find a way to read this memory without it failing (SEGFAULT)
-      printf("read(fd=%d, buffer=%p, count=%d)\n", executableHandle->regs.rdi,
-                                                   executableHandle->regs.rsi,
+      tmpBuffer = readProcessMemory64(executableHandle,
+                                      executableHandle->regs.rsi,
+                                      executableHandle->regs.rdx);
+      printf("read(fd=%d, buffer=%s, count=%d)\n", executableHandle->regs.rdi,
+                                                   tmpBuffer,
                                                    executableHandle->regs.rdx);
       break; /*SYS_read*/
 
@@ -44,7 +94,7 @@ static int printSyscallInfo64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
         tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi,
                                                           executableHandle->regs.rdx);
         tmpBuffer = realloc(tmpBuffer, executableHandle->regs.rdx + 1);
-        tmpBuffer[executableHandle->regs.rdx] = '\0';
+        tmpBuffer[executableHandle->regs.rdx] = '\0'; // Remove extra \n that may be output by command.
       }
       printf("write(fd=%d, buffer=\"%s\", count=%d)\n", executableHandle->regs.rdi,
                                                         tmpBuffer,
@@ -75,6 +125,19 @@ static int printSyscallInfo64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
       printf("poll(pollfd=%p, nfds=%d, timeout=%d)\n", executableHandle->regs.rdi,
                                                        executableHandle->regs.rsi,
                                                        executableHandle->regs.rdx);
+      break; /*SYS_poll*/
+
+
+
+
+
+
+    case SYS_execve:
+      // TODO:Find a way to extract the filename to run
+      // all registers except ORIG_RAX are zero. How can
+      // we extract all arguments???
+      printf("execve()\n");
+      break; /*SYS_execve*/
 
   }
   free(tmpBuffer);
