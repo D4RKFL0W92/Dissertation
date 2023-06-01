@@ -73,8 +73,9 @@ static void * readProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, 
   return data;
 }
 
-static int printSyscallInfo64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
+static int printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
 {
+  struct ptrace_syscall_info syscallInfo = {0};
   char* tmpBuffer = NULL;
 
   switch(executableHandle->regs.orig_rax)
@@ -83,27 +84,32 @@ static int printSyscallInfo64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
       tmpBuffer = readProcessMemory64(executableHandle,
                                       executableHandle->regs.rsi,
                                       executableHandle->regs.rdx);
-      printf("read(fd=%d, buffer=%s, count=%d)\n", executableHandle->regs.rdi,
-                                                   tmpBuffer,
-                                                   executableHandle->regs.rdx);
+
+      printf("read(fd=%d, buffer=\"%s\", count=%d)\n",
+        executableHandle->regs.rdi,
+        tmpBuffer,
+        executableHandle->regs.rdx);
       break; /*SYS_read*/
 
     case SYS_write:
       if(executableHandle->regs.rdx > 0)
       {
-        tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi,
-                                                          executableHandle->regs.rdx);
+        tmpBuffer = readProcessMemory64(executableHandle,
+          executableHandle->regs.rsi,
+          executableHandle->regs.rdx);
+
         tmpBuffer = realloc(tmpBuffer, executableHandle->regs.rdx + 1);
         tmpBuffer[executableHandle->regs.rdx] = '\0'; // Remove extra \n that may be output by command.
       }
-      printf("write(fd=%d, buffer=\"%s\", count=%d)\n", executableHandle->regs.rdi,
-                                                        tmpBuffer,
-                                                        executableHandle->regs.rdx);
+      printf("write(fd=%d, buffer=\"%s\", count=%d)\n",
+        executableHandle->regs.rdi,
+        tmpBuffer,
+        executableHandle->regs.rdx);
       break; /*SYS_write*/
 
     case SYS_open:
-      /* TODO: Test if this works (print string from processSpace[rdi]). */
-      printf("open(path=%s)\n", executableHandle->regs.rdi);
+      tmpBuffer = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi);
+      printf("open(path=%s)\n", tmpBuffer);
       break; /*SYS_open*/
 
     case SYS_close:
@@ -112,26 +118,92 @@ static int printSyscallInfo64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
 
     case SYS_stat:
     case SYS_lstat:
-      printf("stat(path=\"%s\", struct=0x%08x)\n", executableHandle->regs.rdi,
-                                                   executableHandle->regs.rsi);
+      tmpBuffer = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi);
+
+      printf("stat(path=\"%s\", struct=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
       break; /*stat/lstat*/
 
     case SYS_fstat:
-      printf("fstat(fd=%d, struct=0x%08x)\n", executableHandle->regs.rdi,
-                                              executableHandle->regs.rsi);
+      printf("fstat(fd=%d, struct=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
       break;
 
     case SYS_poll:
-      printf("poll(pollfd=%p, nfds=%d, timeout=%d)\n", executableHandle->regs.rdi,
-                                                       executableHandle->regs.rsi,
-                                                       executableHandle->regs.rdx);
+      printf("poll(pollfd=%p, nfds=%d, timeout=%d)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
       break; /*SYS_poll*/
 
+    case SYS_lseek:
+      printf("lseek(fd=%d, offset=%p, whence=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_lseek*/
+
+    case SYS_mmap:
+      printf("mmap(address=0x%08x, length=%d, protections=0x%08x, flags=0x%08x, " \
+        "fd=%d, offset=0x%08x)\n",
+            executableHandle->regs.rdi,
+            executableHandle->regs.rsi,
+            executableHandle->regs.rdx,
+            executableHandle->regs.r10,
+            executableHandle->regs.r8,
+            executableHandle->regs.r9);
+      break; /*SYS_mmap*/
+
+    case SYS_mprotect:
+      printf("mprotect(start=%p, size=0x%08x, protections=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_mprotect*/
+
+    case SYS_munmap:
+      printf("munmap(address=%p, size=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
+      break; /*SYS_munmap*/
+
+    case SYS_brk:
+      printf("brk(brk=0x%08x)\n", executableHandle->regs.rdi);
+      break; /*SYS_brk*/
+
+    case SYS_rt_sigaction:
+      printf("rt_sigaction(signum=%d, sig-new-action=0x%08x, " \
+             "sig-old-action=0x%08x, size=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+      break; /*SYS_rt_sigaction*/
+
+    case SYS_rt_sigprocmask:
+      printf("rt_sigprocmask(how=%d, sig-new-set=0x%08x, " \
+            "sig-old-set=0x%08x, size=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+      break; /*SYS_rt_sigprocmask*/
+
+    case SYS_rt_sigreturn:
+      printf("rt_sigreturn()\n");
+      break; /*SYS_rt_sigreturn*/
+
+    case SYS_ioctl:
+      printf("ioctl(fd=%d, cmd=%d, arg=%ld)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_ioctl*/
 
 
-
-
-
+///////////////////////////////////////////////////////////////////////////////
     case SYS_execve:
       // TODO:Find a way to extract the filename to run
       // all registers except ORIG_RAX are zero. How can
@@ -144,9 +216,8 @@ static int printSyscallInfo64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
   return ERR_NONE;
 }
 
-static int8_t launchTraceProgram64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, int childArgc, char** childArgv, char** envp)
+static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, int childArgc, char** childArgv, char** envp)
 {
-  struct ptrace_syscall_info syscallInfo = {0};
   long syscallNumber = 0;
   int status         = 0;
   int8_t err         = ERR_NONE;
@@ -187,7 +258,7 @@ static int8_t launchTraceProgram64(ELF64_EXECUTABLE_HANDLE_T * executableHandle,
                       NULL, &executableHandle->regs);
                         
       printf("Entering sycall number: %ld\n", executableHandle->regs.orig_rax);
-      printSyscallInfo64(executableHandle);
+      printSyscallInfoElf64(executableHandle);
 
 
       /* Continue to the next syscall. */        
@@ -214,7 +285,7 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, ch
   switch (executableHandle->elfHandle64.ehdr->e_ident[EI_CLASS])
   {
     case ELFCLASS64:
-      err = launchTraceProgram64((ELF64_EXECUTABLE_HANDLE_T *) executableHandle, childArgc, childArgs, envp);
+      err = launchSyscallTraceElf64((ELF64_EXECUTABLE_HANDLE_T *) executableHandle, childArgc, childArgs, envp);
       break;
     
     case ELFCLASS32:
