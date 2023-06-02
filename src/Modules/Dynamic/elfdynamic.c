@@ -1,9 +1,9 @@
 #include "elfdynamic.h"
 
-static void * readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset)
+static int8_t readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset, char** pStr)
 {
   uint16_t allocationSize = 40;
-  void *   data       = NULL;
+  char *   data       = NULL;
   char *   pChar      = NULL;
   int8_t   err        = ERR_NONE;
   long     wordRead   = 0;
@@ -13,7 +13,7 @@ static void * readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executab
 
   if( (data = malloc(allocationSize)) == NULL)
   {
-    return NULL;
+    return ERR_MEMORY_ALLOCATION_FAILED;
   }
   memset(data, 0, allocationSize);
 
@@ -21,13 +21,15 @@ static void * readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executab
   {
     
     wordRead = 0;
-    wordRead = ptrace(PTRACE_PEEKDATA, executableHandle->pid, offset + charCount * sizeof(long), NULL);
+    wordRead = ptrace(PTRACE_PEEKDATA, executableHandle->pid, offset + charCount, NULL);
     pChar = (char *)& wordRead;
     for(uint8_t i = 0; i < sizeof(long); i++)
     {
-      if(*pChar == '\0')
+      if(*pChar++ == '\0')
       {
         cpySize = i;
+        nullRead = TRUE;
+        break;
       }
       else
       {
@@ -35,17 +37,18 @@ static void * readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executab
       }
     }
 
-    memcpy(data + charCount * sizeof(long), &wordRead, cpySize);
+    memcpy(data + charCount, &wordRead, cpySize);
 
     charCount += sizeof(long);
-    if(charCount >= allocationSize)
+    if(charCount >= allocationSize && nullRead == FALSE)
     {
       realloc(data, (allocationSize + 40));
       memset(data + allocationSize, 0, allocationSize);
       allocationSize += 40;
     }
   }
-  return data;
+  (*pStr) = data;
+  return ERR_NONE;
 }
 
 static void * readProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset, uint64_t uCount)
@@ -73,10 +76,11 @@ static void * readProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, 
   return data;
 }
 
-static int printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
+static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
 {
   struct ptrace_syscall_info syscallInfo = {0};
   char* tmpBuffer = NULL;
+  int8_t err = ERR_NONE;
 
   switch(executableHandle->regs.orig_rax)
   {
@@ -108,7 +112,7 @@ static int printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
       break; /*SYS_write*/
 
     case SYS_open:
-      tmpBuffer = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi);
+      err = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi, &tmpBuffer);
       printf("open(path=%s)\n", tmpBuffer);
       break; /*SYS_open*/
 
@@ -118,7 +122,7 @@ static int printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
 
     case SYS_stat:
     case SYS_lstat:
-      tmpBuffer = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi);
+      err = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi, &tmpBuffer);
 
       printf("stat(path=\"%s\", struct=0x%08x)\n",
         executableHandle->regs.rdi,
@@ -202,6 +206,48 @@ static int printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
         executableHandle->regs.rdx);
       break; /*SYS_ioctl*/
 
+    case SYS_pread64:
+      /*TODO: Is it worth printing the bytes that are being read?*/
+      tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi, executableHandle->regs.rdx);
+      printf("pread64(fd=%d, buff=%p, count=0x%08x, position=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10);
+      break; /*SYS_pread64*/
+
+    case SYS_pwrite64:
+      tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi, executableHandle->regs.rdx);
+      printf("pwrite64(fd=%d, buff=%p, count=0x%08x, position=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10);
+      break; /*SYS_pwrite64*/
+
+    case SYS_readv:
+      tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi, executableHandle->regs.rdx);
+      printf("readv(fd=%d, iovec=%p, vec-len=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_readv*/
+
+    case SYS_writev:
+      tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi, executableHandle->regs.rdx);
+      printf("writev(fd=%d, iovec=%p, vec-len=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_writev*/
+
+    case SYS_access:
+      err = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi, &tmpBuffer);
+      printf("access(filename=%s, mode=0x%08x)\n",
+        tmpBuffer,
+        executableHandle->regs.rsi);
+      break; /*SYS_access*/
+
 
 ///////////////////////////////////////////////////////////////////////////////
     case SYS_execve:
@@ -213,7 +259,7 @@ static int printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
 
   }
   free(tmpBuffer);
-  return ERR_NONE;
+  return err;
 }
 
 static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, int childArgc, char** childArgv, char** envp)
