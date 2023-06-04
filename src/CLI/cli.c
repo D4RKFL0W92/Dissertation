@@ -212,6 +212,7 @@ int main(int argc, char *argv[], char *envp[])
         printf("Running Unit Tests...\n");
         fileOpsTestSuite();
         elfInfoTestSuite();
+        elfDynamicTestSuite();
         // ioTestSuite();
         TVectorTestSuite();
         printf("Unit Tests Successful.\n");

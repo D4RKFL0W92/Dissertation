@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <unistd.h>
+#include <stdint.h>
 
 #define TRUE             1
 #define FALSE            0
@@ -27,5 +28,7 @@
 
 #define TRUE_STR         "TRUE"
 #define FALSE_STR        "FALSE"
+
+typedef uint8_t BOOL;
 
 #endif

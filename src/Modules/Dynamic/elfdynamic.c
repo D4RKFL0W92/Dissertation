@@ -1,4 +1,39 @@
 #include "elfdynamic.h"
+/* String values related to mmap flags. */
+const char MAP_SHARED_STR[]     = " MAP_SHARED ";
+const char MAP_PRIVATE_STR[]    = " MAP_PRIVATE ";
+const char MAP_ANONYMOUS_STR[] = " MAP_ANONYMOUS ";
+
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS 0x20
+#endif
+static uint8_t printMmapFlags(int flags)
+{
+  char flagBuff[ sizeof(MAP_SHARED_STR) +
+                 sizeof(MAP_PRIVATE_STR) +
+                 sizeof(MAP_ANONYMOUS_STR) + 1 ] = {0};
+  // Allow for newline and spaces between flags.
+  uint8_t flagsSet = 0;
+
+  if( (flags & MAP_SHARED) == MAP_SHARED)
+  {
+    strcpy(flagBuff, MAP_SHARED_STR);
+    flagsSet += 1;
+  }
+  if( (flags & MAP_PRIVATE) == MAP_PRIVATE)
+  {
+    strcat(flagBuff, MAP_PRIVATE_STR);
+    flagsSet += 1;
+  }
+  if( (flags & MAP_ANONYMOUS) == MAP_ANONYMOUS)
+  {
+    strcat(flagBuff, MAP_PRIVATE_STR);
+    flagsSet += 1;
+  }
+  printf("%s", flagBuff);
+
+  return flagsSet;
+}
 
 static int8_t readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset, char** pStr)
 {
@@ -7,7 +42,7 @@ static int8_t readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executab
   char *   pChar      = NULL;
   int8_t   err        = ERR_NONE;
   long     wordRead   = 0;
-  uint8_t  nullRead   = FALSE;
+  BOOL     nullRead   = FALSE;
   uint8_t  charCount  = 0;
   uint8_t  cpySize    = 0;
 
@@ -40,6 +75,7 @@ static int8_t readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executab
     memcpy(data + charCount, &wordRead, cpySize);
 
     charCount += sizeof(long);
+    // TODO: Is the reallocation code correct??
     if(charCount >= allocationSize && nullRead == FALSE)
     {
       realloc(data, (allocationSize + 40));
@@ -158,6 +194,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
             executableHandle->regs.r10,
             executableHandle->regs.r8,
             executableHandle->regs.r9);
+      printf("Flags: ");
+      printMmapFlags(executableHandle->regs.r10);
+      printf("\n");
       break; /*SYS_mmap*/
 
     case SYS_mprotect:
@@ -347,3 +386,17 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, ch
   return ERR_NONE;
 }
 
+#ifdef UNITTEST
+
+static void test_printMmapFlags()
+{
+  assert(printMmapFlags(MAP_SHARED | MAP_PRIVATE | MAP_ANONYMOUS) == 3);
+  assert(printMmapFlags(MAP_SHARED | MAP_ANONYMOUS) == 2);
+  assert(printMmapFlags(MAP_ANONYMOUS) == 1);
+}
+
+void elfDynamicTestSuite()
+{
+  test_printMmapFlags();
+}
+#endif /* UNITTEST */

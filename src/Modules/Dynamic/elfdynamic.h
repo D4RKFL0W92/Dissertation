@@ -18,4 +18,8 @@
 
 int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, char** childArgv, char** envp);
 
+#ifdef UNITTEST
+void elfDynamicTestSuite();
+#endif /* UNITTEST */
+
 #endif
