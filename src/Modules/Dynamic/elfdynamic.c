@@ -1,4 +1,21 @@
 #include "elfdynamic.h"
+
+static void printMsyncFlags(int flags)
+{
+  if((flags & MS_ASYNC) == MS_ASYNC)
+  {
+    printf(" MS_ASYNC )\n");
+  }
+  else if((flags & MS_SYNC) == MS_SYNC)
+  {
+    printf(" MS_SYNC )\n");
+  }
+
+  if(((flags & MS_INVALIDATE) == MS_INVALIDATE))
+  {
+    printf(" MS_INVALIDATE |");
+  }
+}
 /* String values related to mmap flags. */
 const char MAP_SHARED_STR[]     = " MAP_SHARED ";
 const char MAP_PRIVATE_STR[]    = " MAP_PRIVATE ";
@@ -287,11 +304,61 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         executableHandle->regs.rsi);
       break; /*SYS_access*/
 
+    case SYS_pipe:
+      printf("pipe(fd=%d)\n",
+        executableHandle->regs.rdi);
+      break; /*SYS_pipe*/
+
+    case SYS_select:
+      printf("select(n=%d, inp=%p, outp=%p, exp=%p, timeval=%ld)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8);
+      break; /*SYS_select*/
+
+    case SYS_sched_yield:
+      printf("sched_yield()\n");
+      break; /*SYS_sched_yield*/
+
+    case SYS_mremap:
+      printf("mremap(oldaddr=%p, oldlength=0x%08x, newlength=0x%08x, flags=0x%08x, newaddr=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8);
+      printMmapFlags(executableHandle->regs.r10);
+      break; /*SYS_mremap*/
+
+    case SYS_msync:
+      printf("msync(start=%ld, size=0x%08x, flags=",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
+      printMsyncFlags(executableHandle->regs.rdx);
+      break; /*SYS_msync*/
+
+    case SYS_mincore:
+      printf("mincore(addr=%p, size=0x%08x, vec=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_mincore*/
+
+    case SYS_madvise:
+    /*TODO: Print the bahaviour arguments.*/
+      printf("madvise(start=%p, length=0x%08x, behaviour=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_madvise*/
+
 
 ///////////////////////////////////////////////////////////////////////////////
     case SYS_execve:
-      // TODO:Find a way to extract the filename to run
-      // all registers except ORIG_RAX are zero. How can
+      // TODO:Find a way to extract the filename to run.
+      // All registers except ORIG_RAX are zero. How can
       // we extract all arguments???
       printf("execve()\n");
       break; /*SYS_execve*/
