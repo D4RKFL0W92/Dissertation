@@ -131,7 +131,6 @@ static void * readProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, 
 
 static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
 {
-  struct ptrace_syscall_info syscallInfo = {0};
   char* tmpBuffer = NULL;
   int8_t err = ERR_NONE;
 
@@ -354,6 +353,37 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         executableHandle->regs.rdx);
       break; /*SYS_madvise*/
 
+    case SYS_shmget:
+      printf("shmget(key=0x%08x, size=0x%08x, flag=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_shmget*/
+
+    case SYS_shmat:
+      printf("shmat(id=0x%08x, shmaddr=%p, flag=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_shmat*/
+
+    case SYS_shmctl:
+      printf("shmctl(id=0x%08x, cmd=0x%08x, buff=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_shmctl*/
+
+    case SYS_dup:
+      printf("dup(fd=%d)\n", executableHandle->regs.rdi);
+      break; /*SYS_dup*/
+
+    case SYS_dup2:
+      printf("dup2(id=%d, cmd=%d)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
+      break; /*SYS_dup2*/
+
 
 ///////////////////////////////////////////////////////////////////////////////
     case SYS_execve:
@@ -368,8 +398,29 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
   return err;
 }
 
+static uint8_t isRepeatedSyscallX64(REGS * regs1, REGS * regs2)
+{
+  if(regs1 == NULL || regs2 == NULL)
+  {
+    return FALSE;
+  }
+  if(regs1->orig_rax != regs2->orig_rax ||
+     regs1->rdi != regs2->rdi ||
+     regs1->rsi != regs2->rsi ||
+     regs1->rdx != regs2->rdx ||
+     regs1->r10 != regs2->r10 ||
+     regs1->r8 != regs2->r8 ||
+     regs1->r9 != regs2->r9)
+  {
+    return FALSE;
+  }
+  return TRUE;
+}
+
 static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, int childArgc, char** childArgv, char** envp)
 {
+  static REGS oldRegisters = {0};
+  struct ptrace_syscall_info syscallInfo = {0};
   long syscallNumber = 0;
   int status         = 0;
   int8_t err         = ERR_NONE;
@@ -405,16 +456,28 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
     }
     else
     {
+      // if (ptrace(PTRACE_GET_SYSCALL_INFO, executableHandle->pid,
+			//            sizeof(struct ptrace_syscall_info), &syscallInfo) < 0)
+      // {
+      //   return ERR_PROCESS_OPERATION_FAILED;
+      // }
       /* Get the syscall RAX value. */
-      ptrace(PTRACE_GETREGS, executableHandle->pid,
-                      NULL, &executableHandle->regs);
-                        
-      printf("Entering sycall number: %ld\n", executableHandle->regs.orig_rax);
-      printSyscallInfoElf64(executableHandle);
+      if(ptrace(PTRACE_GETREGS, executableHandle->pid,
+                NULL, &executableHandle->regs) < 0)
+      {
+        return ERR_PROCESS_OPERATION_FAILED;
+      }
+
+      if(isRepeatedSyscallX64(&executableHandle->regs, &oldRegisters) == FALSE)
+      {
+        printf("Entering sycall number: %ld\n", executableHandle->regs.orig_rax);
+        printSyscallInfoElf64(executableHandle);
+      }            
 
 
       /* Continue to the next syscall. */        
       ptrace(PTRACE_SYSCALL, executableHandle->pid, NULL, NULL);
+      oldRegisters = executableHandle->regs;
     }
 
   } while(executableHandle->isExecuting);
@@ -462,8 +525,25 @@ static void test_printMmapFlags()
   assert(printMmapFlags(MAP_ANONYMOUS) == 1);
 }
 
+static void test_isRepeatedSyscallX64()
+{
+  REGS r1 = {0};
+  REGS r2 = {0};
+  uint8_t isRepeated = FALSE;
+
+  isRepeated = isRepeatedSyscallX64(&r1, &r2);
+  assert(isRepeated == TRUE);
+
+  r1.r10 = 1;
+  isRepeated = isRepeatedSyscallX64(&r1, &r2);
+  assert(isRepeated == FALSE);
+
+  // TODO: Add some more calls with different values.
+}
+
 void elfDynamicTestSuite()
 {
   test_printMmapFlags();
+  test_isRepeatedSyscallX64();
 }
 #endif /* UNITTEST */

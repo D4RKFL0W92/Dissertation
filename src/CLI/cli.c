@@ -207,7 +207,8 @@ int main(int argc, char *argv[], char *envp[])
 
     /* Debug_Option: Unit tests. */
     #ifdef UNITTEST
-      if(!strcmp(argv[i], "-u"))
+      if(strcmp(argv[i], "-u") == 0 ||
+         strcmp(argv[i], "-unittest") == 0)
       {
         printf("Running Unit Tests...\n");
         fileOpsTestSuite();
