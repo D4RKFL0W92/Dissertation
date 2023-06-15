@@ -538,6 +538,11 @@ static void test_isRepeatedSyscallX64()
   isRepeated = isRepeatedSyscallX64(&r1, &r2);
   assert(isRepeated == FALSE);
 
+  r1.r10 = 0;
+  r1.r9  = 1;
+  isRepeated = isRepeatedSyscallX64(&r1, &r2);
+  assert(isRepeated == FALSE);
+
   // TODO: Add some more calls with different values.
 }
 

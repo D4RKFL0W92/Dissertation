@@ -18,6 +18,7 @@
 #include "../../Types/turtle_types.h"
 #include "../../Logging/logging.h"
 #include "../../FileOperations/fileOps.h"
+#include "../IO/io.h"
 #include "../../Memory/tvector.h"
 
 
@@ -46,13 +47,15 @@
 enum BITS {T_NO_ELF, T_32, T_64};
 enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
 
+typedef struct user_regs_struct REGS;
+
 typedef struct ELF32_EXECUTABLE
 {
     FILE_HANDLE_T             fileHandle;
     Elf32_Ehdr*               ehdr;
     Elf32_Phdr*               phdr;
     Elf32_Shdr*               shdr;
-    struct user_regs_struct   regs;
+    REGS                      regs;
     pid_t                     pid;
     int8_t                    isExecuting;
 }ELF32_EXECUTABLE_HANDLE_T;
@@ -63,7 +66,7 @@ typedef struct ELF64_EXECUTABLE
     Elf64_Ehdr*             ehdr;
     Elf64_Phdr*             phdr;
     Elf64_Shdr*             shdr;
-    struct user_regs_struct regs;
+    REGS                    regs;
     pid_t                   pid;
     int8_t                  isExecuting;
 }ELF64_EXECUTABLE_HANDLE_T;
@@ -101,6 +104,12 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 
 int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T** elfHandle);
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T** elfHandle);
+
+/*
+ * Checks for active PID with same value as given, if one is found it will be mapped
+ * to the union type ELF_EXECUTABLE_T that can be later checked for architecture.
+ * */
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle);
 
 
 uint64_t getELFEntryFromFile(char* filepath);

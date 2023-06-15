@@ -15,8 +15,6 @@
 #include "../../Types/turtle_types.h"
 #include "../ELFinfo/elfinfo.h"
 
-typedef struct user_regs_struct REGS;
-
 int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, char** childArgv, char** envp);
 
 #ifdef UNITTEST

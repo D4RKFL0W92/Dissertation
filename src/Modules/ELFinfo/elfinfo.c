@@ -1357,11 +1357,120 @@ int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABL
   }
 
   (*elfHandle)->fileHandle = *fileHandle;
-  (*elfHandle)->ehdr     = (Elf64_Ehdr *) &fileHandle->p_data[0];
+  (*elfHandle)->ehdr     = (Elf64_Ehdr *) &fileHandle->p_data[ 0 ];
   (*elfHandle)->phdr     = (Elf64_Phdr *) &fileHandle->p_data[ (*elfHandle)->ehdr->e_phoff ];
   (*elfHandle)->shdr     = (Elf64_Shdr *) &fileHandle->p_data[ (*elfHandle)->ehdr->e_shoff ];
 
   return ERR_NONE;
+}
+
+/*
+ * A simple helper function to extract the address range read from a line of /proc/<pid>/maps
+*/
+static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64_t * endAddr)
+{
+  // Example data line:
+  // 562f6f938000-562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang
+  char* pData = NULL;
+  char startAddrStr[15] = {0};
+  char endAddrStr[15]   = {0};
+  int i = 2;
+  int8_t err = ERR_NONE;
+
+  if(buff == NULL || startAddr == NULL || endAddr == NULL)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+
+  strncat(startAddrStr, "0x", 2);
+  strncat(endAddrStr, "0x", 2);
+
+  pData = buff;
+  while(isalnum(*pData))
+  {
+    startAddrStr[i++] = *pData;
+    ++pData;
+  }
+
+  while(!isalnum(*pData)) ++pData;
+
+  i = 2;
+  while(isalnum(*pData))
+  {
+    endAddrStr[i++] = *pData;
+    ++pData;
+  }
+
+  err = stringToInteger(startAddrStr, startAddr);
+  if(err != ERR_NONE)
+  {
+    return err;
+  }
+
+  err = stringToInteger(endAddrStr, endAddr);
+  if(err != ERR_NONE)
+  {
+    return err;
+  }
+}
+
+/*
+ * Helper function to read /proc/<pid>/maps to calculate and allocate
+ * The necessary memory to map the process referenced by pid.
+*/
+static int8_t readProcessMemMap(char* pidStr, uint8_t * pData)
+{
+  char path[20]  = "/proc/";
+  char mappingFileLine[1024] = {0};
+  FILE* pFile = NULL;
+  int err = ERR_NONE;
+  
+  strncat(path, pidStr, sizeof(pidStr));
+  strncat(path, "/maps", 5);
+
+  if( (pFile = fopen(path, "r")) == NULL)
+  {
+    #ifdef DEBUG
+    perror("Unable to open pid/maps\n");
+    #endif
+    return ERR_FILE_OPERATION_FAILED;
+  }
+
+  while( fgets(mappingFileLine, sizeof(mappingFileLine), pFile) != EOF)
+  {
+    // Process each line.
+    char textMappingLine[] = "r-xp"; // The permissions we are looking for.
+    char* pSearchStr = NULL;
+
+    if( (pSearchStr = strstr(mappingFileLine, textMappingLine)) != NULL)
+    {
+      // We've found the line giving the memory mapping range.
+      // TODO: Delegat the address extraction to a helper function.
+    }
+    // Clear line data each iteration.
+    memset(mappingFileLine, 0, sizeof(mappingFileLine));
+  }
+
+bail:
+  fclose(pFile);
+  return err;
+}
+
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
+{
+  uint8_t * pMem = NULL;
+  pid_t pid = 0;
+  int8_t err = ERR_NONE;
+
+  err = stringToInteger(pidStr, &pid);
+  if(err != ERR_NONE || pid == 0)
+  {
+    return ERR_INVALID_ARGUMENT;
+  }
+
+  err = readProcessMemMap(pidStr, pMem);
+
+  return err;
 }
 
 uint64_t getELFEntryFromFile(char* filepath)
@@ -1876,6 +1985,20 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
 
  #ifdef UNITTEST
 
+ static void test_extractAddressRange_legalUsage()
+ {
+  char orig[] = "562f6f938000-562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang";
+  char buff[] = "562f6f938000-562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang";
+  uint64_t start = 0, end = 0;
+  int8_t err = ERR_NONE;
+
+  err = extractAddressRange(buff, &start, &end);
+  assert(err == ERR_NONE);
+  assert(start == 94761735389184);
+  assert(end == 94761735393280);
+  assert(strcmp(buff, orig) == 0);
+ }
+
  static void test_isELF()
  {
   /* isElf() is only concerned with the first six bytes of the ELF header. */
@@ -1894,6 +2017,7 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
 
  void elfInfoTestSuite()
  {
+  test_extractAddressRange_legalUsage();
   test_isELF();
  }
 

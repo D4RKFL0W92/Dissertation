@@ -21,7 +21,9 @@ int main(int argc, char *argv[], char *envp[])
   FILE_HANDLE_T fileHandle = {0};
   ELF_EXECUTABLE_T * elfHandle = NULL;
   enum BITS arch;
+  char pidStr[5] = {0};
   int i = 1;
+  BOOL usingPid = FALSE;
   int targetFileIndex = 0;
   uint8_t err = ERR_NONE;
 
@@ -36,32 +38,47 @@ int main(int argc, char *argv[], char *envp[])
   {
     for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
     {
-      if(strncmp(argv[j], "-", 1) != 0) // Firts argument that doesn't start with -
+      if(strncmp(argv[j], "-pid=", 5) == 0)
+      {
+        // TODO: Add some sanity checks
+        found = TRUE; // We are using a PID instead of path
+        usingPid = TRUE;
+        strncpy(pidStr, &argv[j][5], 5);
+      }
+      else if(strncmp(argv[j], "-", 1) == 0) // First argument that doesn't start with -
       {
         found = TRUE;
         targetFileIndex = j;
       }
     }
-    if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
+    
+    if(usingPid == FALSE)
     {
-      printf("Unable map %s into memory\n", argv[targetFileIndex]);
-      exit(-1);
+      if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
+      {
+        printf("Unable map %s into memory\n", argv[targetFileIndex]);
+        exit(-1);
+      }
+      arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
+
+      switch(arch)
+      {
+        case T_64:
+          mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T *) &elfHandle);
+          break;
+
+        case T_32:
+          mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
+          break;
+
+        case T_NO_ELF:
+        default:
+          break;
+      }
     }
-    arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
-
-    switch(arch)
+    else
     {
-      case T_64:
-        mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T *) &elfHandle);
-        break;
-
-      case T_32:
-        mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
-        break;
-
-      case T_NO_ELF:
-      default:
-        break;
+      mapELFToHandleFromPID(pidStr, elfHandle);
     }
   }
 
@@ -73,7 +90,7 @@ int main(int argc, char *argv[], char *envp[])
      * Print verbose infomation found in the various ELF, section
      * and program headers of the file passed as last argument.
     */
-    if(strcmp(argv[i], "-E") == 0)
+    if(strcmp(argv[i], "-E") == 0 && usingPid == FALSE) // This option relies on a path rather than a PID. (Can we change this).
     {
       if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
       {
