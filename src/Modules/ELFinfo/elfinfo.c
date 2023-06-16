@@ -1382,8 +1382,8 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
     return ERR_NULL_ARGUMENT;
   }
 
-  strncat(startAddrStr, "0x", 2);
-  strncat(endAddrStr, "0x", 2);
+  strcat(startAddrStr, "0x");
+  strcat(endAddrStr, "0x");
 
   pData = buff;
   while(isalnum(*pData)) // TODO Change this check to check for hexidecimal characters using isHexadecimalCharacter().
@@ -1463,9 +1463,9 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
       // We've found the line giving the memory mapping range.
       err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
       addrRange = endAddr - startAddr;
-
       // TODO: Check the address range makes sense.
 
+      // This call to function does the memory allocation.
       memoryMapping = readProcessMemoryFromPID(pid, startAddr, addrRange);
       break;
     }
@@ -1476,7 +1476,6 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
     }
   }
 
-  // Read the E_hdr to determine architecture
   if(memoryMapping != NULL)
   {
     pData = memoryMapping;

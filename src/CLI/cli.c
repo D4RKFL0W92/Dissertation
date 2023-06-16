@@ -45,7 +45,7 @@ int main(int argc, char *argv[], char *envp[])
         usingPid = TRUE;
         strncpy(pidStr, &argv[j][5], 5);
       }
-      else if(strncmp(argv[j], "-", 1) == 0) // First argument that doesn't start with -
+      else if(strncmp(argv[j], "-", 1) != 0) // First argument that doesn't start with -
       {
         found = TRUE;
         targetFileIndex = j;
