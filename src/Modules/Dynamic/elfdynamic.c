@@ -52,7 +52,7 @@ static uint8_t printMmapFlags(int flags)
   return flagsSet;
 }
 
-static int8_t readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset, char** pStr)
+int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char** pStr)
 {
   uint16_t allocationSize = 40;
   char *   data       = NULL;
@@ -73,7 +73,7 @@ static int8_t readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executab
   {
     
     wordRead = 0;
-    wordRead = ptrace(PTRACE_PEEKDATA, executableHandle->pid, offset + charCount, NULL);
+    wordRead = ptrace(PTRACE_PEEKDATA, pid, offset + charCount, NULL);
     pChar = (char *)& wordRead;
     for(uint8_t i = 0; i < sizeof(long); i++)
     {
@@ -104,7 +104,7 @@ static int8_t readStringFromProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executab
   return ERR_NONE;
 }
 
-static void * readProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, uint64_t offset, uint64_t uCount)
+void * readProcessMemoryFromPID(pid_t pid, uint64_t offset, uint64_t uCount)
 {
   void *   data       = NULL;
   uint16_t iterations = 0;
@@ -122,7 +122,7 @@ static void * readProcessMemory64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, 
   for(uint16_t i = 0; i < iterations; i++)
   {
     wordRead = 0;
-    wordRead = ptrace(PTRACE_PEEKDATA, executableHandle->pid, offset + i * sizeof(long), NULL);
+    wordRead = ptrace(PTRACE_PEEKDATA, pid, offset + i * sizeof(long), NULL);
     memcpy(data + i * sizeof(long), &wordRead, sizeof(long));
   }
 
@@ -137,7 +137,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
   switch(executableHandle->regs.orig_rax)
   {
     case SYS_read:
-      tmpBuffer = readProcessMemory64(executableHandle,
+      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       executableHandle->regs.rdx);
 
@@ -150,7 +150,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
     case SYS_write:
       if(executableHandle->regs.rdx > 0)
       {
-        tmpBuffer = readProcessMemory64(executableHandle,
+        tmpBuffer = readProcessMemoryFromPID(executableHandle->pid,
           executableHandle->regs.rsi,
           executableHandle->regs.rdx);
 
@@ -164,7 +164,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_write*/
 
     case SYS_open:
-      err = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi, &tmpBuffer);
+      err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer);
       printf("open(path=%s)\n", tmpBuffer);
       break; /*SYS_open*/
 
@@ -174,7 +174,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 
     case SYS_stat:
     case SYS_lstat:
-      err = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi, &tmpBuffer);
+      err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer);
 
       printf("stat(path=\"%s\", struct=0x%08x)\n",
         executableHandle->regs.rdi,
@@ -263,7 +263,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 
     case SYS_pread64:
       /*TODO: Is it worth printing the bytes that are being read?*/
-      tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi, executableHandle->regs.rdx);
+      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi, executableHandle->regs.rdx);
       printf("pread64(fd=%d, buff=%p, count=0x%08x, position=%p)\n",
         executableHandle->regs.rdi,
         executableHandle->regs.rsi,
@@ -272,7 +272,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_pread64*/
 
     case SYS_pwrite64:
-      tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi, executableHandle->regs.rdx);
+      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi, executableHandle->regs.rdx);
       printf("pwrite64(fd=%d, buff=%p, count=0x%08x, position=%p)\n",
         executableHandle->regs.rdi,
         executableHandle->regs.rsi,
@@ -281,7 +281,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_pwrite64*/
 
     case SYS_readv:
-      tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi, executableHandle->regs.rdx);
+      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi, executableHandle->regs.rdx);
       printf("readv(fd=%d, iovec=%p, vec-len=0x%08x)\n",
         executableHandle->regs.rdi,
         executableHandle->regs.rsi,
@@ -289,7 +289,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_readv*/
 
     case SYS_writev:
-      tmpBuffer = readProcessMemory64(executableHandle, executableHandle->regs.rsi, executableHandle->regs.rdx);
+      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi, executableHandle->regs.rdx);
       printf("writev(fd=%d, iovec=%p, vec-len=0x%08x)\n",
         executableHandle->regs.rdi,
         executableHandle->regs.rsi,
@@ -297,7 +297,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_writev*/
 
     case SYS_access:
-      err = readStringFromProcessMemory64(executableHandle, executableHandle->regs.rdi, &tmpBuffer);
+      err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer);
       printf("access(filename=%s, mode=0x%08x)\n",
         tmpBuffer,
         executableHandle->regs.rsi);

@@ -1412,17 +1412,20 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
   {
     return err;
   }
+
+  return err;
 }
 
 /*
  * Helper function to read /proc/<pid>/maps to calculate and allocate
  * The necessary memory to map the process referenced by pid.
 */
-static int8_t readProcessMemMap(char* pidStr, uint8_t * pData)
+static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
 {
   char path[20]  = "/proc/";
   char mappingFileLine[1024] = {0};
-  FILE* pFile = NULL;
+  void * memoryMapping = NULL;
+  FILE * pFile = NULL;
   int err = ERR_NONE;
   
   strncat(path, pidStr, sizeof(pidStr));
@@ -1438,17 +1441,36 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData)
 
   while( fgets(mappingFileLine, sizeof(mappingFileLine), pFile) != EOF)
   {
-    // Process each line.
+    // Process each line of /proc/<pid>/maps to find text segment mapping.
     char textMappingLine[] = "r-xp"; // The permissions we are looking for.
     char* pSearchStr = NULL;
 
     if( (pSearchStr = strstr(mappingFileLine, textMappingLine)) != NULL)
     {
+      uint64_t startAddr   = 0;
+      uint64_t endAddr     = 0;
+      uint64_t addrRange   = 0;
+
       // We've found the line giving the memory mapping range.
-      // TODO: Delegat the address extraction to a helper function.
+      err = extractAddressRange(pSearchStr, &startAddr, &endAddr);
+      addrRange = endAddr - startAddr;
+
+      // TODO: Check the address range makes sense.
+
+      memoryMapping = readProcessMemoryFromPID(pid, startAddr, addrRange);
+      break;
     }
-    // Clear line data each iteration.
-    memset(mappingFileLine, 0, sizeof(mappingFileLine));
+    else
+    {
+      // Clear line data if text segment mapping not found.
+      memset(mappingFileLine, 0, sizeof(mappingFileLine));
+    }
+  }
+
+  // Read the E_hdr to determine architecture
+  if(memoryMapping != NULL)
+  {
+
   }
 
 bail:
@@ -1468,7 +1490,7 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
     return ERR_INVALID_ARGUMENT;
   }
 
-  err = readProcessMemMap(pidStr, pMem);
+  err = readProcessMemMap(pidStr, pMem, pid);
 
   return err;
 }

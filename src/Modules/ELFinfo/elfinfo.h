@@ -19,6 +19,7 @@
 #include "../../Logging/logging.h"
 #include "../../FileOperations/fileOps.h"
 #include "../IO/io.h"
+#include "../Dynamic/elfdynamic.h"
 #include "../../Memory/tvector.h"
 
 
