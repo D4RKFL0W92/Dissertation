@@ -1386,8 +1386,12 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
   strncat(endAddrStr, "0x", 2);
 
   pData = buff;
-  while(isalnum(*pData))
+  while(isalnum(*pData)) // TODO Change this check to check for hexidecimal characters using isHexadecimalCharacter().
   {
+    if(!isHexadecimalCharacter(*pData) && *pData != '-')
+    {
+      return ERR_FORMAT_NOT_SUPPORTED;
+    }
     startAddrStr[i++] = *pData;
     ++pData;
   }
@@ -1397,6 +1401,10 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
   i = 2;
   while(isalnum(*pData))
   {
+    if(!isHexadecimalCharacter(*pData) && *pData != '-')
+    {
+      return ERR_FORMAT_NOT_SUPPORTED;
+    }
     endAddrStr[i++] = *pData;
     ++pData;
   }
@@ -1423,7 +1431,8 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
 static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
 {
   char path[20]  = "/proc/";
-  char mappingFileLine[1024] = {0};
+  // 512 bytes is more than enough for a real line in /proc/<pid>/maps
+  char mappingFileLine[512] = {0};
   void * memoryMapping = NULL;
   FILE * pFile = NULL;
   int err = ERR_NONE;
@@ -1434,7 +1443,7 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
   if( (pFile = fopen(path, "r")) == NULL)
   {
     #ifdef DEBUG
-    perror("Unable to open pid/maps\n");
+    perror("Unable to open /proc/pid/maps\n");
     #endif
     return ERR_FILE_OPERATION_FAILED;
   }
@@ -1452,7 +1461,7 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
       uint64_t addrRange   = 0;
 
       // We've found the line giving the memory mapping range.
-      err = extractAddressRange(pSearchStr, &startAddr, &endAddr);
+      err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
       addrRange = endAddr - startAddr;
 
       // TODO: Check the address range makes sense.
@@ -1470,10 +1479,15 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
   // Read the E_hdr to determine architecture
   if(memoryMapping != NULL)
   {
-
+    pData = memoryMapping;
+    err =  ERR_NONE;
+  }
+  else
+  {
+    pData = NULL;
+    err = ERR_FORMAT_NOT_SUPPORTED;
   }
 
-bail:
   fclose(pFile);
   return err;
 }
@@ -1483,6 +1497,7 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
   uint8_t * pMem = NULL;
   pid_t pid = 0;
   int8_t err = ERR_NONE;
+  enum BITS arch = T_NO_ELF;
 
   err = stringToInteger(pidStr, &pid);
   if(err != ERR_NONE || pid == 0)
@@ -1491,6 +1506,12 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
   }
 
   err = readProcessMemMap(pidStr, pMem, pid);
+  if(err != ERR_NONE)
+  {
+    return err;
+  }
+
+  arch = isELF(pMem);
 
   return err;
 }

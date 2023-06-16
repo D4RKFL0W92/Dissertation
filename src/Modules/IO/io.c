@@ -1,5 +1,23 @@
 #include "./io.h"
 
+/* TODO: Write unit tests for this function. */
+BOOL isHexadecimalCharacter(char digit)
+{
+  if(isdigit(digit))
+  {
+    return TRUE;
+  }
+  else if(digit >= 0x41 && digit <= 0x46)
+  {
+    return TRUE;
+  }
+  else if(digit >= 0x61 && digit <= 0x66)
+  {
+    return TRUE;
+  }
+  return FALSE;
+}
+
 uint8_t hexToDecimal(const char* hexString, uint64_t * value)
 {
   uint8_t  offsetExponent  = 0;

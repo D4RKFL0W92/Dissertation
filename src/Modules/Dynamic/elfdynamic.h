@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <sys/syscall.h>
 #include <linux/ptrace.h>
+#include "../Headers/elftypes.h"
 #include "../../Logging/logging.h"
 #include "../../Types/turtle_types.h"
 #include "../ELFinfo/elfinfo.h"
