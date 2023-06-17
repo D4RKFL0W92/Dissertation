@@ -518,14 +518,14 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, ch
 
 #ifdef UNITTEST
 
-static void test_printMmapFlags()
+static void unittest_printMmapFlags()
 {
   assert(printMmapFlags(MAP_SHARED | MAP_PRIVATE | MAP_ANONYMOUS) == 3);
   assert(printMmapFlags(MAP_SHARED | MAP_ANONYMOUS) == 2);
   assert(printMmapFlags(MAP_ANONYMOUS) == 1);
 }
 
-static void test_isRepeatedSyscallX64()
+static void unittest_isRepeatedSyscallX64()
 {
   REGS r1 = {0};
   REGS r2 = {0};
@@ -548,7 +548,7 @@ static void test_isRepeatedSyscallX64()
 
 void elfDynamicTestSuite()
 {
-  test_printMmapFlags();
-  test_isRepeatedSyscallX64();
+  unittest_printMmapFlags();
+  unittest_isRepeatedSyscallX64();
 }
 #endif /* UNITTEST */

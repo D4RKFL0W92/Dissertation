@@ -108,33 +108,39 @@ uint8_t stringToInteger(const char* numString, uint64_t* value)
   uint64_t lValue = 0;
 
   if(numString[0] == '0' && numString[1] == 'x' || numString[1] == 'X')
+  {
+    err = hexToDecimal(numString, &lValue);
+    if(err != ERR_NONE)
+    {
+      return err; // Propergate the error from hexToDecimal
+    }
+  }
+  // TODO: Add logic to handle binary numbers
+  else
+  {
+    int len = strlen(numString);
+    uint8_t i = 0;
+
+    if(numString[0] == '-' || numString[0] == '+') // Account for negative/positive sign.
+    {
+      i++;
+    }
+    for(i; i < len-1; i++)
+    {
+      if(!isdigit(numString[i]))
       {
-        err = hexToDecimal(numString, &lValue);
-        if(err == ERR_UNKNOWN)
-        {
-          printf("Zero Offset Was Given.");
-          exit(-1);
-        }
+        return ERR_FORMAT_NOT_SUPPORTED;
       }
-      else
-      {
-        int len = strlen(numString);
-        for(uint8_t i = 0; i < len-1; i++)
-        {
-          if(!isdigit(numString[i]))
-          {
-            return ERR_FORMAT_NOT_SUPPORTED;
-          }
-        }
-        lValue = atol(numString);
-      }
-      *value = lValue;
-      return ERR_NONE;
+    }
+    lValue = atol(numString);
+  }
+  *value = lValue;
+  return ERR_NONE;
 }
 
 #ifdef UNITTEST
 
-void test_isHexadecimalCharacter_legalChars()
+void unittest_isHexadecimalCharacter_legalChars()
 {
   assert( isHexadecimalCharacter('0') == TRUE );
   assert( isHexadecimalCharacter('1') == TRUE );
@@ -160,7 +166,7 @@ void test_isHexadecimalCharacter_legalChars()
   assert( isHexadecimalCharacter('F') == TRUE );
 }
 
-void test_isHexadecimalCharacter_illegalChars()
+void unittest_isHexadecimalCharacter_illegalChars()
 {
   assert( isHexadecimalCharacter('z') == FALSE );
   assert( isHexadecimalCharacter('y') == FALSE );
@@ -186,7 +192,39 @@ void test_isHexadecimalCharacter_illegalChars()
   assert( isHexadecimalCharacter('\"') == FALSE );
 }
 
-void test_hexToDecimal_valid()
+void unittest_stringToInteger_legalUsage()
+{
+  uint64_t value = 0;
+  uint8_t err = ERR_NONE;
+
+  err = stringToInteger("1", &value);
+  assert(err == ERR_NONE);
+  assert(value == 1);
+
+  err = stringToInteger("0", &value);
+  assert(err == ERR_NONE);
+  assert(value == 0);
+
+  err = stringToInteger("0X555555", &value);
+  assert(err == ERR_NONE);
+  assert(value == 0X555555);
+
+  err = stringToInteger("1347", &value);
+  assert(err == ERR_NONE);
+  assert(value == 1347);
+
+  err = stringToInteger("0x9965", &value);
+  assert(err == ERR_NONE);
+  assert(value == 0x9965);
+
+  err = stringToInteger("-1", &value);
+  assert(err == ERR_NONE);
+  assert((int)value == -1);
+
+  // TODO: Test negative values when implemented.
+}
+
+void unittest_hexToDecimal_valid()
 {
   uint8_t err = 0;
   uint64_t value = 0;
@@ -347,12 +385,13 @@ void test_hexToDecimal_valid()
 
 void ioTestSuite()
 {
-  test_isHexadecimalCharacter_legalChars();
-  test_isHexadecimalCharacter_illegalChars();
+  unittest_isHexadecimalCharacter_legalChars();
+  unittest_isHexadecimalCharacter_illegalChars();
 
   // TODO: Add tests for stringToInteger
+  unittest_stringToInteger_legalUsage();
 
-  test_hexToDecimal_valid();
+  unittest_hexToDecimal_valid();
 }
 
 #endif

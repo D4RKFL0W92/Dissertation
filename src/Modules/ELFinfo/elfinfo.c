@@ -2027,7 +2027,7 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
 
 #ifdef UNITTEST
 
-static void test_extractAddressRange_legalUsage()
+static void unittest_extractAddressRange_legalUsage()
 {
   char orig[] = "562f6f938000-562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang";
   char buff[] = "562f6f938000-562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang";
@@ -2050,7 +2050,7 @@ static void test_extractAddressRange_legalUsage()
   assert(strcmp(buff, orig) == 0);
 }
 
-static void test_extractAddressRange_legalUsage_extraDelimeter()
+static void unittest_extractAddressRange_legalUsage_extraDelimeter()
 {
   char buff[] = "562f6f938000---562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang";
   uint64_t start = 0, end = 0;
@@ -2062,7 +2062,7 @@ static void test_extractAddressRange_legalUsage_extraDelimeter()
   assert(end == 94761735393280);
 }
 
-static void test_extractAddressRange_nullArguments()
+static void unittest_extractAddressRange_nullArguments()
 {
   char buff[] = "";
   uint64_t start = 0, end = 0;
@@ -2080,7 +2080,7 @@ static void test_extractAddressRange_nullArguments()
   assert(err == ERR_NULL_ARGUMENT);
 }
 
-static void test_isELF()
+static void unittest_isELF()
 {
   /* isElf() is only concerned with the first six bytes of the ELF header. */
   assert(isELF("\x7f\x45\x4c\x46\x01\x01") == T_32); // Test a real 32-bit ELF header Little Endian.
@@ -2098,11 +2098,11 @@ static void test_isELF()
 
 void elfInfoTestSuite()
 {
-  test_extractAddressRange_legalUsage();
-  test_extractAddressRange_legalUsage_extraDelimeter();
-  test_extractAddressRange_nullArguments();
+  unittest_extractAddressRange_legalUsage();
+  unittest_extractAddressRange_legalUsage_extraDelimeter();
+  unittest_extractAddressRange_nullArguments();
   
-  test_isELF();
+  unittest_isELF();
 }
 
 #endif
