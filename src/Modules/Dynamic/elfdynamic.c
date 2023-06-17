@@ -77,7 +77,13 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char** pStr)
     pChar = (char *)& wordRead;
     for(uint8_t i = 0; i < sizeof(long); i++)
     {
-      if(*pChar++ == '\0')
+      if(*pChar == '\0')
+      {
+        cpySize = i;
+        nullRead = TRUE;
+        break;
+      }
+      else if(*pChar <= 0x20 || *pChar >= 0x7E) // Outside the ASCII range
       {
         cpySize = i;
         nullRead = TRUE;
@@ -87,6 +93,7 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char** pStr)
       {
         cpySize = sizeof(long);
       }
+      pChar++;
     }
 
     memcpy(data + charCount, &wordRead, cpySize);
@@ -388,6 +395,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 ///////////////////////////////////////////////////////////////////////////////
     case SYS_execve:
       // TODO:Find a way to extract the filename to run.
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
       // All registers except ORIG_RAX are zero. How can
       // we extract all arguments???
       printf("execve()\n");

@@ -107,6 +107,11 @@ uint8_t stringToInteger(const char* numString, uint64_t* value)
   uint8_t err = 0;
   uint64_t lValue = 0;
 
+  if(numString == NULL || value == NULL)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+
   if(numString[0] == '0' && numString[1] == 'x' || numString[1] == 'X')
   {
     err = hexToDecimal(numString, &lValue);
@@ -221,7 +226,28 @@ void unittest_stringToInteger_legalUsage()
   assert(err == ERR_NONE);
   assert((int)value == -1);
 
-  // TODO: Test negative values when implemented.
+  err = stringToInteger("-54321", &value);
+  assert(err == ERR_NONE);
+  assert((int)value == -54321);
+
+  err = stringToInteger("-20", &value);
+  assert(err == ERR_NONE);
+  assert((int)value == -20);
+}
+
+void unittest_stringToInteger_illegalUsage()
+{
+  uint64_t value = 0;
+  uint8_t err = ERR_NONE;
+
+  err = stringToInteger("aa", &value);
+  assert(err == ERR_FORMAT_NOT_SUPPORTED);
+
+  err = stringToInteger("aa", NULL);
+  assert(err == ERR_NULL_ARGUMENT);
+
+  err = stringToInteger(NULL, &value);
+  assert(err == ERR_NULL_ARGUMENT);
 }
 
 void unittest_hexToDecimal_valid()
@@ -388,8 +414,8 @@ void ioTestSuite()
   unittest_isHexadecimalCharacter_legalChars();
   unittest_isHexadecimalCharacter_illegalChars();
 
-  // TODO: Add tests for stringToInteger
   unittest_stringToInteger_legalUsage();
+  unittest_stringToInteger_illegalUsage();
 
   unittest_hexToDecimal_valid();
 }
