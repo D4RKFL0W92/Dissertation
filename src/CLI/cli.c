@@ -223,20 +223,20 @@ int main(int argc, char *argv[], char *envp[])
       exit(0);
     }
 
-    /* Debug_Option: Unit tests. */
-    #ifdef UNITTEST
-      if(strcmp(argv[i], "-u") == 0 ||
-         strcmp(argv[i], "-unittest") == 0)
-      {
-        printf("Running Unit Tests...\n");
-        fileOpsTestSuite();
-        elfInfoTestSuite();
-        elfDynamicTestSuite();
-        ioTestSuite();
-        TVectorTestSuite();
-        printf("Unit Tests Successful.\n");
-      }
-    #endif
+  /* Debug_Option: Unit tests. */
+  #ifdef UNITTEST
+    if(strcmp(argv[i], "-u") == 0 ||
+       strcmp(argv[i], "-unittest") == 0)
+    {
+      printf("Running Unit Tests...\n");
+      fileOpsTestSuite();
+      elfInfoTestSuite();
+      elfDynamicTestSuite();
+      ioTestSuite();
+      TVectorTestSuite();
+      printf("Unit Tests Successful.\n");
+    }
+  #endif
 
   }while(i++ < targetFileIndex);
   

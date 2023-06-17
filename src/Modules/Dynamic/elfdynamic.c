@@ -209,7 +209,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_lseek*/
 
     case SYS_mmap:
-      printf("mmap(address=0x%08x, length=%d, protections=0x%08x, flags=0x%08x, " \
+      printf("mmap(address=0x%08x, length=0x%08x, protections=0x%08x, flags=0x%08x, " \
         "fd=%d, offset=0x%08x)\n",
             executableHandle->regs.rdi,
             executableHandle->regs.rsi,
@@ -395,6 +395,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 ///////////////////////////////////////////////////////////////////////////////
     case SYS_execve:
       // TODO:Find a way to extract the filename to run.
+      // Another call to ptrace to continue to end of syscall\
+      // still isn't helpful.
       err = readStringFromProcessMemory(executableHandle->pid,
                                         executableHandle->regs.rdi,
                                         &tmpBuffer);
@@ -457,8 +459,19 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
     return ERR_NONE;
   }
 
+  /* This feels a little hacky,
+   * TODO: Can we find a better solution.
+  */
+  printf("execl(\"%s\"", executableHandle->fileHandle.path);
+  for(int i = 0; i < childArgc && childArgv[i] != NULL; i++)
+  {
+    printf(", \"%s\"", childArgv[i]);
+  }
+  printf(")\n");
+
   do
   {
+
     wait(&status);
     if(WIFEXITED(status))
     {
@@ -483,7 +496,11 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
         printf("Entering sycall number: %ld\n", executableHandle->regs.orig_rax);
         printSyscallInfoElf64(executableHandle);
       }            
-
+      else
+      {
+        // Get return code.
+        printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      }
 
       /* Continue to the next syscall. */        
       ptrace(PTRACE_SYSCALL, executableHandle->pid, NULL, NULL);
@@ -497,7 +514,7 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
 
 int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, char** childArgs, char** envp)
 {
-  int8_t err         = ERR_NONE;
+  int8_t err = ERR_NONE;
 
   if(executableHandle == NULL)
   {
@@ -523,7 +540,7 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, ch
 
   
   
-  return ERR_NONE;
+  return err;
 }
 
 #ifdef UNITTEST
