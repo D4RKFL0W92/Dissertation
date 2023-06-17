@@ -134,6 +134,58 @@ uint8_t stringToInteger(const char* numString, uint64_t* value)
 
 #ifdef UNITTEST
 
+void test_isHexadecimalCharacter_legalChars()
+{
+  assert( isHexadecimalCharacter('0') == TRUE );
+  assert( isHexadecimalCharacter('1') == TRUE );
+  assert( isHexadecimalCharacter('2') == TRUE );
+  assert( isHexadecimalCharacter('3') == TRUE );
+  assert( isHexadecimalCharacter('4') == TRUE );
+  assert( isHexadecimalCharacter('5') == TRUE );
+  assert( isHexadecimalCharacter('6') == TRUE );
+  assert( isHexadecimalCharacter('7') == TRUE );
+  assert( isHexadecimalCharacter('8') == TRUE );
+  assert( isHexadecimalCharacter('9') == TRUE );
+  assert( isHexadecimalCharacter('a') == TRUE );
+  assert( isHexadecimalCharacter('b') == TRUE );
+  assert( isHexadecimalCharacter('c') == TRUE );
+  assert( isHexadecimalCharacter('d') == TRUE );
+  assert( isHexadecimalCharacter('e') == TRUE );
+  assert( isHexadecimalCharacter('f') == TRUE );
+  assert( isHexadecimalCharacter('A') == TRUE );
+  assert( isHexadecimalCharacter('B') == TRUE );
+  assert( isHexadecimalCharacter('C') == TRUE );
+  assert( isHexadecimalCharacter('D') == TRUE );
+  assert( isHexadecimalCharacter('E') == TRUE );
+  assert( isHexadecimalCharacter('F') == TRUE );
+}
+
+void test_isHexadecimalCharacter_illegalChars()
+{
+  assert( isHexadecimalCharacter('z') == FALSE );
+  assert( isHexadecimalCharacter('y') == FALSE );
+  assert( isHexadecimalCharacter('x') == FALSE );
+  assert( isHexadecimalCharacter('&') == FALSE );
+  assert( isHexadecimalCharacter('^') == FALSE );
+  assert( isHexadecimalCharacter('@') == FALSE );
+  assert( isHexadecimalCharacter(';') == FALSE );
+  assert( isHexadecimalCharacter('k') == FALSE );
+  assert( isHexadecimalCharacter('Q') == FALSE );
+  assert( isHexadecimalCharacter('I') == FALSE );
+  assert( isHexadecimalCharacter('P') == FALSE );
+  assert( isHexadecimalCharacter('W') == FALSE );
+  assert( isHexadecimalCharacter('X') == FALSE );
+  assert( isHexadecimalCharacter('`') == FALSE );
+  assert( isHexadecimalCharacter('~') == FALSE );
+  assert( isHexadecimalCharacter(']') == FALSE );
+  assert( isHexadecimalCharacter('H') == FALSE );
+  assert( isHexadecimalCharacter('{') == FALSE );
+  assert( isHexadecimalCharacter('\t') == FALSE );
+  assert( isHexadecimalCharacter('\n') == FALSE );
+  assert( isHexadecimalCharacter('\\') == FALSE );
+  assert( isHexadecimalCharacter('\"') == FALSE );
+}
+
 void test_hexToDecimal_valid()
 {
   uint8_t err = 0;
@@ -295,6 +347,11 @@ void test_hexToDecimal_valid()
 
 void ioTestSuite()
 {
+  test_isHexadecimalCharacter_legalChars();
+  test_isHexadecimalCharacter_illegalChars();
+
+  // TODO: Add tests for stringToInteger
+
   test_hexToDecimal_valid();
 }
 

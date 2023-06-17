@@ -33,7 +33,6 @@ int main(int argc, char *argv[], char *envp[])
     exit(-1);
   }
 
-  // We only need to write code to determine the ELF architecture once.
   if(argc >= 3)
   {
     for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
@@ -43,6 +42,12 @@ int main(int argc, char *argv[], char *envp[])
         // TODO: Add some sanity checks
         found = TRUE; // We are using a PID instead of path
         usingPid = TRUE;
+
+        if(strlen(argv[j]) <= 5)
+        {
+          printf("Please Provide A Valid Process ID, Usage: -pid=1234\n");
+          exit(ERR_INVALID_ARGUMENT);
+        }
         strncpy(pidStr, &argv[j][5], 5);
       }
       else if(strncmp(argv[j], "-", 1) != 0) // First argument that doesn't start with -
@@ -52,6 +57,7 @@ int main(int argc, char *argv[], char *envp[])
       }
     }
     
+    // We only need to write code to determine the ELF architecture once.
     if(usingPid == FALSE)
     {
       if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
@@ -59,22 +65,17 @@ int main(int argc, char *argv[], char *envp[])
         printf("Unable map %s into memory\n", argv[targetFileIndex]);
         exit(-1);
       }
+
       arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
-
-      switch(arch)
+      if(arch == T_64)
       {
-        case T_64:
-          mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T *) &elfHandle);
-          break;
-
-        case T_32:
-          mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
-          break;
-
-        case T_NO_ELF:
-        default:
-          break;
+        mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T *) &elfHandle);
       }
+      else if(arch == T_32)
+      {
+        mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
+      }
+
     }
     else
     {
@@ -231,7 +232,7 @@ int main(int argc, char *argv[], char *envp[])
         fileOpsTestSuite();
         elfInfoTestSuite();
         elfDynamicTestSuite();
-        // ioTestSuite();
+        ioTestSuite();
         TVectorTestSuite();
         printf("Unit Tests Successful.\n");
       }
