@@ -136,7 +136,7 @@ void * readProcessMemoryFromPID(pid_t pid, uint64_t offset, uint64_t uCount)
   return data;
 }
 
-static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
+static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, BOOL firstSysCall)
 {
   char* tmpBuffer = NULL;
   int8_t err = ERR_NONE;
@@ -394,8 +394,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 
 ///////////////////////////////////////////////////////////////////////////////
     case SYS_execve:
+      if(firstSysCall)
+      {
+        break; // We have already printed execve syscall data in launchSyscallTraceElf64.
+      }
       // TODO:Find a way to extract the filename to run.
-      // Another call to ptrace to continue to end of syscall\
+      // Another call to ptrace to continue to end of syscall
       // still isn't helpful.
       err = readStringFromProcessMemory(executableHandle->pid,
                                         executableHandle->regs.rdi,
@@ -433,6 +437,7 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
 {
   static REGS oldRegisters = {0};
   struct ptrace_syscall_info syscallInfo = {0};
+  BOOL firstSysCall  = TRUE;
   long syscallNumber = 0;
   int status         = 0;
   int8_t err         = ERR_NONE;
@@ -455,19 +460,19 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
       #endif
       return ERR_TRACE_OPERATION_FAILED;
     }
-    execl(executableHandle->fileHandle.path, childArgv, NULL);
+    execve(executableHandle->fileHandle.path, childArgv, NULL);
     return ERR_NONE;
   }
 
-  /* This feels a little hacky,
-   * TODO: Can we find a better solution.
+  /*
+   * Print the first syscall execve() and it's arguments.
   */
   printf("execl(\"%s\"", executableHandle->fileHandle.path);
   for(int i = 0; i < childArgc && childArgv[i] != NULL; i++)
   {
     printf(", \"%s\"", childArgv[i]);
   }
-  printf(")\n");
+  printf(")\n\n");
 
   do
   {
@@ -494,7 +499,8 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
       if(isRepeatedSyscallX64(&executableHandle->regs, &oldRegisters) == FALSE)
       {
         printf("Entering sycall number: %ld\n", executableHandle->regs.orig_rax);
-        printSyscallInfoElf64(executableHandle);
+        printSyscallInfoElf64(executableHandle, firstSysCall);
+        firstSysCall = FALSE;
       }            
       else
       {
