@@ -233,6 +233,14 @@ void unittest_stringToInteger_legalUsage()
   err = stringToInteger("-20", &value);
   assert(err == ERR_NONE);
   assert((int)value == -20);
+
+  err = stringToInteger("+15", &value);
+  assert(err == ERR_NONE);
+  assert(value == 15);
+
+  err = stringToInteger("+9000", &value);
+  assert(err == ERR_NONE);
+  assert(value == 9000);
 }
 
 void unittest_stringToInteger_illegalUsage()
