@@ -269,7 +269,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_ioctl*/
 
     case SYS_pread64:
-      /*TODO: Is it worth printing the bytes that are being read?*/
+      /*
+       * TODO: Is it worth printing the bytes that are being read?
+       * YES, error handling for if tmpBuffer is null should be added
+      */
       tmpBuffer = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi, executableHandle->regs.rdx);
       printf("pread64(fd=%d, buff=%p, count=0x%08x, position=%p)\n",
         executableHandle->regs.rdi,
@@ -289,7 +292,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 
     case SYS_readv:
       tmpBuffer = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi, executableHandle->regs.rdx);
-      printf("readv(fd=%d, iovec=%p, vec-len=0x%08x)\n",
+      printf("readv(fd=%d, iovec=%p, vec-len=0x%08x)\n", // TODO: Check if it's even possible to read iovec?
         executableHandle->regs.rdi,
         executableHandle->regs.rsi,
         executableHandle->regs.rdx);
@@ -305,7 +308,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 
     case SYS_access:
       err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer);
-      printf("access(filename=%s, mode=0x%08x)\n",
+      printf("access(filename=\"%s\", mode=0x%08x)\n",
         tmpBuffer,
         executableHandle->regs.rsi);
       break; /*SYS_access*/
@@ -391,25 +394,86 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         executableHandle->regs.rsi);
       break; /*SYS_dup2*/
 
+    case SYS_pause:
+      printf("pause()\n");
+      break; /*SYS_pause*/
+
+    case SYS_nanosleep:
+      printf("nanosleep()\n");
+      break; /*SYS_nanosleep*/
+
+    /*
+     * TODO: Write code to read itimer value from struct. This
+     * is relavent for most timer related syscalls.
+    */
+    case SYS_getitimer:
+      printf("getitimer(which=%d, valueAddr=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
+      break; /*SYS_getitimer*/
+
+    case SYS_alarm:
+      printf("alarm(seconds=%d)\n",
+        executableHandle->regs.rdi);
+      break; /*SYS_alarm*/
+
+    case SYS_setitimer:
+      printf("getitimer(which=%d, valueAddr=%p, ovalueAddr=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_setitimer*/
+
+    case SYS_getpid:
+      printf("getpid()\n"); // PID will be printed in return value by hiogher level function.
+      break; /*SYS_getpid*/
+
+    case SYS_sendfile:
+      printf("sendfile(out_fd=%d, in_fd=%d, offset=%p, count=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10);
+      break; /*SYS_sendfile*/
+
+    case SYS_socket:
+      printf("sendfile(domain=%d, type=%d, protocol=%d)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_socket*/
+
+    case SYS_connect:
+      printf("connect(sock_fd=%d, addr=%p, protocol=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_connect*/
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
     case SYS_execve:
       if(firstSysCall)
       {
         break; // We have already printed execve syscall data in launchSyscallTraceElf64.
+        // TODO: Could this be handled more optimally??
       }
-      // TODO:Find a way to extract the filename to run.
-      // Another call to ptrace to continue to end of syscall
-      // still isn't helpful.
+      /*
+       * TODO: Add error checking/handling
+      */
       err = readStringFromProcessMemory(executableHandle->pid,
                                         executableHandle->regs.rdi,
                                         &tmpBuffer);
       // All registers except ORIG_RAX are zero. How can
-      // we extract all arguments???
+      // we extract all arguments??? (This may noty be an issue
+      // with later calls to execve).
       printf("execve()\n");
       break; /*SYS_execve*/
 
   }
+
   free(tmpBuffer);
   return err;
 }
@@ -467,7 +531,7 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
   /*
    * Print the first syscall execve() and it's arguments.
   */
-  printf("execl(\"%s\"", executableHandle->fileHandle.path);
+  printf("execve(\"%s\"", executableHandle->fileHandle.path);
   for(int i = 0; i < childArgc && childArgv[i] != NULL; i++)
   {
     printf(", \"%s\"", childArgv[i]);
@@ -558,7 +622,7 @@ static void unittest_printMmapFlags()
   assert(printMmapFlags(MAP_ANONYMOUS) == 1);
 }
 
-static void unittest_isRepeatedSyscallX64()
+static void unittest_isRepeatedSyscallX64_legalUsage()
 {
   REGS r1 = {0};
   REGS r2 = {0};
@@ -576,12 +640,28 @@ static void unittest_isRepeatedSyscallX64()
   isRepeated = isRepeatedSyscallX64(&r1, &r2);
   assert(isRepeated == FALSE);
 
-  // TODO: Add some more calls with different values.
+  r1.r10 = 10;
+  r1.r9  = 5;
+  isRepeated = isRepeatedSyscallX64(&r1, &r2);
+  assert(isRepeated == FALSE);
+
+  r1.r10 = 20;
+  r1.r9  = 20;
+  isRepeated = isRepeatedSyscallX64(&r1, &r2);
+  assert(isRepeated == TRUE);
+
+  r1 = {0};
+  r2 = {0};
+
+  r1.rax = 10;
+  r2.rax = 10;
+  isRepeated = isRepeatedSyscallX64(&r1, &r2);
+  assert(isRepeated == TRUE);
 }
 
 void elfDynamicTestSuite()
 {
   unittest_printMmapFlags();
-  unittest_isRepeatedSyscallX64();
+  unittest_isRepeatedSyscallX64_legalUsage();
 }
 #endif /* UNITTEST */
