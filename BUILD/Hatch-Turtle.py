@@ -81,13 +81,21 @@ class Hatch:
         process = Popen(self.buildParameters, stdout=PIPE, stderr=PIPE)
         self.stdout, self.stderr = process.communicate()
 
-        # TODO: Process stdout/stderr.
-        print(self.stdout, self.stderr)
+        if process.returncode != 0:
+            print(self.stdout, self.stderr)
+            print("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
+            print("------------------------------ BUILD FAILED -----------------------------------")
+            print("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
+            exit(1)
 
-        # Optionally run functional tests
-        if runFunctionalTests == True:
-            for i in range(0, len(self.tests)):
-                self.runTest(self.tests[i])
+        else:
+            # TODO: Process stdout/stderr.
+            print(self.stdout, self.stderr)
+
+            # Optionally run functional tests
+            if runFunctionalTests == True:
+                for i in range(0, len(self.tests)):
+                    self.runTest(self.tests[i])
 
 if __name__ == "__main__":
     turtle = Hatch()
