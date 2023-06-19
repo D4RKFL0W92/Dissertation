@@ -450,6 +450,53 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         executableHandle->regs.rdx);
       break; /*SYS_connect*/
 
+    case SYS_accept:
+      printf("accept(sock_fd=%d, addr=%p, protocol=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_accept*/
+
+    case SYS_sendto:
+      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid,
+                                           executableHandle->regs.rsi,
+                                           executableHandle->regs.rdx);
+      printf("sendto(fd=%d, buffAddr=%p, length=0x%08x, flags=0x%08x, dstAddr=0x%08x, addrLen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        tmpBuffer,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8,
+        executableHandle->regs.r9);
+      break; /*SYS_sendto*/
+
+    case SYS_recvfrom:
+      /*
+       * TODO: If we catch this on the syscall exit we could read the data.
+      */
+      printf("recvfrom(fd=%d, buffAddr=%p, length=0x%08x, flags=0x%08x, srcAddr=0x%08x, addrLen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8,
+        executableHandle->regs.r9);
+      break; /*SYS_recvfrom*/
+
+    case SYS_sendmsg:
+      printf("sendmsg(fd=%d, buffAddr=%p, flags=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_sendmsg*/
+
+    case SYS_recvmsg:
+      printf("recvmsg(fd=%d, buffAddr=%p, flags=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_recvmsg*/
+
 
 
 
