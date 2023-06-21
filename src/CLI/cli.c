@@ -1,3 +1,6 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
 #include <ctype.h>
 
 #include "../Modules/ELFinfo/elfinfo.h"

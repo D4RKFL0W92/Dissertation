@@ -1,3 +1,7 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
+
 #ifndef _TLIST_
 #define _TLIST_
 

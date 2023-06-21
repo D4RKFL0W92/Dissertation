@@ -1,3 +1,6 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
 #include "elfinfo.h"
 
 static Elf32_Addr getELF32Entry(uint8_t* p_mem)
@@ -1430,7 +1433,7 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
  * to the pointer pointed to by 'pData'.
  * (This function may be made none-static at a later date.)
 */
-static int8_t readProcessPIDMap(char* pidStr, uint8_t * pData, pid_t pid, char* searchStr)
+static int8_t readProcessPIDMap(char* pidStr, void ** pData, pid_t pid, char* searchStr)
 {
   char path[20]  = "/proc/";
   char pathEnd[] = "/maps";
@@ -1478,11 +1481,7 @@ static int8_t readProcessPIDMap(char* pidStr, uint8_t * pData, pid_t pid, char* 
         goto cleanup;
       }
 
-      if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
-      {
-        err = ERR_PROCESS_ATTACH_FAILED;
-        goto cleanup;
-      }
+      
       err = readProcessMemoryFromPID(pid, startAddr, memoryMapping, addrRange);
       break;
     }
@@ -1495,18 +1494,13 @@ static int8_t readProcessPIDMap(char* pidStr, uint8_t * pData, pid_t pid, char* 
 
   if(memoryMapping != NULL)
   {
-    pData = memoryMapping;
+    (*pData) = memoryMapping;
     err =  ERR_NONE;
   }
   else
   {
-    pData = NULL;
+    (*pData) = NULL;
     err = ERR_FORMAT_NOT_SUPPORTED;
-  }
-
-  if(ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0)
-  { // Can't really do anything but indicate source of failure.
-    err = ERR_PROCESS_ATTACH_FAILED;
   }
 
 cleanup:
@@ -1529,7 +1523,12 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
     return ERR_INVALID_ARGUMENT;
   }
 
-  err = readProcessPIDMap(pidStr, pMem, pid, "r--p");
+  if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
+  {
+    return ERR_PROCESS_ATTACH_FAILED;
+  }
+
+  err = readProcessPIDMap(pidStr, &pMem, pid, "r--p");
   if(err != ERR_NONE)
   {
     return err;
@@ -1537,6 +1536,10 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
 
   arch = isELF(pMem);
 
+  if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
+  {
+    err = ERR_PROCESS_ATTACH_FAILED;
+  }
   return err;
 }
 

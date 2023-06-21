@@ -1,3 +1,7 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
+
 #include "./logging.h"
 
 int logEvent(const char* filepath, const char* func_name, const char* cause)

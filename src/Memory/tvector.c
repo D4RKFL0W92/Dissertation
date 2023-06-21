@@ -1,3 +1,7 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
+
 #include "./tvector.h"
 
 int8_t TVector_initVector(TVector * vec, size_t elementSize, uint32_t initialElementCount)

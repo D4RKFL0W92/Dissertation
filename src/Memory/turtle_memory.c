@@ -1,3 +1,7 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
+
 #include "./turtle_memory.h"
 
 #define MAX_MAPPED_REGIONS 1024

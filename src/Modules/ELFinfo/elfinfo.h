@@ -1,3 +1,6 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
 #ifndef _ELF_INFO_
 #define _ELF_INFO_
 

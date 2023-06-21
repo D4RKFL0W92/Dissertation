@@ -1,3 +1,7 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
+
 #ifndef _FILE_OPS_
 #define _FILE_OPS_
 

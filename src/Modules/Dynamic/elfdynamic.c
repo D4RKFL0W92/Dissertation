@@ -1,3 +1,7 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
+
 #include "elfdynamic.h"
 
 static void printMsyncFlags(int flags)
@@ -501,9 +505,15 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_accept*/
 
     case SYS_sendto:
-      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid,
-                                           executableHandle->regs.rsi,
-                                           executableHandle->regs.rdx);
+      tmpBuffer = malloc(executableHandle->regs.rdx);
+      if(tmpBuffer == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     tmpBuffer,
+                                     executableHandle->regs.rdx);
       printf("sendto(fd=%d, buffAddr=%p, length=0x%08x, flags=0x%08x, dstAddr=0x%08x, addrLen=0x%08x)\n",
         executableHandle->regs.rdi,
         tmpBuffer,
@@ -783,9 +793,39 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, ch
       return ERR_INVALID_ARGUMENT;
   }
 
-  
-  
   return err;
+}
+
+int8_t mapELF64ToHandleFromProcessMemory(void * pMem, ELF64_EXECUTABLE_HANDLE_T * elfHandle)
+{
+  if(pMem == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR null parameter passed to mapELF64ToHandleFromProcessMemory()");
+    #endif
+    return ERR_NULL_ARGUMENT;
+  }
+
+  pMem = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
+  if(pMem == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR allocating memory in mapELF64ToHandleFromProcessMemory()");
+    #endif
+    return ERR_MEMORY_ALLOCATION_FAILED;
+  }
+  
+  // Set all fields to zero as we want to set them here.
+  memset(elfHandle, 0, sizeof(ELF64_EXECUTABLE_HANDLE_T));
+
+  elfHandle->fileHandle.p_data = elfHandle->fileHandle.p_data = pMem;
+  elfHandle->isExecuting       = TRUE;
+  
+  elfHandle->ehdr = (Elf64_Ehdr *) pMem;
+  elfHandle->phdr = (Elf64_Phdr *) elfHandle->ehdr->e_phoff;
+  elfHandle->shdr = (Elf64_Shdr *) elfHandle->ehdr->e_shoff;
+
+  return ERR_NONE;
 }
 
 #ifdef UNITTEST

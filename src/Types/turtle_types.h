@@ -1,6 +1,9 @@
 #ifndef _TURTLE_TYPES_
 #define _TURTLE_TYPES_
 
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
 #include <assert.h>
 #include <unistd.h>
 #include <stdint.h>
