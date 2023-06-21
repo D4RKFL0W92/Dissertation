@@ -493,10 +493,129 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         executableHandle->regs.rdx);
       break; /*SYS_connect*/
 
+    case SYS_accept:
+      printf("accept(sock_fd=%d, addr=%p, protocol=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_accept*/
 
+    case SYS_sendto:
+      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid,
+                                           executableHandle->regs.rsi,
+                                           executableHandle->regs.rdx);
+      printf("sendto(fd=%d, buffAddr=%p, length=0x%08x, flags=0x%08x, dstAddr=0x%08x, addrLen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        tmpBuffer,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8,
+        executableHandle->regs.r9);
+      break; /*SYS_sendto*/
 
+    case SYS_recvfrom:
+      /*
+       * TODO: If we catch this on the syscall exit we could read the data.
+      */
+      printf("recvfrom(sock_fd=%d, buffAddr=%p, length=0x%08x, flags=0x%08x, srcAddr=0x%08x, addrLen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8,
+        executableHandle->regs.r9);
+      break; /*SYS_recvfrom*/
 
-///////////////////////////////////////////////////////////////////////////////
+    case SYS_sendmsg:
+      printf("sendmsg(sock_fd=%d, buffAddr=%p, flags=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_sendmsg*/
+
+    case SYS_recvmsg:
+      printf("recvmsg(sock_fd=%d, buffAddr=%p, flags=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_recvmsg*/
+
+    case SYS_shutdown:
+      printf("shutdown(sock_fd=%d, how=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
+      break; /*SYS_shutdown*/
+
+    case SYS_bind:
+      printf("bind(sock_fd=%d, addr=%p, addrLen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_bind*/
+
+    case SYS_listen:
+      printf("listen(sock_fd=%d, backlog=%d)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
+      break; /*SYS_listen*/
+
+    case SYS_getsockname:
+      printf("getsockname(sock_fd=%d, addr=%p, addrLen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_getsockname*/
+
+    case SYS_getpeername:
+      printf("getpeername(sock_fd=%d, addr=%p, addrLen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_getpeername*/
+
+    case SYS_socketpair:
+      printf("socketpair(domain=%d, type=%d, protocol=%d, sv=%d)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10);
+      break; /*SYS_socketpair*/
+
+    case SYS_setsockopt:
+      printf("setsockopt(fd=%d, level=%d, optname=%d, optval=%p, optlen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8);
+      break; /*SYS_setsockopt*/
+
+    case SYS_getsockopt:
+      printf("getsockopt(fd=%d, level=%d, optname=%d, optval=%p, optlen=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8);
+      break; /*SYS_getsockopt*/
+
+    case SYS_clone:
+      printf("clone(funcPtr=%p, stack=%p, flags=0x%08x, arg=%p, parent_tid=%d)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10,
+        executableHandle->regs.r8);
+      break; /*SYS_clone*/
+
+    case SYS_fork:
+      printf("fork()\n");
+      break; /*SYS_fork*/
+
+    case SYS_vfork:
+      printf("vfork()\n");
+      break; /*SYS_vfork*/
+
     case SYS_execve:
       if(firstSysCall)
       {
@@ -514,6 +633,19 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       // with later calls to execve).
       printf("execve()\n");
       break; /*SYS_execve*/
+
+    case SYS_exit:
+      printf("exit(errcode=%d)\n",
+        executableHandle->regs.rdi);
+      break; /*SYS_exit*/
+
+    case SYS_wait4:
+      printf("clone(pid=%d, status=%p, options=0x%08x, rusage=%p)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10);
+      break; /*SYS_clone*/
 
   }
 
@@ -688,18 +820,18 @@ static void unittest_isRepeatedSyscallX64_legalUsage()
   isRepeated = isRepeatedSyscallX64(&r1, &r2);
   assert(isRepeated == FALSE);
 
-  // r1.r10 = 20;
-  // r1.r9  = 20;
-  // isRepeated = isRepeatedSyscallX64(&r1, &r2);
-  // assert(isRepeated == TRUE);
+  r1.r10 = 20;
+  r2.r10 = 20;
+  r1.r9  = 0;
+  isRepeated = isRepeatedSyscallX64(&r1, &r2);
+  assert(isRepeated == TRUE);
 
-  // r1 = {0};
-  // r2 = {0};
-
-  // r1.rax = 10;
-  // r2.rax = 10;
-  // isRepeated = isRepeatedSyscallX64(&r1, &r2);
-  // assert(isRepeated == TRUE);
+  r1.r10 = 0;
+  r2.r10 = 0;
+  r1.rax = 10;
+  r2.rax = 10;
+  isRepeated = isRepeatedSyscallX64(&r1, &r2);
+  assert(isRepeated == TRUE);
 }
 
 void elfDynamicTestSuite()
