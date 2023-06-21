@@ -33,7 +33,7 @@ int main(int argc, char *argv[], char *envp[])
     exit(-1);
   }
 
-  if(argc >= 3)
+  if(argc > 1)
   {
     for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
     {

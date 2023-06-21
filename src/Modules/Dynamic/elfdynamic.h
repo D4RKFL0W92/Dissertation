@@ -17,7 +17,7 @@
 #include "../ELFinfo/elfinfo.h"
 
 int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char** pStr);
-void * readProcessMemoryFromPID(pid_t pid, uint64_t offset, uint64_t uCount);
+int8_t readProcessMemoryFromPID(pid_t pid, const void * offset, void * dstAddr, uint64_t uCount);
 
 int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, char** childArgv, char** envp);
 

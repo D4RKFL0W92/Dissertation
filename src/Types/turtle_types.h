@@ -23,8 +23,11 @@
 #define ERR_FILE_OPERATION_FAILED      20
 
 #define ERR_PROCESS_OPERATION_FAILED   30
+#define ERR_PROCESS_ATTACH_FAILED      31
 
 #define ERR_TRACE_OPERATION_FAILED     35
+
+#define ERR_ILLEGAL_MAPPING_SIZE       40
 
 #define TRUE_STR         "TRUE"
 #define FALSE_STR        "FALSE"

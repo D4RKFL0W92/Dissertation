@@ -1426,19 +1426,21 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
 
 /*
  * Helper function to read /proc/<pid>/maps to calculate and allocate
- * The necessary memory to map the process referenced by pid.
+ * the necessary memory to map the section indicated by 'searchStr'
+ * to the pointer pointed to by 'pData'.
+ * (This function may be made none-static at a later date.)
 */
-static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
+static int8_t readProcessPIDMap(char* pidStr, uint8_t * pData, pid_t pid, char* searchStr)
 {
   char path[20]  = "/proc/";
-  // 512 bytes is more than enough for a real line in /proc/<pid>/maps
-  char mappingFileLine[512] = {0};
+  char pathEnd[] = "/maps";
+  // Let the length be calculated at compile time.
+  char mappingFileLine[PATH_MAX + 100] = {0}; // Typically upto 73+PATH_MAX 
   void * memoryMapping = NULL;
   FILE * pFile = NULL;
   int err = ERR_NONE;
-  
   strncat(path, pidStr, sizeof(pidStr));
-  strncat(path, "/maps", 5);
+  strncat(path, pathEnd, 5);
 
   if( (pFile = fopen(path, "r")) == NULL)
   {
@@ -1451,10 +1453,9 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
   while( fgets(mappingFileLine, sizeof(mappingFileLine), pFile) != EOF)
   {
     // Process each line of /proc/<pid>/maps to find text segment mapping.
-    char textMappingLine[] = "r-xp"; // The permissions we are looking for.
     char* pSearchStr = NULL;
 
-    if( (pSearchStr = strstr(mappingFileLine, textMappingLine)) != NULL)
+    if( (pSearchStr = strstr(mappingFileLine, searchStr)) != NULL)
     {
       uint64_t startAddr   = 0;
       uint64_t endAddr     = 0;
@@ -1463,10 +1464,26 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
       // We've found the line giving the memory mapping range.
       err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
       addrRange = endAddr - startAddr;
-      // TODO: Check the address range makes sense.
 
-      // This call to function does the memory allocation.
-      memoryMapping = readProcessMemoryFromPID(pid, startAddr, addrRange);
+      if((addrRange % PAGE_SIZE) != 0)
+      {
+        err = ERR_ILLEGAL_MAPPING_SIZE;
+        goto cleanup; // We still need to close the file
+      }
+
+      memoryMapping = malloc(addrRange);
+      if(memoryMapping == NULL)
+      {
+        err = ERR_MEMORY_ALLOCATION_FAILED;
+        goto cleanup;
+      }
+
+      if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
+      {
+        err = ERR_PROCESS_ATTACH_FAILED;
+        goto cleanup;
+      }
+      err = readProcessMemoryFromPID(pid, startAddr, memoryMapping, addrRange);
       break;
     }
     else
@@ -1487,7 +1504,15 @@ static int8_t readProcessMemMap(char* pidStr, uint8_t * pData, pid_t pid)
     err = ERR_FORMAT_NOT_SUPPORTED;
   }
 
+  if(ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0)
+  { // Can't really do anything but indicate source of failure.
+    err = ERR_PROCESS_ATTACH_FAILED;
+  }
+
+cleanup:
+
   fclose(pFile);
+  free(memoryMapping);
   return err;
 }
 
@@ -1504,7 +1529,7 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
     return ERR_INVALID_ARGUMENT;
   }
 
-  err = readProcessMemMap(pidStr, pMem, pid);
+  err = readProcessPIDMap(pidStr, pMem, pid, "r--p");
   if(err != ERR_NONE)
   {
     return err;
