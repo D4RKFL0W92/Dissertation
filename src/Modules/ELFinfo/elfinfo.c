@@ -1536,7 +1536,16 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
 
   arch = isELF(pMem);
 
-  if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
+  if(arch == T_64)
+  {
+    err = mapELF64ToHandleFromProcessMemory(&pMem, &elfHandle);
+  }
+  else if(arch == T_32)
+  {
+
+  }
+
+  if(ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0)
   {
     err = ERR_PROCESS_ATTACH_FAILED;
   }

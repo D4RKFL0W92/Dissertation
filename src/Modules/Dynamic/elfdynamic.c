@@ -17,13 +17,13 @@ static void printMsyncFlags(int flags)
 
   if(((flags & MS_INVALIDATE) == MS_INVALIDATE))
   {
-    printf(" MS_INVALIDATE |");
+    printf(" MS_INVALIDATE ");
   }
 }
 /* String values related to mmap flags. */
 const char MAP_SHARED_STR[]     = " MAP_SHARED ";
 const char MAP_PRIVATE_STR[]    = " MAP_PRIVATE ";
-const char MAP_ANONYMOUS_STR[] = " MAP_ANONYMOUS ";
+const char MAP_ANONYMOUS_STR[]  = " MAP_ANONYMOUS ";
 
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS 0x20
@@ -796,9 +796,11 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, ch
   return err;
 }
 
-int8_t mapELF64ToHandleFromProcessMemory(void * pMem, ELF64_EXECUTABLE_HANDLE_T * elfHandle)
+int8_t mapELF64ToHandleFromProcessMemory(void ** pMem, ELF64_EXECUTABLE_HANDLE_T ** elfHandle)
 {
-  if(pMem == NULL)
+  enum BITS arch = T_NO_ELF;
+
+  if((*pMem) == NULL)
   {
     #ifdef DEBUG
     perror("ERROR null parameter passed to mapELF64ToHandleFromProcessMemory()");
@@ -806,8 +808,17 @@ int8_t mapELF64ToHandleFromProcessMemory(void * pMem, ELF64_EXECUTABLE_HANDLE_T 
     return ERR_NULL_ARGUMENT;
   }
 
-  pMem = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
-  if(pMem == NULL)
+  arch = isELF((*pMem));
+  if(arch == T_NO_ELF)
+  {
+    #ifdef DEBUG
+    perror("ERROR invalid parameter passed to mapELF64ToHandleFromProcessMemory()");
+    #endif
+    return ERR_INVALID_ARGUMENT;
+  }
+
+  (*elfHandle) = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
+  if((*elfHandle) == NULL)
   {
     #ifdef DEBUG
     perror("ERROR allocating memory in mapELF64ToHandleFromProcessMemory()");
@@ -816,14 +827,14 @@ int8_t mapELF64ToHandleFromProcessMemory(void * pMem, ELF64_EXECUTABLE_HANDLE_T 
   }
   
   // Set all fields to zero as we want to set them here.
-  memset(elfHandle, 0, sizeof(ELF64_EXECUTABLE_HANDLE_T));
+  // memset((*elfHandle), 0, sizeof(ELF64_EXECUTABLE_HANDLE_T));
 
-  elfHandle->fileHandle.p_data = elfHandle->fileHandle.p_data = pMem;
-  elfHandle->isExecuting       = TRUE;
+  (*elfHandle)->fileHandle.p_data = (*elfHandle)->fileHandle.p_data_seekPtr = (*pMem);
+  (*elfHandle)->isExecuting       = TRUE;
   
-  elfHandle->ehdr = (Elf64_Ehdr *) pMem;
-  elfHandle->phdr = (Elf64_Phdr *) elfHandle->ehdr->e_phoff;
-  elfHandle->shdr = (Elf64_Shdr *) elfHandle->ehdr->e_shoff;
+  memcpy(&(*elfHandle)->ehdr, &(*pMem), sizeof(Elf64_Ehdr));
+  memcpy(&(*elfHandle)->phdr, &(*elfHandle)->ehdr->e_phoff, sizeof(Elf64_Phdr));
+  memcpy(&(*elfHandle)->shdr, &(*elfHandle)->ehdr->e_shoff, sizeof(Elf64_Shdr));
 
   return ERR_NONE;
 }
@@ -874,9 +885,42 @@ static void unittest_isRepeatedSyscallX64_legalUsage()
   assert(isRepeated == TRUE);
 }
 
+void test_mapELF64ToHandleFromProcessMemory_legalEhdr()
+{
+  /*
+   * Typical Elf64_Ehdr
+  */
+  char buff[] =
+  {
+    0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x03, 0x00, 0x3e, 0x00, 0x01, 0x00, 0x00, 0x00, 0x90, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x3d, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x38, 0x00, 0x0d, 0x00, 0x40, 0x00, 0x25, 0x00, 0x24, 0x00
+  };
+
+  ELF64_EXECUTABLE_HANDLE_T * handle  = NULL;
+  char * pData = buff;
+  int8_t err   = ERR_NONE;
+
+  err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
+  assert(err == ERR_NONE);
+  assert(handle->isExecuting == TRUE);
+  assert(handle->phdr == 0x40);
+  assert(handle->shdr == 0x23D88);
+  assert(handle->fileHandle.p_data == handle->fileHandle.p_data_seekPtr);
+
+  free(handle);
+}
+
+/*
+ * TODO: Add some more tests for mapELF64ToHandleFromProcessMemory.
+*/
+
 void elfDynamicTestSuite()
 {
   unittest_printMmapFlags();
   unittest_isRepeatedSyscallX64_legalUsage();
+
+  test_mapELF64ToHandleFromProcessMemory_legalEhdr();
 }
 #endif /* UNITTEST */
