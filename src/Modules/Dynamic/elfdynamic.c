@@ -800,7 +800,7 @@ int8_t mapELF64ToHandleFromProcessMemory(void ** pMem, ELF64_EXECUTABLE_HANDLE_T
 {
   enum BITS arch = T_NO_ELF;
 
-  if((*pMem) == NULL)
+  if(pMem == NULL || (*pMem) == NULL)
   {
     #ifdef DEBUG
     perror("ERROR null parameter passed to mapELF64ToHandleFromProcessMemory()");
@@ -885,7 +885,7 @@ static void unittest_isRepeatedSyscallX64_legalUsage()
   assert(isRepeated == TRUE);
 }
 
-void test_mapELF64ToHandleFromProcessMemory_legalEhdr()
+void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr()
 {
   /*
    * Typical Elf64_Ehdr
@@ -904,6 +904,17 @@ void test_mapELF64ToHandleFromProcessMemory_legalEhdr()
 
   err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
   assert(err == ERR_NONE);
+  assert(handle->ehdr->e_type = ET_EXEC);
+  assert(handle->ehdr->e_machine = EM_X86_64);
+  assert(handle->ehdr->e_version = EV_CURRENT);
+  assert(handle->ehdr->e_entry == 0x1290);
+  assert(handle->ehdr->e_phoff == 0x40);
+  assert(handle->ehdr->e_shoff == 0x23d88);
+  assert(handle->ehdr->e_phentsize == 0x38);
+  assert(handle->ehdr->e_phnum == 13);
+  assert(handle->ehdr->e_shentsize == 0x40);
+  assert(handle->ehdr->e_shnum == 37);
+  assert(handle->ehdr->e_shstrndx == 36);
   assert(handle->isExecuting == TRUE);
   assert(handle->phdr == 0x40);
   assert(handle->shdr == 0x23D88);
@@ -912,15 +923,86 @@ void test_mapELF64ToHandleFromProcessMemory_legalEhdr()
   free(handle);
 }
 
-/*
- * TODO: Add some more tests for mapELF64ToHandleFromProcessMemory.
-*/
+void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues()
+{
+  /*
+   * Typical Elf64_Ehdr
+  */
+  char buff[] =
+  {
+    0x7f, 0x45, 0x4c, 0x46, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x03, 0x00, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78, 0xfa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x99, 0x99, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x5F, 0x00, 0x0d, 0x00, 0x40, 0x00, 0x27, 0x00, 0x10, 0x00
+  };
+
+  ELF64_EXECUTABLE_HANDLE_T * handle  = NULL;
+  char * pData = buff;
+  int8_t err   = ERR_NONE;
+
+  err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
+  assert(err == ERR_NONE);
+  assert(handle->ehdr->e_type = ET_EXEC);
+  assert(handle->ehdr->e_machine = EM_X86_64);
+  assert(handle->ehdr->e_version = EV_CURRENT);
+  assert(handle->ehdr->e_entry == 0xFA78);
+  assert(handle->ehdr->e_phoff == 0x80);
+  assert(handle->ehdr->e_shoff == 0x99999);
+  assert(handle->ehdr->e_phentsize == 0x5F);
+  assert(handle->ehdr->e_phnum == 13);
+  assert(handle->ehdr->e_shentsize == 0x40);
+  assert(handle->ehdr->e_shnum == 39);
+  assert(handle->ehdr->e_shstrndx == 16);
+  assert(handle->isExecuting == TRUE);
+  assert(handle->phdr == 0x80);
+  assert(handle->shdr == 0x99999);
+  assert(handle->fileHandle.p_data == handle->fileHandle.p_data_seekPtr);
+
+  free(handle);
+}
+
+void unittest_mapELF64ToHandleFromProcessMemory_illegalEhdr()
+{
+  /*
+   * Typical Elf64_Ehdr
+  */
+  char buff[] =
+  {
+    0x00, 0x00, 0x00, 0x00, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  ELF64_EXECUTABLE_HANDLE_T * handle  = NULL;
+  char * pData = buff;
+  int8_t err   = ERR_NONE;
+
+  err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
+  assert(err == ERR_INVALID_ARGUMENT);
+  assert(handle == NULL);
+}
+
+void unittest_mapELF64ToHandleFromProcessMemory_nullMemoryPtr()
+{
+  char * ptr = NULL;
+  ELF64_EXECUTABLE_HANDLE_T * handle  = NULL;
+  int8_t err   = ERR_NONE;
+
+  err = mapELF64ToHandleFromProcessMemory(&ptr, &handle);
+  assert(err == ERR_NULL_ARGUMENT);
+  assert(handle == NULL);
+
+  err = mapELF64ToHandleFromProcessMemory(NULL, &handle);
+  assert(err == ERR_NULL_ARGUMENT);
+  assert(handle == NULL);
+}
 
 void elfDynamicTestSuite()
 {
   unittest_printMmapFlags();
   unittest_isRepeatedSyscallX64_legalUsage();
 
-  test_mapELF64ToHandleFromProcessMemory_legalEhdr();
+  unittest_mapELF64ToHandleFromProcessMemory_legalEhdr();
+  unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues();
+  unittest_mapELF64ToHandleFromProcessMemory_illegalEhdr();
+  unittest_mapELF64ToHandleFromProcessMemory_nullMemoryPtr();
 }
 #endif /* UNITTEST */
