@@ -82,7 +82,7 @@ int main(int argc, char *argv[], char *envp[])
     }
     else
     {
-      mapELFToHandleFromPID(pidStr, elfHandle);
+      mapELFToHandleFromPID(pidStr, &elfHandle);
     }
   }
 

@@ -25,18 +25,30 @@ typedef struct ELF32_EXECUTABLE
     Elf32_Shdr*               shdr;
     REGS                      regs;
     pid_t                     pid;
+    uint64_t *                pTextSeg;
+    uint64_t *                pDataSeg;
+    uint64_t *                pBssSeg;
+    uint64_t                  textSegSize;
+    uint64_t                  dataSegSize;
+    uint64_t                  bssSegSize;
     int8_t                    isExecuting;
 }ELF32_EXECUTABLE_HANDLE_T;
 
 typedef struct ELF64_EXECUTABLE
 {
-    FILE_HANDLE_T           fileHandle;
-    Elf64_Ehdr*             ehdr;
-    Elf64_Phdr*             phdr;
-    Elf64_Shdr*             shdr;
-    REGS                    regs;
-    pid_t                   pid;
-    int8_t                  isExecuting;
+    FILE_HANDLE_T             fileHandle;
+    Elf64_Ehdr*               ehdr;
+    Elf64_Phdr*               phdr;
+    Elf64_Shdr*               shdr;
+    REGS                      regs;
+    pid_t                     pid;
+    uint64_t *                pTextSeg;
+    uint64_t *                pDataSeg;
+    uint64_t *                pBssSeg;
+    uint64_t                  textSegSize;
+    uint64_t                  dataSegSize;
+    uint64_t                  bssSegSize;
+    int8_t                    isExecuting;
 }ELF64_EXECUTABLE_HANDLE_T;
 
 typedef union ELF_EXECUTABLE

@@ -1433,7 +1433,11 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
  * to the pointer pointed to by 'pData'.
  * (This function may be made none-static at a later date.)
 */
-static int8_t readProcessPIDMap(char* pidStr, void ** pData, pid_t pid, char* searchStr)
+static int8_t readProcessPIDMap(const char*     pidStr,
+                                void **          pData,
+                                pid_t              pid,
+                                const char * searchStr,
+                                uint64_t * mappingSize)
 {
   char path[20]  = "/proc/";
   char pathEnd[] = "/maps";
@@ -1467,6 +1471,7 @@ static int8_t readProcessPIDMap(char* pidStr, void ** pData, pid_t pid, char* se
       // We've found the line giving the memory mapping range.
       err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
       addrRange = endAddr - startAddr;
+      *mappingSize = addrRange;
 
       if((addrRange % PAGE_SIZE) != 0)
       {
@@ -1510,12 +1515,13 @@ cleanup:
   return err;
 }
 
-int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle)
 {
   uint8_t * pMem = NULL;
   pid_t pid = 0;
   int8_t err = ERR_NONE;
   enum BITS arch = T_NO_ELF;
+  uint64_t mappingSize = 0;
 
   err = stringToInteger(pidStr, &pid);
   if(err != ERR_NONE || pid == 0)
@@ -1528,7 +1534,7 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
     return ERR_PROCESS_ATTACH_FAILED;
   }
 
-  err = readProcessPIDMap(pidStr, &pMem, pid, "r--p");
+  err = readProcessPIDMap(pidStr, &pMem, pid, "r--p", &mappingSize);
   if(err != ERR_NONE)
   {
     return err;
@@ -1538,7 +1544,7 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
 
   if(arch == T_64)
   {
-    err = mapELF64ToHandleFromProcessMemory(&pMem, &elfHandle);
+    err = mapELF64ToHandleFromProcessMemory(&pMem, (ELF64_EXECUTABLE_HANDLE_T *) (*elfHandle));
   }
   else if(arch == T_32)
   {
@@ -1549,6 +1555,7 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
   {
     err = ERR_PROCESS_ATTACH_FAILED;
   }
+  free(pMem);
   return err;
 }
 
