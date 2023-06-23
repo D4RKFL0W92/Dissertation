@@ -32,6 +32,8 @@
 
 #define ERR_ILLEGAL_MAPPING_SIZE       40
 
+#define ERR_ELF_BINARY_STRIPPED        50 // NOT a critical error but useful to check for.
+
 #define TRUE_STR         "TRUE"
 #define FALSE_STR        "FALSE"
 
