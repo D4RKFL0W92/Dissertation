@@ -928,8 +928,6 @@ static void unittest_isRepeatedSyscallX64_legalUsage()
   assert(isRepeated == TRUE);
 }
 
-
-
 void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr()
 {
   /*
@@ -938,6 +936,46 @@ void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr()
   char buff[] =
   {
     0x7f, 0x45, 0x4c, 0x46, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x02, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x70, 0x10, 0x00, 0x00, 0x34, 0x00, 0x00, 0x00,
+    0xe0, 0x35, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34, 0x00, 0x20, 0x00, 0x0b, 0x00, 0x28, 0x00,
+    0x1e, 0x00, 0x1d, 0x00, 0x06, 0x40
+  };
+
+  ELF32_EXECUTABLE_HANDLE_T * handle  = NULL;
+  char * pData = buff;
+  int8_t err   = ERR_NONE;
+
+  err = mapELF32ToHandleFromProcessMemory(&pData, &handle);
+  assert(err == ERR_NONE);
+  assert(handle->ehdr->e_ident[EI_DATA] == ELFDATA2LSB);
+  assert(handle->ehdr->e_ident[EI_VERSION] == EV_CURRENT);
+  assert(handle->ehdr->e_type == ET_EXEC);
+  assert(handle->ehdr->e_machine == EM_386);
+  assert(handle->ehdr->e_version == EV_CURRENT);
+  assert(handle->ehdr->e_entry == 0x1070);
+  assert(handle->ehdr->e_phoff == 0x34);
+  assert(handle->ehdr->e_shoff == 0x35e0);
+  assert(handle->ehdr->e_phentsize == 0x20);
+  assert(handle->ehdr->e_phnum == 0x0B);
+  assert(handle->ehdr->e_shentsize == 0x28);
+  assert(handle->ehdr->e_shnum == 0x1e);
+  assert(handle->ehdr->e_shstrndx == 0x1d);
+  assert(handle->isExecuting == TRUE);
+  assert(handle->phdr == 0x34);
+  assert(handle->shdr == 0x35e0);
+  assert(handle->fileHandle.p_data == handle->fileHandle.p_data_seekPtr);
+
+  free(handle);
+}
+
+void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr_differentValues()
+{
+  /*
+   * Typical Elf32_Ehdr
+  */
+  char buff[] =
+  {
+    0x7f, 0x45, 0x4c, 0x46, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x03, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x70, 0x10, 0x00, 0x00, 0x34, 0x00, 0x00, 0x00,
     0xe0, 0x35, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34, 0x00, 0x20, 0x00, 0x0b, 0x00, 0x28, 0x00,
     0x1e, 0x00, 0x1d, 0x00, 0x06, 0x40
@@ -949,17 +987,19 @@ void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr()
 
   err = mapELF32ToHandleFromProcessMemory(&pData, &handle);
   assert(err == ERR_NONE);
-  assert(handle->ehdr->e_type = ET_EXEC);
-  assert(handle->ehdr->e_machine = EM_386);
-  assert(handle->ehdr->e_version = EV_CURRENT);
+  assert(handle->ehdr->e_ident[EI_DATA] == ELFDATA2MSB);
+  assert(handle->ehdr->e_ident[EI_VERSION] == EV_NONE);
+  assert(handle->ehdr->e_type == ET_DYN);
+  assert(handle->ehdr->e_machine == EM_386);
+  assert(handle->ehdr->e_version == EV_CURRENT);
   assert(handle->ehdr->e_entry == 0x1070);
   assert(handle->ehdr->e_phoff == 0x34);
   assert(handle->ehdr->e_shoff == 0x35e0);
-  assert(handle->ehdr->e_phentsize == 0x20); // This seems wrong, TODO: Check this.
+  assert(handle->ehdr->e_phentsize == 0x20);
   assert(handle->ehdr->e_phnum == 0x0B);
   assert(handle->ehdr->e_shentsize == 0x28);
   assert(handle->ehdr->e_shnum == 0x1e);
-  assert(handle->ehdr->e_shstrndx == 0x1d); // This seems wrong, TODO: Check this.
+  assert(handle->ehdr->e_shstrndx == 0x1d);
   assert(handle->isExecuting == TRUE);
   assert(handle->phdr == 0x34);
   assert(handle->shdr == 0x35e0);
@@ -991,7 +1031,7 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr()
   char buff[] =
   {
     0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x03, 0x00, 0x3e, 0x00, 0x01, 0x00, 0x00, 0x00, 0x90, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x02, 0x00, 0x3e, 0x00, 0x01, 0x00, 0x00, 0x00, 0x90, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x3d, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x38, 0x00, 0x0d, 0x00, 0x40, 0x00, 0x25, 0x00, 0x24, 0x00
   };
@@ -1002,9 +1042,11 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr()
 
   err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
   assert(err == ERR_NONE);
-  assert(handle->ehdr->e_type = ET_EXEC);
-  assert(handle->ehdr->e_machine = EM_X86_64);
-  assert(handle->ehdr->e_version = EV_CURRENT);
+  assert(handle->ehdr->e_ident[EI_DATA] == ELFDATA2LSB);
+  assert(handle->ehdr->e_ident[EI_VERSION] == EV_CURRENT);
+  assert(handle->ehdr->e_type == ET_EXEC);
+  assert(handle->ehdr->e_machine == EM_X86_64);
+  assert(handle->ehdr->e_version == EV_CURRENT);
   assert(handle->ehdr->e_entry == 0x1290);
   assert(handle->ehdr->e_phoff == 0x40);
   assert(handle->ehdr->e_shoff == 0x23d88);
@@ -1028,8 +1070,8 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues()
   */
   char buff[] =
   {
-    0x7f, 0x45, 0x4c, 0x46, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x03, 0x00, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78, 0xfa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x7f, 0x45, 0x4c, 0x46, 0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78, 0xfa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x99, 0x99, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x5F, 0x00, 0x0d, 0x00, 0x40, 0x00, 0x27, 0x00, 0x10, 0x00
   };
@@ -1040,9 +1082,11 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues()
 
   err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
   assert(err == ERR_NONE);
-  assert(handle->ehdr->e_type = ET_EXEC);
-  assert(handle->ehdr->e_machine = EM_X86_64);
-  assert(handle->ehdr->e_version = EV_CURRENT);
+  assert(handle->ehdr->e_ident[EI_DATA] == ELFDATA2MSB);
+  assert(handle->ehdr->e_ident[EI_VERSION] == EV_NONE);
+  assert(handle->ehdr->e_type == ET_CORE);
+  assert(handle->ehdr->e_machine == EM_X86_64);
+  assert(handle->ehdr->e_version == EV_NONE);
   assert(handle->ehdr->e_entry == 0xFA78);
   assert(handle->ehdr->e_phoff == 0x80);
   assert(handle->ehdr->e_shoff == 0x99999);
@@ -1057,25 +1101,6 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues()
   assert(handle->fileHandle.p_data == handle->fileHandle.p_data_seekPtr);
 
   free(handle);
-}
-
-void unittest_mapELF64ToHandleFromProcessMemory_illegalEhdr()
-{
-  /*
-   * Typical Elf64_Ehdr
-  */
-  char buff[] =
-  {
-    0x00, 0x00, 0x00, 0x00, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-  };
-
-  ELF64_EXECUTABLE_HANDLE_T * handle  = NULL;
-  char * pData = buff;
-  int8_t err   = ERR_NONE;
-
-  err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
-  assert(err == ERR_INVALID_ARGUMENT);
-  assert(handle == NULL);
 }
 
 void unittest_mapELF64ToHandleFromProcessMemory_nullMemoryPtr()
@@ -1099,6 +1124,7 @@ void elfDynamicTestSuite()
   unittest_isRepeatedSyscallX64_legalUsage();
 
   unittest_mapELF32ToHandleFromProcessMemory_legalEhdr();
+  unittest_mapELF32ToHandleFromProcessMemory_legalEhdr_differentValues();
   unittest_mapELF32ToHandleFromProcessMemory_nullMemoryPtr();
 
   unittest_mapELF64ToHandleFromProcessMemory_legalEhdr();
