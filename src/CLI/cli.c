@@ -242,6 +242,15 @@ int main(int argc, char *argv[], char *envp[])
   #endif
 
   }while(i++ < targetFileIndex);
+
+  // Free All possible dynamic memory areas associated with a Handle.
+  free(elfHandle->elfHandle64.pTextSeg);
+  free(elfHandle->elfHandle64.pDataSeg);
+  free(elfHandle->elfHandle64.pBssSeg);
+
+  free(elfHandle->elfHandle32.pTextSeg);
+  free(elfHandle->elfHandle32.pDataSeg);
+  free(elfHandle->elfHandle32.pBssSeg);
   
   free(elfHandle);
   /* Check if fileHandle needs cleaning up. */

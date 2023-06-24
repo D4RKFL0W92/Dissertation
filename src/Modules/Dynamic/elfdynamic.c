@@ -804,38 +804,45 @@ int8_t mapELF32ToHandleFromProcessMemory(void ** pMem, ELF32_EXECUTABLE_HANDLE_T
   if(pMem == NULL || (*pMem) == NULL)
   {
     #ifdef DEBUG
-    perror("ERROR null parameter passed to mapELF32ToHandleFromProcessMemory()");
+    perror("ERROR null parameter passed to mapELF64ToHandleFromProcessMemory()");
     #endif
     return ERR_NULL_ARGUMENT;
   }
 
-  (*elfHandle) = malloc(sizeof(ELF32_EXECUTABLE_HANDLE_T));
   if((*elfHandle) == NULL)
   {
     #ifdef DEBUG
-    perror("ERROR allocating memory in mapELF32ToHandleFromProcessMemory()");
+    perror("ERROR allocating memory in mapELF64ToHandleFromProcessMemory()");
     #endif
     return ERR_MEMORY_ALLOCATION_FAILED;
   }
   
-  // Set all fields to zero as we want to set them here.
-  memset((*elfHandle), 0, sizeof(ELF32_EXECUTABLE_HANDLE_T));
-
-  (*elfHandle)->fileHandle.p_data = (*elfHandle)->fileHandle.p_data_seekPtr = (*pMem);
-  (*elfHandle)->isExecuting       = TRUE;
+  if((*elfHandle)->textSegSize == 0)
+  {
+    #ifdef DEBUG
+    perror("ERROR invalid parameter in mapELF64ToHandleFromProcessMemory()");
+    #endif
+    return ERR_INVALID_ARGUMENT;
+  }
+  memcpy((*elfHandle)->pTextSeg, (*pMem), (*elfHandle)->textSegSize);
   
-  memcpy(&(*elfHandle)->ehdr, &(*pMem), sizeof(Elf32_Ehdr));
-  (*elfHandle)->phdr = (*elfHandle)->ehdr->e_phoff;
-
-  if((*elfHandle)->ehdr->e_shoff == 0 ||
-     (*elfHandle)->ehdr->e_shnum == 0 ||
+  (*elfHandle)->isExecuting = TRUE;
+  
+  /* Point the all headers to there respective offsets. */
+  (*elfHandle)->ehdr  = (Elf32_Ehdr *)  (*elfHandle)->pTextSeg;
+  (*elfHandle)->phdr  = (Elf32_Phdr *) &(*elfHandle)->pTextSeg[ (*elfHandle)->ehdr->e_phoff ];
+  
+  if((*elfHandle)->ehdr->e_shoff     == 0 ||
+     (*elfHandle)->ehdr->e_shnum     == 0 ||
      (*elfHandle)->ehdr->e_shentsize == 0)
   {
     err = ERR_ELF_BINARY_STRIPPED;
   }
-
-  (*elfHandle)->shdr = (*elfHandle)->ehdr->e_shoff;
-
+  else
+  {
+    (*elfHandle)->shdr  = (Elf32_Shdr *) &(*elfHandle)->pTextSeg[ (*elfHandle)->ehdr->e_shoff ];
+  }
+  
   return ERR_NONE;
 }
 
@@ -852,7 +859,6 @@ int8_t mapELF64ToHandleFromProcessMemory(void ** pMem, ELF64_EXECUTABLE_HANDLE_T
     return ERR_NULL_ARGUMENT;
   }
 
-  (*elfHandle) = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
   if((*elfHandle) == NULL)
   {
     #ifdef DEBUG
@@ -861,24 +867,32 @@ int8_t mapELF64ToHandleFromProcessMemory(void ** pMem, ELF64_EXECUTABLE_HANDLE_T
     return ERR_MEMORY_ALLOCATION_FAILED;
   }
   
-  // Set all fields to zero as we want to set them here.
-  memset((*elfHandle), 0, sizeof(ELF64_EXECUTABLE_HANDLE_T));
-
-  (*elfHandle)->fileHandle.p_data = (*elfHandle)->fileHandle.p_data_seekPtr = (*pMem);
-  (*elfHandle)->isExecuting       = TRUE;
+  if((*elfHandle)->textSegSize == 0)
+  {
+    #ifdef DEBUG
+    perror("ERROR invalid parameter in mapELF64ToHandleFromProcessMemory()");
+    #endif
+    return ERR_INVALID_ARGUMENT;
+  }
+  memcpy((*elfHandle)->pTextSeg, (*pMem), (*elfHandle)->textSegSize);
   
-  memcpy(&(*elfHandle)->ehdr, &(*pMem), sizeof(Elf64_Ehdr));
-  (*elfHandle)->phdr = (*elfHandle)->ehdr->e_phoff;
+  (*elfHandle)->isExecuting = TRUE;
   
-  if((*elfHandle)->ehdr->e_shoff == 0 ||
-     (*elfHandle)->ehdr->e_shnum == 0 ||
+  /* Point the all headers to there respective offsets. */
+  (*elfHandle)->ehdr  = (Elf64_Ehdr *)  (*elfHandle)->pTextSeg;
+  (*elfHandle)->phdr  = (Elf64_Phdr *) &(*elfHandle)->pTextSeg[ (*elfHandle)->ehdr->e_phoff ];
+  
+  if((*elfHandle)->ehdr->e_shoff     == 0 ||
+     (*elfHandle)->ehdr->e_shnum     == 0 ||
      (*elfHandle)->ehdr->e_shentsize == 0)
   {
     err = ERR_ELF_BINARY_STRIPPED;
   }
+  else
+  {
+    (*elfHandle)->shdr  = (Elf64_Shdr *) &(*elfHandle)->pTextSeg[ (*elfHandle)->ehdr->e_shoff ];
+  }
   
-  (*elfHandle)->shdr = (*elfHandle)->ehdr->e_shoff;
-
   return ERR_NONE;
 }
 
@@ -945,6 +959,10 @@ void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr()
   char * pData = buff;
   int8_t err   = ERR_NONE;
 
+  handle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
+  handle->pTextSeg = malloc(sizeof(buff));
+  handle->textSegSize = sizeof(buff);
+
   err = mapELF32ToHandleFromProcessMemory(&pData, &handle);
   assert(err == ERR_NONE);
   assert(handle->ehdr->e_ident[EI_DATA] == ELFDATA2LSB);
@@ -961,17 +979,15 @@ void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr()
   assert(handle->ehdr->e_shnum == 0x1e);
   assert(handle->ehdr->e_shstrndx == 0x1d);
   assert(handle->isExecuting == TRUE);
-  assert(handle->phdr == 0x34);
-  assert(handle->shdr == 0x35e0);
-  assert(handle->fileHandle.p_data == handle->fileHandle.p_data_seekPtr);
 
+  free(handle->pTextSeg);
   free(handle);
 }
 
 void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr_differentValues()
 {
   /*
-   * Typical Elf32_Ehdr
+   * Typical Elf32_Ehdr (Different Values)
   */
   char buff[] =
   {
@@ -984,6 +1000,10 @@ void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr_differentValues()
   ELF32_EXECUTABLE_HANDLE_T * handle  = NULL;
   char * pData = buff;
   int8_t err   = ERR_NONE;
+
+  handle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
+  handle->pTextSeg = malloc(sizeof(buff));
+  handle->textSegSize = sizeof(buff);
 
   err = mapELF32ToHandleFromProcessMemory(&pData, &handle);
   assert(err == ERR_NONE);
@@ -1001,10 +1021,8 @@ void unittest_mapELF32ToHandleFromProcessMemory_legalEhdr_differentValues()
   assert(handle->ehdr->e_shnum == 0x1e);
   assert(handle->ehdr->e_shstrndx == 0x1d);
   assert(handle->isExecuting == TRUE);
-  assert(handle->phdr == 0x34);
-  assert(handle->shdr == 0x35e0);
-  assert(handle->fileHandle.p_data == handle->fileHandle.p_data_seekPtr);
 
+  free(handle->pTextSeg);
   free(handle);
 }
 
@@ -1040,6 +1058,10 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr()
   char * pData = buff;
   int8_t err   = ERR_NONE;
 
+  handle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
+  handle->pTextSeg = malloc(sizeof(buff));
+  handle->textSegSize = sizeof(buff);
+
   err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
   assert(err == ERR_NONE);
   assert(handle->ehdr->e_ident[EI_DATA] == ELFDATA2LSB);
@@ -1056,17 +1078,15 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr()
   assert(handle->ehdr->e_shnum == 37);
   assert(handle->ehdr->e_shstrndx == 36);
   assert(handle->isExecuting == TRUE);
-  assert(handle->phdr == 0x40);
-  assert(handle->shdr == 0x23D88);
-  assert(handle->fileHandle.p_data == handle->fileHandle.p_data_seekPtr);
 
+  free(handle->pTextSeg);
   free(handle);
 }
 
 void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues()
 {
   /*
-   * Typical Elf64_Ehdr
+   * Typical Elf64_Ehdr (Different values)
   */
   char buff[] =
   {
@@ -1079,6 +1099,10 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues()
   ELF64_EXECUTABLE_HANDLE_T * handle  = NULL;
   char * pData = buff;
   int8_t err   = ERR_NONE;
+
+  handle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
+  handle->pTextSeg = malloc(sizeof(buff));
+  handle->textSegSize = sizeof(buff);
 
   err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
   assert(err == ERR_NONE);
@@ -1096,10 +1120,8 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues()
   assert(handle->ehdr->e_shnum == 39);
   assert(handle->ehdr->e_shstrndx == 16);
   assert(handle->isExecuting == TRUE);
-  assert(handle->phdr == 0x80);
-  assert(handle->shdr == 0x99999);
-  assert(handle->fileHandle.p_data == handle->fileHandle.p_data_seekPtr);
 
+  free(handle->pTextSeg);
   free(handle);
 }
 

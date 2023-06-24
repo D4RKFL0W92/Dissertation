@@ -20,14 +20,14 @@ typedef struct user_regs_struct REGS;
 typedef struct ELF32_EXECUTABLE
 {
     FILE_HANDLE_T             fileHandle;
-    Elf32_Ehdr*               ehdr;
-    Elf32_Phdr*               phdr;
-    Elf32_Shdr*               shdr;
+    Elf32_Ehdr *              ehdr;
+    Elf32_Phdr *              phdr;
+    Elf32_Shdr *              shdr;
     REGS                      regs;
     pid_t                     pid;
-    uint64_t *                pTextSeg;
-    uint64_t *                pDataSeg;
-    uint64_t *                pBssSeg;
+    void *                    pTextSeg;
+    void *                    pDataSeg;
+    void *                    pBssSeg;
     uint64_t                  textSegSize;
     uint64_t                  dataSegSize;
     uint64_t                  bssSegSize;
@@ -37,14 +37,14 @@ typedef struct ELF32_EXECUTABLE
 typedef struct ELF64_EXECUTABLE
 {
     FILE_HANDLE_T             fileHandle;
-    Elf64_Ehdr*               ehdr;
-    Elf64_Phdr*               phdr;
-    Elf64_Shdr*               shdr;
+    Elf64_Ehdr *              ehdr;
+    Elf64_Phdr *              phdr;
+    Elf64_Shdr *              shdr;
     REGS                      regs;
     pid_t                     pid;
-    uint64_t *                pTextSeg;
-    uint64_t *                pDataSeg;
-    uint64_t *                pBssSeg;
+    void *                    pTextSeg;
+    void *                    pDataSeg;
+    void *                    pBssSeg;
     uint64_t                  textSegSize;
     uint64_t                  dataSegSize;
     uint64_t                  bssSegSize;

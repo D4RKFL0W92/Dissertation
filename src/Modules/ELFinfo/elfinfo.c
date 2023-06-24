@@ -1517,6 +1517,8 @@ cleanup:
 
 int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle)
 {
+  ELF64_EXECUTABLE_HANDLE_T * elf64 = NULL;
+  ELF32_EXECUTABLE_HANDLE_T * elf32 = NULL;
   uint8_t * pMem = NULL;
   pid_t pid = 0;
   int8_t err = ERR_NONE;
@@ -1537,20 +1539,29 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle)
   err = readProcessPIDMap(pidStr, &pMem, pid, "r--p", &mappingSize);
   if(err != ERR_NONE)
   {
-    return err;
+    goto cleanup;
   }
 
   arch = isELF(pMem);
 
   if(arch == T_64)
   {
-    err = mapELF64ToHandleFromProcessMemory(&pMem, (ELF64_EXECUTABLE_HANDLE_T *) (*elfHandle));
+    elf64 = malloc(sizeof(mappingSize));
+    if(elf64 == NULL)
+    {
+      err = ERR_MEMORY_ALLOCATION_FAILED;
+    }
+    elf64->textSegSize = mappingSize;
+    elf64->pTextSeg = malloc(mappingSize);
+    
+    err = mapELF64ToHandleFromProcessMemory(&pMem, (ELF64_EXECUTABLE_HANDLE_T **) &elf64);
   }
   else if(arch == T_32)
   {
 
   }
 
+cleanup:
   if(ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0)
   {
     err = ERR_PROCESS_ATTACH_FAILED;
