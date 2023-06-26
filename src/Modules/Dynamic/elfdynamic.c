@@ -779,7 +779,7 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, ch
     return ERR_NULL_ARGUMENT;
   }
 
-  switch (executableHandle->elfHandle64.ehdr->e_ident[EI_CLASS])
+  switch (executableHandle->elfHandle64->ehdr->e_ident[EI_CLASS])
   {
     case ELFCLASS64:
       err = launchSyscallTraceElf64((ELF64_EXECUTABLE_HANDLE_T *) executableHandle, childArgc, childArgs, envp);
@@ -846,7 +846,7 @@ int8_t mapELF32ToHandleFromProcessMemory(void ** pMem, ELF32_EXECUTABLE_HANDLE_T
   return ERR_NONE;
 }
 
-int8_t mapELF64ToHandleFromProcessMemory(void ** pMem, ELF64_EXECUTABLE_HANDLE_T ** elfHandle)
+int8_t mapELF64ToHandleFromProcessMemory(void ** pMem, ELF64_EXECUTABLE_HANDLE_T ** elfHandle, const uint64_t uCount)
 {
   enum BITS arch = T_NO_ELF;
   int8_t err     = ERR_NONE;
@@ -867,14 +867,15 @@ int8_t mapELF64ToHandleFromProcessMemory(void ** pMem, ELF64_EXECUTABLE_HANDLE_T
     return ERR_MEMORY_ALLOCATION_FAILED;
   }
   
-  if((*elfHandle)->textSegSize == 0)
+  if(uCount == 0)
   {
     #ifdef DEBUG
     perror("ERROR invalid parameter in mapELF64ToHandleFromProcessMemory()");
     #endif
     return ERR_INVALID_ARGUMENT;
   }
-  memcpy((*elfHandle)->pTextSeg, (*pMem), (*elfHandle)->textSegSize);
+  (*elfHandle)->pTextSeg = malloc(uCount);
+  memcpy((*elfHandle)->pTextSeg, (*pMem), uCount);
   
   (*elfHandle)->isExecuting = TRUE;
   
@@ -1059,10 +1060,8 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr()
   int8_t err   = ERR_NONE;
 
   handle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
-  handle->pTextSeg = malloc(sizeof(buff));
-  handle->textSegSize = sizeof(buff);
 
-  err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
+  err = mapELF64ToHandleFromProcessMemory(&pData, &handle, sizeof(buff));
   assert(err == ERR_NONE);
   assert(handle->ehdr->e_ident[EI_DATA] == ELFDATA2LSB);
   assert(handle->ehdr->e_ident[EI_VERSION] == EV_CURRENT);
@@ -1101,10 +1100,8 @@ void unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues()
   int8_t err   = ERR_NONE;
 
   handle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
-  handle->pTextSeg = malloc(sizeof(buff));
-  handle->textSegSize = sizeof(buff);
 
-  err = mapELF64ToHandleFromProcessMemory(&pData, &handle);
+  err = mapELF64ToHandleFromProcessMemory(&pData, &handle, sizeof(buff));
   assert(err == ERR_NONE);
   assert(handle->ehdr->e_ident[EI_DATA] == ELFDATA2MSB);
   assert(handle->ehdr->e_ident[EI_VERSION] == EV_NONE);
@@ -1131,13 +1128,15 @@ void unittest_mapELF64ToHandleFromProcessMemory_nullMemoryPtr()
   ELF64_EXECUTABLE_HANDLE_T * handle  = NULL;
   int8_t err   = ERR_NONE;
 
-  err = mapELF64ToHandleFromProcessMemory(&ptr, &handle);
+  err = mapELF64ToHandleFromProcessMemory(&ptr, &handle, 1);
   assert(err == ERR_NULL_ARGUMENT);
   assert(handle == NULL);
 
-  err = mapELF64ToHandleFromProcessMemory(NULL, &handle);
+  err = mapELF64ToHandleFromProcessMemory(NULL, &handle, 1);
   assert(err == ERR_NULL_ARGUMENT);
   assert(handle == NULL);
+
+  /* TODO: Add case where uCount == 0 */
 }
 
 void elfDynamicTestSuite()

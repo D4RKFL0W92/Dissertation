@@ -24,6 +24,7 @@ int main(int argc, char *argv[], char *envp[])
   FILE_HANDLE_T fileHandle = {0};
   ELF_EXECUTABLE_T * elfHandle = NULL;
   enum BITS arch;
+  MODE executionMode = UNKNOWN_MODE;
   char pidStr[5] = {0};
   int i = 1;
   BOOL usingPid = FALSE;
@@ -45,6 +46,7 @@ int main(int argc, char *argv[], char *envp[])
         // TODO: Add some sanity checks
         found = TRUE; // We are using a PID instead of path
         usingPid = TRUE;
+        executionMode = PID_MODE;
 
         if(strlen(argv[j]) <= 5)
         {
@@ -55,6 +57,7 @@ int main(int argc, char *argv[], char *envp[])
       }
       else if(strncmp(argv[j], "-", 1) != 0) // First argument that doesn't start with -
       {
+        executionMode = FILE_HANDLE_MODE;
         found = TRUE;
         targetFileIndex = j;
       }
@@ -226,6 +229,11 @@ int main(int argc, char *argv[], char *envp[])
       exit(0);
     }
 
+    else
+    {
+      printf("UNKNOWN ARGUMENT: %s\n", argv[i]);
+    }
+
   /* Debug_Option: Unit tests. */
   #ifdef UNITTEST
     if(strcmp(argv[i], "-u") == 0 ||
@@ -244,13 +252,13 @@ int main(int argc, char *argv[], char *envp[])
   }while(i++ < targetFileIndex);
 
   // Free All possible dynamic memory areas associated with a Handle.
-  free(elfHandle->elfHandle64.pTextSeg);
-  free(elfHandle->elfHandle64.pDataSeg);
-  free(elfHandle->elfHandle64.pBssSeg);
+  free(elfHandle->elfHandle64->pTextSeg);
+  free(elfHandle->elfHandle64->pDataSeg);
+  free(elfHandle->elfHandle64->pBssSeg);
 
-  free(elfHandle->elfHandle32.pTextSeg);
-  free(elfHandle->elfHandle32.pDataSeg);
-  free(elfHandle->elfHandle32.pBssSeg);
+  free(elfHandle->elfHandle32->pTextSeg);
+  free(elfHandle->elfHandle32->pDataSeg);
+  free(elfHandle->elfHandle32->pBssSeg);
   
   free(elfHandle);
   /* Check if fileHandle needs cleaning up. */

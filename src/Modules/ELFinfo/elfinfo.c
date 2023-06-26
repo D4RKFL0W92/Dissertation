@@ -1542,23 +1542,43 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle)
     goto cleanup;
   }
 
+  if(mappingSize == 0)
+  {
+    err = ERR_UNKNOWN;
+    goto cleanup;
+  }
+
   arch = isELF(pMem);
 
   if(arch == T_64)
   {
-    elf64 = malloc(sizeof(mappingSize));
-    if(elf64 == NULL)
-    {
-      err = ERR_MEMORY_ALLOCATION_FAILED;
-    }
-    elf64->textSegSize = mappingSize;
-    elf64->pTextSeg = malloc(mappingSize);
+    *elfHandle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
+    // if(elf64 == NULL)
+    // {
+    //   err = ERR_MEMORY_ALLOCATION_FAILED;
+    // }
     
-    err = mapELF64ToHandleFromProcessMemory(&pMem, (ELF64_EXECUTABLE_HANDLE_T **) &elf64);
+    err = mapELF64ToHandleFromProcessMemory(&pMem, (ELF64_EXECUTABLE_HANDLE_T **) &elfHandle, mappingSize);
+    // if(elf64 != NULL)
+    // {
+    //   (*elfHandle)->elfHandle64 = (ELF64_EXECUTABLE_HANDLE_T *) elf64;
+    // }
   }
   else if(arch == T_32)
   {
-
+    elf32 = malloc(sizeof(ELF32_EXECUTABLE_HANDLE_T));
+    if(elf32 == NULL)
+    {
+      err = ERR_MEMORY_ALLOCATION_FAILED;
+    }
+    elf32->textSegSize = mappingSize;
+    elf32->pTextSeg = malloc(mappingSize);
+    
+    err = mapELF32ToHandleFromProcessMemory(&pMem, (ELF32_EXECUTABLE_HANDLE_T **) &elf32);
+    if(err == ERR_NONE)
+    {
+      (*elfHandle)->elfHandle32 = (ELF32_EXECUTABLE_HANDLE_T *) elf32;
+    }
   }
 
 cleanup:
