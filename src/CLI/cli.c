@@ -23,12 +23,12 @@ int main(int argc, char *argv[], char *envp[])
 {
   FILE_HANDLE_T fileHandle = {0};
   ELF_EXECUTABLE_T * elfHandle = NULL;
-  enum BITS arch;
+  enum BITS arch = T_NO_ELF;
   MODE executionMode = UNKNOWN_MODE;
   char pidStr[5] = {0};
-  int i = 1;
   BOOL usingPid = FALSE;
   int targetFileIndex = 0;
+  int i = 1;
   uint8_t err = ERR_NONE;
 
   if(argc < 2 || strcmp(argv[1], "-h") == 0)
@@ -54,12 +54,14 @@ int main(int argc, char *argv[], char *envp[])
           exit(ERR_INVALID_ARGUMENT);
         }
         strncpy(pidStr, &argv[j][5], 5);
+        break;
       }
       else if(strncmp(argv[j], "-", 1) != 0) // First argument that doesn't start with -
       {
         executionMode = FILE_HANDLE_MODE;
         found = TRUE;
         targetFileIndex = j;
+        break;
       }
     }
     
@@ -81,11 +83,10 @@ int main(int argc, char *argv[], char *envp[])
       {
         mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
       }
-
     }
     else
     {
-      mapELFToHandleFromPID(pidStr, &elfHandle);
+      mapELFToHandleFromPID(pidStr, &elfHandle, &arch);
     }
   }
 
@@ -150,7 +151,7 @@ int main(int argc, char *argv[], char *envp[])
      * Option:
      * Lookup address of ELF symbol.
     */
-    else if(!strcmp(argv[i], "-lookup"))
+    else if(strcmp(argv[i], "-lookup") == 0)
     {
       uint64_t addr;
 
@@ -164,7 +165,8 @@ int main(int argc, char *argv[], char *envp[])
     }
 
     /* Option: Trace execution of an executable file. */
-    else if(strcmp(argv[i], "-trace") == 0)
+    else if(strcmp(argv[i], "-trace") == 0 &&
+            executionMode == FILE_HANDLE_MODE)
     {
       // TODO: Add some sanity checks
       launchTraceProgram(elfHandle, argc-targetFileIndex, &argv[targetFileIndex], envp);
@@ -172,7 +174,7 @@ int main(int argc, char *argv[], char *envp[])
     }
 
     /* Option: Print SHA1 of given file. */
-    else if(!strcmp(argv[i], "-sha1"))
+    else if(strcmp(argv[i], "-sha1") == 0)
     {
       if(printSHA1OfFile(argv[targetFileIndex]) == ERR_UNKNOWN)
       {
@@ -183,8 +185,10 @@ int main(int argc, char *argv[], char *envp[])
     
 
     /* Option: Dump hex bytes from given offset.*/
-    else if(!strcmp(argv[i], "-hd"))
+    else if(strcmp(argv[i], "-hd") == 0 &&
+            executionMode == UNKNOWN_MODE)
     {
+      // Only makes sense for UNKNOWN_MODE
       uint8_t err = ERR_NONE;
       uint64_t start = 0;
       uint64_t uCount = 0;
@@ -213,9 +217,16 @@ int main(int argc, char *argv[], char *envp[])
     }
 
     /* Option: Dump ASCII strings. */
-    else if(!strcmp(argv[i], "-s")) /* TODO: Adapt this functionality to handle searching for strings of a given size. */
+    else if(!strcmp(argv[i], "-s"))
     {
-      scanFileForStrings(argv[targetFileIndex], 3);
+      if(executionMode == PID_MODE)
+      {
+        /* TODO: Implement this for PID option. */
+      }
+      else
+      {
+        scanFileForStrings(argv[targetFileIndex], 3);
+      }
     }
 
     /* Option: Convert a hex passed as argument after switch value to decimal. */
@@ -229,10 +240,7 @@ int main(int argc, char *argv[], char *envp[])
       exit(0);
     }
 
-    else
-    {
-      printf("UNKNOWN ARGUMENT: %s\n", argv[i]);
-    }
+    /* TODO: Find a way to print out any unknown commands the user provides. */
 
   /* Debug_Option: Unit tests. */
   #ifdef UNITTEST
@@ -251,16 +259,28 @@ int main(int argc, char *argv[], char *envp[])
 
   }while(i++ < targetFileIndex);
 
-  // Free All possible dynamic memory areas associated with a Handle.
-  free(elfHandle->elfHandle64->pTextSeg);
-  free(elfHandle->elfHandle64->pDataSeg);
-  free(elfHandle->elfHandle64->pBssSeg);
+  if(arch == T_64)
+  {
+    ELF64_EXECUTABLE_HANDLE_T * elf = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+    free(elf->pTextSeg);
+    free(elf->pDataSeg);
+    free(elf->pBssSeg);
+    free(elfHandle);
+  }
+  else if(arch == T_32)
+  {
+    ELF32_EXECUTABLE_HANDLE_T * elf = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+    free(elf->pTextSeg);
+    free(elf->pDataSeg);
+    free(elf->pBssSeg);
+    free(elfHandle);
+  }
+  else
+  {
+    free(elfHandle);
+  }
 
-  free(elfHandle->elfHandle32->pTextSeg);
-  free(elfHandle->elfHandle32->pDataSeg);
-  free(elfHandle->elfHandle32->pBssSeg);
-  
-  free(elfHandle);
+  // Free All possible dynamic memory areas associated with a Handle.
   /* Check if fileHandle needs cleaning up. */
   if(fileHandle.p_data && fileHandle.st.st_size > 0)
   {

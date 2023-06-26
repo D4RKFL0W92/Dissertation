@@ -1515,15 +1515,14 @@ cleanup:
   return err;
 }
 
-int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle)
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle, enum BITS * pArch)
 {
-  ELF64_EXECUTABLE_HANDLE_T * elf64 = NULL;
-  ELF32_EXECUTABLE_HANDLE_T * elf32 = NULL;
   uint8_t * pMem = NULL;
-  pid_t pid = 0;
-  int8_t err = ERR_NONE;
-  enum BITS arch = T_NO_ELF;
-  uint64_t mappingSize = 0;
+  pid_t     pid = 0;
+  uint64_t  mappingSize = 0;
+  int8_t    err = ERR_NONE;
+
+  *pArch = T_NO_ELF;
 
   err = stringToInteger(pidStr, &pid);
   if(err != ERR_NONE || pid == 0)
@@ -1548,37 +1547,30 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle)
     goto cleanup;
   }
 
-  arch = isELF(pMem);
+  *pArch = isELF(pMem);
 
-  if(arch == T_64)
+  if(*pArch == T_64)
   {
     *elfHandle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
-    // if(elf64 == NULL)
-    // {
-    //   err = ERR_MEMORY_ALLOCATION_FAILED;
-    // }
-    
-    err = mapELF64ToHandleFromProcessMemory(&pMem, (ELF64_EXECUTABLE_HANDLE_T **) &elfHandle, mappingSize);
-    // if(elf64 != NULL)
-    // {
-    //   (*elfHandle)->elfHandle64 = (ELF64_EXECUTABLE_HANDLE_T *) elf64;
-    // }
-  }
-  else if(arch == T_32)
-  {
-    elf32 = malloc(sizeof(ELF32_EXECUTABLE_HANDLE_T));
-    if(elf32 == NULL)
+    if(*elfHandle == NULL)
     {
       err = ERR_MEMORY_ALLOCATION_FAILED;
+      goto cleanup;
     }
-    elf32->textSegSize = mappingSize;
-    elf32->pTextSeg = malloc(mappingSize);
     
-    err = mapELF32ToHandleFromProcessMemory(&pMem, (ELF32_EXECUTABLE_HANDLE_T **) &elf32);
-    if(err == ERR_NONE)
+    err = mapELF64ToHandleFromProcessMemory(&pMem, (ELF64_EXECUTABLE_HANDLE_T **) &elfHandle, mappingSize);
+  }
+
+  else if(*pArch == T_32)
+  {
+    *elfHandle = malloc(sizeof(ELF32_EXECUTABLE_HANDLE_T));
+    if(*elfHandle == NULL)
     {
-      (*elfHandle)->elfHandle32 = (ELF32_EXECUTABLE_HANDLE_T *) elf32;
+      err = ERR_MEMORY_ALLOCATION_FAILED;
+      goto cleanup;
     }
+
+    err = mapELF32ToHandleFromProcessMemory(&pMem, (ELF32_EXECUTABLE_HANDLE_T **) &elfHandle, mappingSize);
   }
 
 cleanup:
@@ -1586,7 +1578,6 @@ cleanup:
   {
     err = ERR_PROCESS_ATTACH_FAILED;
   }
-  free(pMem);
   return err;
 }
 
