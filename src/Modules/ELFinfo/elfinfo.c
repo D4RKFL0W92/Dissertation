@@ -1,6 +1,15 @@
 /*
- * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
 */
+
 #include "elfinfo.h"
 
 static Elf32_Addr getELF32Entry(uint8_t* p_mem)
@@ -1431,7 +1440,11 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
  * Helper function to read /proc/<pid>/maps to calculate and allocate
  * the necessary memory to map the section indicated by 'searchStr'
  * to the pointer pointed to by 'pData'.
- * (This function may be made none-static at a later date.)
+ * If NULL is passed as the 'searchStr' argument the function will return
+ * the file path of the running process in the pointer 'pData'.
+ * 
+ * This function allocates memory into the 'pData' pointer so MUST be free'd
+ * accordingly after use.
 */
 static int8_t readProcessPIDMap(const char*     pidStr,
                                 void **          pData,
@@ -1439,22 +1452,33 @@ static int8_t readProcessPIDMap(const char*     pidStr,
                                 const char * searchStr,
                                 uint64_t * mappingSize)
 {
+  // Used when reading file path instead of calculating mapping area.
+  char filePathStart[] = "/";
+
   char path[20]  = "/proc/";
   char pathEnd[] = "/maps";
-  // Let the length be calculated at compile time.
   char mappingFileLine[PATH_MAX + 100] = {0}; // Typically upto 73+PATH_MAX 
   void * memoryMapping = NULL;
   FILE * pFile = NULL;
+  BOOL readingFilePath = FALSE;
   int err = ERR_NONE;
+  
   strncat(path, pidStr, sizeof(pidStr));
   strncat(path, pathEnd, 5);
 
   if( (pFile = fopen(path, "r")) == NULL)
   {
     #ifdef DEBUG
-    perror("Unable to open /proc/pid/maps\n");
+  /* TODO: Refactor this function. */
+    perror("Unable to open /proc/pid/maps in readProcessPIDMap()\n");
     #endif
     return ERR_FILE_OPERATION_FAILED;
+  }
+
+  if(searchStr == NULL)
+  {
+    readingFilePath = TRUE;
+    searchStr = filePathStart;
   }
 
   while( fgets(mappingFileLine, sizeof(mappingFileLine), pFile) != EOF)
@@ -1464,31 +1488,51 @@ static int8_t readProcessPIDMap(const char*     pidStr,
 
     if( (pSearchStr = strstr(mappingFileLine, searchStr)) != NULL)
     {
-      uint64_t startAddr   = 0;
-      uint64_t endAddr     = 0;
-      uint64_t addrRange   = 0;
-
-      // We've found the line giving the memory mapping range.
-      err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
-      addrRange = endAddr - startAddr;
-      *mappingSize = addrRange;
-
-      if((addrRange % PAGE_SIZE) != 0)
+      /* Only handles the case of reading the pathname from file. */
+      if(readingFilePath)
       {
-        err = ERR_ILLEGAL_MAPPING_SIZE;
-        goto cleanup; // We still need to close the file
+        *pData = malloc(PATH_MAX);
+        if( *pData == NULL )
+        {
+          #ifdef DEBUG
+          perror("Unable to allocate memory in readProcessPIDMap()\n");
+          #endif
+          return ERR_MEMORY_ALLOCATION_FAILED;
+        }
+        strncpy((*pData), pSearchStr, PATH_MAX);
+        return ERR_NONE;
       }
 
-      memoryMapping = malloc(addrRange);
-      if(memoryMapping == NULL)
+      /* We are extracting/mapping a specified memory area of the given process. */
+      else
       {
-        err = ERR_MEMORY_ALLOCATION_FAILED;
-        goto cleanup;
-      }
+        uint64_t startAddr   = 0;
+        uint64_t endAddr     = 0;
+        uint64_t addrRange   = 0;
 
-      
-      err = readProcessMemoryFromPID(pid, startAddr, memoryMapping, addrRange);
-      break;
+        // We've found the line giving the memory mapping range.
+        err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
+        addrRange = endAddr - startAddr;
+        *mappingSize = addrRange;
+
+        if((addrRange % PAGE_SIZE) != 0)
+        {
+          err = ERR_ILLEGAL_MAPPING_SIZE;
+          goto cleanup; // We still need to close the file
+        }
+
+        memoryMapping = malloc(addrRange);
+        if(memoryMapping == NULL)
+        {
+          err = ERR_MEMORY_ALLOCATION_FAILED;
+          goto cleanup;
+        }
+
+        
+        err = readProcessMemoryFromPID(pid, startAddr, memoryMapping, addrRange);
+        break;
+
+      }
     }
     else
     {
@@ -2058,26 +2102,29 @@ uint64_t lookupSymbolAddress(ELF_EXECUTABLE_T * elfHandle, char* symbolName)
 int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
 {
   // Abritrary which architecture for this check.
-  ELF64_EXECUTABLE_HANDLE_T* p_elfHandle;
+  ELF64_EXECUTABLE_HANDLE_T* p_elfHandle = NULL;
   int8_t err = ERR_NONE;
+  enum BITS arch = T_NO_ELF;
 
   if(elfHandle == NULL)
   {
     return ERR_NULL_ARGUMENT;
   }
 
-  p_elfHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+  arch = isELF((char*) elfHandle);
 
-  switch(p_elfHandle->ehdr->e_ident[EI_CLASS])
+  // p_elfHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+
+  switch(arch)
   {
-    case ELFCLASS64:
+    case T_64:
       if(printImports)
         err = printSymbolTableDataElf64((ELF64_EXECUTABLE_HANDLE_T *) elfHandle, TRUE);
       else
         err = printSymbolTableDataElf64((ELF64_EXECUTABLE_HANDLE_T *) elfHandle, FALSE);
       break;
     
-    case ELFCLASS32:
+    case T_32:
       if(printImports)
         err = printSymbolTableDataElf32((ELF32_EXECUTABLE_HANDLE_T *) elfHandle, TRUE);
       else
@@ -2085,7 +2132,7 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
       break;
 
     default:
-    case ELFCLASSNONE:
+    case T_NO_ELF:
       break;
   }
   return err;

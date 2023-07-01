@@ -1,6 +1,15 @@
 /*
- * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
 */
+
 #include <ctype.h>
 
 #include "../Modules/ELFinfo/elfinfo.h"
@@ -136,10 +145,12 @@ int main(int argc, char *argv[], char *envp[])
     else if(strcmp(argv[i], "-f") == 0 ||
             strcmp(argv[i], "-functions") == 0)
     {
-
-      if(strcmp(argv[i], "-v") == 0)
+      if(i != argc-1)
       {
-        printSymbolTableData(elfHandle, ALL);
+        if(strcmp(argv[i + 1], "-v") == 0)
+        {
+          printSymbolTableData(elfHandle, ALL);
+        }
       }
       else
       {
@@ -257,7 +268,7 @@ int main(int argc, char *argv[], char *envp[])
     }
   #endif
 
-  }while(i++ < targetFileIndex);
+  }while(i++ < argc);
 
   if(arch == T_64)
   {
