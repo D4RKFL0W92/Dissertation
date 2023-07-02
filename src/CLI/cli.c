@@ -38,6 +38,7 @@ int main(int argc, char *argv[], char *envp[])
   BOOL usingPid = FALSE;
   int targetFileIndex = 0;
   int i = 1;
+  int j = 0;
   uint8_t err = ERR_NONE;
 
   if(argc < 2 || strcmp(argv[1], "-h") == 0)
@@ -48,7 +49,8 @@ int main(int argc, char *argv[], char *envp[])
 
   if(argc > 1)
   {
-    for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
+    int found = FALSE;
+    for(j = 1; j < argc && found != TRUE; j++)
     {
       if(strncmp(argv[j], "-pid=", 5) == 0)
       {
@@ -299,4 +301,3 @@ int main(int argc, char *argv[], char *envp[])
   }
   return 0;
 }
-

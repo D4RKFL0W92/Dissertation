@@ -2111,9 +2111,9 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
     return ERR_NULL_ARGUMENT;
   }
 
-  arch = isELF((char*) elfHandle);
 
-  // p_elfHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+  p_elfHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+  arch = isELF((char*) p_elfHandle->ehdr);
 
   switch(arch)
   {
