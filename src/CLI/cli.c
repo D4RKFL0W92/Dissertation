@@ -54,22 +54,86 @@ int main(int argc, char *argv[], char *envp[])
      * Check for options that specific ordering to their arguments.
     */
 
+    /* Option: Print SHA1 of given file. */
+    if(strcmp(argv[1], "-sha1") == 0)
+    {
+      if(printSHA1OfFile(argv[argc-1]) == ERR_UNKNOWN)
+      {
+        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
+        exit(-1);
+      }
+      exit(0);
+    }
+
+    /* Option: Dump hex bytes from given offset.*/
+    else if(strcmp(argv[1], "-hd") == 0 &&
+            executionMode == UNKNOWN_MODE)
+    {
+      // Only makes sense for UNKNOWN_MODE
+      uint8_t err = ERR_NONE;
+      uint64_t start = 0;
+      uint64_t uCount = 0;
+
+      err = stringToInteger(argv[2], &start);
+
+      if(err != ERR_NONE)
+      {
+        printf("Byte Offset Provided In Incorrect Format.\n");
+        exit(1);
+      }
+
+      err = stringToInteger(argv[3], &uCount);
+
+      if(err != ERR_NONE)
+      {
+        printf("Count Provided In Incorrect Format.\n");
+        exit(1);
+      }
+      if(uCount == 0)
+      {
+        printf("Count Must Be Greater Than Zero.\n");
+      }
+      
+      err = dumpHexBytesFromFile(argv[argc-1], start, uCount);
+      exit(err);
+    }
+
     /*
      * Option: Lookup address of ELF symbol.
      * Usage: <Program> <-lookup> <symbol> <program-name>
     */
-    // if(strcmp(argv[1], "-lookup") == 0)
-    // {
-    //   uint64_t addr;
+    else if(strcmp(argv[1], "-lookup") == 0)
+    {
+      uint64_t addr;
 
-    //   if(argv[2] == NULL) // TODO: Could we make some check that it is a sensical name
-    //   {
-    //     printf("Please Provide A Symbol Name To Lookup.\n");
-    //     exit(0);
-    //   }
-    //   addr = lookupSymbolAddress(elfHandle, argv[2]);
-    //   printf("<%s>\t0x%016lx", argv[2], addr);
-    // }
+      if(argv[2] == NULL) // TODO: Could we make some check that it is a sensical name
+      {
+        printf("Please Provide A Symbol Name To Lookup.\n");
+        exit(0);
+      }
+
+      if(argv[argc-1] == NULL)
+      {
+        printf("Please provide The Name Of An Executable File.\n");
+      }
+
+      err = mapFile_ElfHandle(argv[argc-1], &elfHandle);
+
+      addr = lookupSymbolAddress(elfHandle, argv[2]);
+      printf("<%s>\t0x%016lx\n", argv[2], addr);
+      exit(0);
+    }
+
+    /* Option: Convert a hex passed as argument after switch value to decimal. */
+    else if((strcmp(argv[1], "-h2d")) == 0)
+    {
+      uint64_t result = 0;
+      uint8_t ret = 0;
+      
+      ret = hexToDecimal(argv[2], &result);
+      printf("Result: %llu\n", result);
+      exit(0);
+    }
 
     for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
     {
@@ -101,21 +165,6 @@ int main(int argc, char *argv[], char *envp[])
     if(usingPid == FALSE)
     {
       err = mapFile_ElfHandle(argv[targetFileIndex], &elfHandle);
-      // if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
-      // {
-      //   printf("Unable map %s into memory\n", argv[targetFileIndex]);
-      //   exit(-1);
-      // }
-
-      // arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
-      // if(arch == T_64)
-      // {
-      //   mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T *) &elfHandle);
-      // }
-      // else if(arch == T_32)
-      // {
-      //   mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
-      // }
     }
     else
     {
@@ -188,50 +237,6 @@ int main(int argc, char *argv[], char *envp[])
     {
       // TODO: Add some sanity checks
       launchTraceProgram(elfHandle, argc-targetFileIndex, &argv[targetFileIndex], envp);
-
-    }
-
-    /* Option: Print SHA1 of given file. */
-    else if(strcmp(argv[i], "-sha1") == 0)
-    {
-      if(printSHA1OfFile(argv[targetFileIndex]) == ERR_UNKNOWN)
-      {
-        printf("Unable to calculate hash for %s.\n", argv[targetFileIndex]);
-        exit(-1);
-      }
-    }
-    
-
-    /* Option: Dump hex bytes from given offset.*/
-    else if(strcmp(argv[i], "-hd") == 0 &&
-            executionMode == UNKNOWN_MODE)
-    {
-      // Only makes sense for UNKNOWN_MODE
-      uint8_t err = ERR_NONE;
-      uint64_t start = 0;
-      uint64_t uCount = 0;
-
-      err = stringToInteger(argv[i+1], &start);
-
-      if(err != ERR_NONE)
-      {
-        printf("Byte Offset Provided In Incorrect Format.\n");
-        exit(1);
-      }
-
-      err = stringToInteger(argv[i+2], &uCount);
-
-      if(err != ERR_NONE)
-      {
-        printf("Count Provided In Incorrect Format.\n");
-        exit(1);
-      }
-      if(uCount == 0)
-      {
-        printf("Count Must Be Greater Than Zero.\n");
-      }
-      
-      dumpHexBytesFromFile(argv[targetFileIndex], start, uCount);
     }
 
     /* Option: Dump ASCII strings. */
@@ -245,17 +250,6 @@ int main(int argc, char *argv[], char *envp[])
       {
         scanFileForStrings(argv[targetFileIndex], 3);
       }
-    }
-
-    /* Option: Convert a hex passed as argument after switch value to decimal. */
-    else if(!(strcmp(argv[i], "-h2d")))
-    {
-      uint64_t result = 0;
-      uint8_t ret = 0;
-      
-      ret = hexToDecimal(argv[i+1], &result);
-      printf("Result: %llu\n", result);
-      exit(0);
     }
 
     /* TODO: Find a way to print out any unknown commands the user provides. */
