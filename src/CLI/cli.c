@@ -28,6 +28,8 @@
 
 #define TEST_STRINGS "/home/calum/Test_Files/strings"
 
+static int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle);
+
 int main(int argc, char *argv[], char *envp[])
 {
   FILE_HANDLE_T fileHandle = {0};
@@ -38,7 +40,6 @@ int main(int argc, char *argv[], char *envp[])
   BOOL usingPid = FALSE;
   int targetFileIndex = 0;
   int i = 1;
-  int j = 0;
   uint8_t err = ERR_NONE;
 
   if(argc < 2 || strcmp(argv[1], "-h") == 0)
@@ -49,8 +50,28 @@ int main(int argc, char *argv[], char *envp[])
 
   if(argc > 1)
   {
-    int found = FALSE;
-    for(j = 1; j < argc && found != TRUE; j++)
+    /*
+     * Check for options that specific ordering to their arguments.
+    */
+
+    /*
+     * Option: Lookup address of ELF symbol.
+     * Usage: <Program> <-lookup> <symbol> <program-name>
+    */
+    // if(strcmp(argv[1], "-lookup") == 0)
+    // {
+    //   uint64_t addr;
+
+    //   if(argv[2] == NULL) // TODO: Could we make some check that it is a sensical name
+    //   {
+    //     printf("Please Provide A Symbol Name To Lookup.\n");
+    //     exit(0);
+    //   }
+    //   addr = lookupSymbolAddress(elfHandle, argv[2]);
+    //   printf("<%s>\t0x%016lx", argv[2], addr);
+    // }
+
+    for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
     {
       if(strncmp(argv[j], "-pid=", 5) == 0)
       {
@@ -79,21 +100,22 @@ int main(int argc, char *argv[], char *envp[])
     // We only need to write code to determine the ELF architecture once.
     if(usingPid == FALSE)
     {
-      if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
-      {
-        printf("Unable map %s into memory\n", argv[targetFileIndex]);
-        exit(-1);
-      }
+      err = mapFile_ElfHandle(argv[targetFileIndex], &elfHandle);
+      // if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
+      // {
+      //   printf("Unable map %s into memory\n", argv[targetFileIndex]);
+      //   exit(-1);
+      // }
 
-      arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
-      if(arch == T_64)
-      {
-        mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T *) &elfHandle);
-      }
-      else if(arch == T_32)
-      {
-        mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
-      }
+      // arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
+      // if(arch == T_64)
+      // {
+      //   mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T *) &elfHandle);
+      // }
+      // else if(arch == T_32)
+      // {
+      //   mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T *) &elfHandle);
+      // }
     }
     else
     {
@@ -101,7 +123,7 @@ int main(int argc, char *argv[], char *envp[])
     }
   }
 
-  do
+  while(i < argc)
   {
     /* Header info related options. */
     /*
@@ -158,23 +180,6 @@ int main(int argc, char *argv[], char *envp[])
       {
         printSymbolTableData(elfHandle, LOCAL);
       }
-    }
-
-    /*
-     * Option:
-     * Lookup address of ELF symbol.
-    */
-    else if(strcmp(argv[i], "-lookup") == 0)
-    {
-      uint64_t addr;
-
-      if(argv[i + 1] == NULL) // TODO: Could we make some check that it is a sensical name
-      {
-        printf("Please Provide A Symbol Name To Lookup.\n");
-        exit(0);
-      }
-      addr = lookupSymbolAddress(elfHandle, argv[i + 1]);
-      printf("<%s>\t0x%016lx", argv[i + 1], addr);
     }
 
     /* Option: Trace execution of an executable file. */
@@ -270,7 +275,8 @@ int main(int argc, char *argv[], char *envp[])
     }
   #endif
 
-  }while(i++ < argc);
+  i++; // Increment the argv pointer.
+  }
 
   if(arch == T_64)
   {
@@ -300,4 +306,34 @@ int main(int argc, char *argv[], char *envp[])
     unmapFileFromStruct(&fileHandle);
   }
   return 0;
+}
+
+
+static int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle)
+{
+  FILE_HANDLE_T fileHandle = {0};
+  enum BITS arch = T_NO_ELF;
+  int8_t err = ERR_NONE;
+
+  if((err = mapFileToStruct(filepath, &fileHandle)) == ERR_UNKNOWN)
+  {
+    printf("Unable map %s into memory\n", filepath);
+    return err;
+  }
+
+  arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
+  if(arch == T_64)
+  {
+    ELF64_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
+    mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
+    (*elfHandle) = tmp_elfHandle;
+    return ERR_NONE;
+  }
+  else if(arch == T_32)
+  {
+    ELF32_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
+    mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
+    (*elfHandle) = tmp_elfHandle;
+    return ERR_NONE;
+  }
 }
