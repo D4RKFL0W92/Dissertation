@@ -501,9 +501,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_accept*/
 
     case SYS_sendto:
-      tmpBuffer = readProcessMemoryFromPID(executableHandle->pid,
-                                           executableHandle->regs.rsi,
-                                           executableHandle->regs.rdx);
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     tmpBuffer,
+                                     executableHandle->regs.rdx);
       printf("sendto(fd=%d, buffAddr=%p, length=0x%08x, flags=0x%08x, dstAddr=0x%08x, addrLen=0x%08x)\n",
         executableHandle->regs.rdi,
         tmpBuffer,
