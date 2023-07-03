@@ -777,6 +777,7 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
 
 int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, char** childArgs, char** envp)
 {
+  ELF64_EXECUTABLE_HANDLE_T * tmpHandle = NULL;
   int8_t err = ERR_NONE;
 
   if(executableHandle == NULL)
@@ -787,7 +788,9 @@ int8_t launchTraceProgram(ELF_EXECUTABLE_T * executableHandle, int childArgc, ch
     return ERR_NULL_ARGUMENT;
   }
 
-  switch (executableHandle->elfHandle64->ehdr->e_ident[EI_CLASS])
+  // We cast arbitrarily to 64 bit here just for the switch condition.
+  tmpHandle = (ELF64_EXECUTABLE_HANDLE_T *) executableHandle;
+  switch (tmpHandle->ehdr->e_ident[EI_CLASS])
   {
     case ELFCLASS64:
       err = launchSyscallTraceElf64((ELF64_EXECUTABLE_HANDLE_T *) executableHandle, childArgc, childArgs, envp);
