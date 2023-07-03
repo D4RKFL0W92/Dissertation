@@ -135,6 +135,7 @@ int main(int argc, char *argv[], char *envp[])
       exit(0);
     }
 
+    // Determine which argument is the filepath/PID.
     for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
     {
       if(strncmp(argv[j], "-pid=", 5) == 0)
@@ -146,7 +147,7 @@ int main(int argc, char *argv[], char *envp[])
 
         if(strlen(argv[j]) <= 5)
         {
-          printf("Please Provide A Valid Process ID, Usage: -pid=1234\n");
+          printf("Please Provide A Valid Process ID, Usage: -pid=PID-VALUE\n");
           exit(ERR_INVALID_ARGUMENT);
         }
         strncpy(pidStr, &argv[j][5], 5);
@@ -170,107 +171,113 @@ int main(int argc, char *argv[], char *envp[])
     {
       mapELFToHandleFromPID(pidStr, &elfHandle, &arch);
     }
-  }
 
-  while(i < argc)
-  {
-    /* Header info related options. */
+
     /*
-     * Option:
-     * Print verbose infomation found in the various ELF, section
-     * and program headers of the file passed as last argument.
+     * All functionality that relies on an elf/file handle
     */
-    if(strcmp(argv[i], "-E") == 0 && usingPid == FALSE) // This option relies on a path rather than a PID. (Can we change this).
+    while(i < argc)
     {
-      if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
+      /* Header info related options. */
+      /*
+      * Option:
+      * Print verbose infomation found in the various ELF, section
+      * and program headers of the file passed as last argument.
+      */
+      if(strcmp(argv[i], "-E") == 0 && usingPid == FALSE) // This option relies on a path rather than a PID. (Can we change this).
       {
-        printf("Unable map %s into memory\n", argv[targetFileIndex]);
-        exit(-1);
-      }
-
-      if(printElfInfoVerbose(&fileHandle) == ERR_UNKNOWN)
-      {
-        printf("Unable to get ELF info from %s\n", argv[targetFileIndex]);
-        exit(-1);
-      }
-
-    }
-    /* Option: Prints the program header info contained in the binary. */
-    else if(strcmp(argv[i], "-phdrs") == 0)
-    {
-      err = printELFProgramHeaders(elfHandle);
-    }
-    /* Option: Prints the section header info contained in the binary. */
-    else if(strcmp(argv[i], "-shdrs") == 0)
-    {
-      err = printELFSectionHeaders(elfHandle);
-    }
-
-    /* Function related options. */
-    /* Option: Handle dumping of imported function names. */
-    else if(strcmp(argv[i], "-i") == 0 ||
-            strcmp(argv[i], "-imports") == 0)
-    {
-      printSymbolTableData(elfHandle, IMPORTS);
-    }
-
-    /* Option: Local function dumping. */
-    else if(strcmp(argv[i], "-f") == 0 ||
-            strcmp(argv[i], "-functions") == 0)
-    {
-      if(i != argc-1)
-      {
-        if(strcmp(argv[i + 1], "-v") == 0)
+        if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
         {
-          printSymbolTableData(elfHandle, ALL);
+          printf("Unable map %s into memory\n", argv[targetFileIndex]);
+          exit(-1);
+        }
+
+        if(printElfInfoVerbose(&fileHandle) == ERR_UNKNOWN)
+        {
+          printf("Unable to get ELF info from %s\n", argv[targetFileIndex]);
+          exit(-1);
+        }
+
+      }
+      /* Option: Prints the program header info contained in the binary. */
+      else if(strcmp(argv[i], "-phdrs") == 0)
+      {
+        err = printELFProgramHeaders(elfHandle);
+      }
+      /* Option: Prints the section header info contained in the binary. */
+      else if(strcmp(argv[i], "-shdrs") == 0)
+      {
+        err = printELFSectionHeaders(elfHandle);
+      }
+
+      /* Function related options. */
+      /* Option: Handle dumping of imported function names. */
+      else if(strcmp(argv[i], "-i") == 0 ||
+              strcmp(argv[i], "-imports") == 0)
+      {
+        printSymbolTableData(elfHandle, IMPORTS);
+      }
+
+      /* Option: Local function dumping. */
+      else if(strcmp(argv[i], "-f") == 0 ||
+              strcmp(argv[i], "-functions") == 0)
+      {
+        if(i != argc-1)
+        {
+          if(strcmp(argv[i + 1], "-v") == 0)
+          {
+            printSymbolTableData(elfHandle, ALL);
+          }
+        }
+        else
+        {
+          printSymbolTableData(elfHandle, LOCAL);
         }
       }
-      else
+
+      /* Option: Trace execution of an executable file. */
+      else if(strcmp(argv[i], "-trace") == 0 &&
+              executionMode == FILE_HANDLE_MODE)
       {
-        printSymbolTableData(elfHandle, LOCAL);
+        // TODO: Add some sanity checks
+        launchTraceProgram(elfHandle, argc-targetFileIndex, &argv[targetFileIndex], envp);
       }
-    }
 
-    /* Option: Trace execution of an executable file. */
-    else if(strcmp(argv[i], "-trace") == 0 &&
-            executionMode == FILE_HANDLE_MODE)
-    {
-      // TODO: Add some sanity checks
-      launchTraceProgram(elfHandle, argc-targetFileIndex, &argv[targetFileIndex], envp);
-    }
-
-    /* Option: Dump ASCII strings. */
-    else if(!strcmp(argv[i], "-s"))
-    {
-      if(executionMode == PID_MODE)
+      /* Option: Dump ASCII strings. */
+      else if(strcmp(argv[i], "-s") == 0)
       {
-        /* TODO: Implement this for PID option. */
+        if(executionMode == PID_MODE)
+        {
+          /* TODO: Implement this for PID option. */
+        }
+        else
+        {
+          scanFileForStrings(argv[targetFileIndex], 3);
+        }
       }
-      else
+
+      /* TODO: Find a way to print out any unknown commands the user provides. */
+
+    /* Debug_Option: Unit tests. */
+    #ifdef UNITTEST
+      if(strcmp(argv[i], "-u") == 0 ||
+        strcmp(argv[i], "-unittest") == 0)
       {
-        scanFileForStrings(argv[targetFileIndex], 3);
+        printf("Running Unit Tests...\n");
+        fileOpsTestSuite();
+        elfInfoTestSuite();
+        elfDynamicTestSuite();
+        ioTestSuite();
+        TVectorTestSuite();
+        printf("Unit Tests Successful.\n");
       }
+    #endif
+
+    i++; // Increment the argv pointer.
     }
 
-    /* TODO: Find a way to print out any unknown commands the user provides. */
-
-  /* Debug_Option: Unit tests. */
-  #ifdef UNITTEST
-    if(strcmp(argv[i], "-u") == 0 ||
-       strcmp(argv[i], "-unittest") == 0)
-    {
-      printf("Running Unit Tests...\n");
-      fileOpsTestSuite();
-      elfInfoTestSuite();
-      elfDynamicTestSuite();
-      ioTestSuite();
-      TVectorTestSuite();
-      printf("Unit Tests Successful.\n");
-    }
-  #endif
-
-  i++; // Increment the argv pointer.
   }
+
 
   if(arch == T_64)
   {
