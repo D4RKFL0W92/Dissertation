@@ -28,8 +28,6 @@
 
 #define TEST_STRINGS "/home/calum/Test_Files/strings"
 
-static int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle);
-
 int main(int argc, char *argv[], char *envp[])
 {
   FILE_HANDLE_T fileHandle = {0};
@@ -162,7 +160,6 @@ int main(int argc, char *argv[], char *envp[])
       }
     }
     
-    // We only need to write code to determine the ELF architecture once.
     if(usingPid == FALSE)
     {
       err = mapFile_ElfHandle(argv[targetFileIndex], &elfHandle);
@@ -307,34 +304,4 @@ int main(int argc, char *argv[], char *envp[])
     unmapFileFromStruct(&fileHandle);
   }
   return 0;
-}
-
-
-static int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle)
-{
-  FILE_HANDLE_T fileHandle = {0};
-  enum BITS arch = T_NO_ELF;
-  int8_t err = ERR_NONE;
-
-  if((err = mapFileToStruct(filepath, &fileHandle)) == ERR_UNKNOWN)
-  {
-    printf("Unable map %s into memory\n", filepath);
-    return err;
-  }
-
-  arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
-  if(arch == T_64)
-  {
-    ELF64_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
-    mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
-    (*elfHandle) = tmp_elfHandle;
-    return ERR_NONE;
-  }
-  else if(arch == T_32)
-  {
-    ELF32_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
-    mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
-    (*elfHandle) = tmp_elfHandle;
-    return ERR_NONE;
-  }
 }

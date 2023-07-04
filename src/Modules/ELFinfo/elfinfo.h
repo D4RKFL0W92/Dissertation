@@ -67,6 +67,7 @@
  *          T_32, T64, or T_NO_ELF
 */
 enum BITS isELF(char* MAG);
+enum BITS getArch(ELF_EXECUTABLE_T * elfHandle);
 
 
 /*
@@ -84,6 +85,8 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 
 int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T** elfHandle);
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T** elfHandle);
+
+int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle);
 
 /*
  * Checks for active PID with same value as given, if one is found it will be mapped

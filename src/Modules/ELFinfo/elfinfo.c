@@ -1266,6 +1266,28 @@ enum BITS isELF(char* arch)
   }
 }
 
+enum BITS getArch(ELF_EXECUTABLE_T * elfHandle)
+{
+  ELF64_EXECUTABLE_HANDLE_T * tmpHandle = NULL;
+  enum BITS arch = T_NO_ELF;
+
+  tmpHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+
+
+  if(tmpHandle->ehdr->e_ident[EI_CLASS] == ELFCLASS32)
+  {
+    return T_32;
+  }
+  else if(tmpHandle->ehdr->e_ident[EI_CLASS] == ELFCLASS64)
+  {
+    return T_64;
+  }
+  else
+  {
+    return T_NO_ELF;
+  }
+}
+
 char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
 {
   #ifdef DEBUG
@@ -1374,6 +1396,35 @@ int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABL
   (*elfHandle)->shdr     = (Elf64_Shdr *) &fileHandle->p_data[ (*elfHandle)->ehdr->e_shoff ];
 
   return ERR_NONE;
+}
+
+int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle)
+{
+  FILE_HANDLE_T fileHandle = {0};
+  enum BITS arch = T_NO_ELF;
+  int8_t err = ERR_NONE;
+
+  if((err = mapFileToStruct(filepath, &fileHandle)) == ERR_UNKNOWN)
+  {
+    printf("Unable map %s into memory\n", filepath);
+    return err;
+  }
+
+  arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
+  if(arch == T_64)
+  {
+    ELF64_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
+    mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
+    (*elfHandle) = tmp_elfHandle;
+    return ERR_NONE;
+  }
+  else if(arch == T_32)
+  {
+    ELF32_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
+    mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
+    (*elfHandle) = tmp_elfHandle;
+    return ERR_NONE;
+  }
 }
 
 /*
@@ -1491,6 +1542,7 @@ static int8_t readProcessPIDMap(const char*     pidStr,
       /* Only handles the case of reading the pathname from file. */
       if(readingFilePath)
       {
+        char * tmpPathPtr = NULL;
         *pData = malloc(PATH_MAX);
         if( *pData == NULL )
         {
@@ -1500,6 +1552,13 @@ static int8_t readProcessPIDMap(const char*     pidStr,
           return ERR_MEMORY_ALLOCATION_FAILED;
         }
         strncpy((*pData), pSearchStr, PATH_MAX);
+
+        // Null's the last byte to prevent 'open' failure
+        tmpPathPtr = (char *)*pData;
+        if(tmpPathPtr[strlen(tmpPathPtr) - 1] == '\n')
+        {
+          tmpPathPtr[strlen(tmpPathPtr) - 1] = '\0';
+        }
         return ERR_NONE;
       }
 
@@ -1579,43 +1638,13 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle, enum B
     return ERR_PROCESS_ATTACH_FAILED;
   }
 
-  err = readProcessPIDMap(pidStr, &pMem, pid, "r--p", &mappingSize);
+  err = readProcessPIDMap(pidStr, &pMem, pid, NULL, &mappingSize);
   if(err != ERR_NONE)
   {
     goto cleanup;
   }
 
-  if(mappingSize == 0)
-  {
-    err = ERR_UNKNOWN;
-    goto cleanup;
-  }
-
-  *pArch = isELF(pMem);
-
-  if(*pArch == T_64)
-  {
-    *elfHandle = malloc(sizeof(ELF64_EXECUTABLE_HANDLE_T));
-    if(*elfHandle == NULL)
-    {
-      err = ERR_MEMORY_ALLOCATION_FAILED;
-      goto cleanup;
-    }
-    
-    err = mapELF64ToHandleFromProcessMemory(&pMem, (ELF64_EXECUTABLE_HANDLE_T **) &elfHandle, mappingSize);
-  }
-
-  else if(*pArch == T_32)
-  {
-    *elfHandle = malloc(sizeof(ELF32_EXECUTABLE_HANDLE_T));
-    if(*elfHandle == NULL)
-    {
-      err = ERR_MEMORY_ALLOCATION_FAILED;
-      goto cleanup;
-    }
-
-    err = mapELF32ToHandleFromProcessMemory(&pMem, (ELF32_EXECUTABLE_HANDLE_T **) &elfHandle, mappingSize);
-  }
+  err = mapFile_ElfHandle(pMem, elfHandle);
 
 cleanup:
   if(ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0)
@@ -2111,9 +2140,7 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
     return ERR_NULL_ARGUMENT;
   }
 
-
-  p_elfHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
-  arch = isELF((char*) p_elfHandle->ehdr);
+  arch = getArch(elfHandle);
 
   switch(arch)
   {
