@@ -1,3 +1,6 @@
+/*
+ * Copywrite: 2023 Calum Dawson calumjamesdawson@gmail.com
+*/
 
 const char helpMenu[] = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%-Turtle-Scan-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n" \
                         "--------------------------------Help Menu--------------------------------\n\n\n" \

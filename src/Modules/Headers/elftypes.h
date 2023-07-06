@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
+
 #ifndef _ELFTYPES_
 #define _ELFTYPES_
 
@@ -16,29 +28,43 @@ typedef struct user_regs_struct REGS;
 typedef struct ELF32_EXECUTABLE
 {
     FILE_HANDLE_T             fileHandle;
-    Elf32_Ehdr*               ehdr;
-    Elf32_Phdr*               phdr;
-    Elf32_Shdr*               shdr;
+    Elf32_Ehdr *              ehdr;
+    Elf32_Phdr *              phdr;
+    Elf32_Shdr *              shdr;
     REGS                      regs;
     pid_t                     pid;
+    void *                    pTextSeg;
+    void *                    pDataSeg;
+    void *                    pBssSeg;
+    uint64_t                  textSegSize;
+    uint64_t                  dataSegSize;
+    uint64_t                  bssSegSize;
     int8_t                    isExecuting;
 }ELF32_EXECUTABLE_HANDLE_T;
 
 typedef struct ELF64_EXECUTABLE
 {
-    FILE_HANDLE_T           fileHandle;
-    Elf64_Ehdr*             ehdr;
-    Elf64_Phdr*             phdr;
-    Elf64_Shdr*             shdr;
-    REGS                    regs;
-    pid_t                   pid;
-    int8_t                  isExecuting;
+    FILE_HANDLE_T             fileHandle;
+    Elf64_Ehdr *              ehdr;
+    Elf64_Phdr *              phdr;
+    Elf64_Shdr *              shdr;
+    REGS                      regs;
+    pid_t                     pid;
+    void *                    pTextSeg;
+    void *                    pDataSeg;
+    void *                    pBssSeg;
+    uint64_t                  textSegSize;
+    uint64_t                  dataSegSize;
+    uint64_t                  bssSegSize;
+    int8_t                    isExecuting;
 }ELF64_EXECUTABLE_HANDLE_T;
 
 typedef union ELF_EXECUTABLE
 {
-    ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-    ELF64_EXECUTABLE_HANDLE_T elfHandle64;
+    ELF32_EXECUTABLE_HANDLE_T * elfHandle32;
+    ELF64_EXECUTABLE_HANDLE_T * elfHandle64;
 } ELF_EXECUTABLE_T;
+
+typedef enum mode { UNKNOWN_MODE, FILE_HANDLE_MODE, PID_MODE } MODE;
 
 #endif

@@ -1,0 +1,234 @@
+b"running objdump....
+
+printf@plt
+close@plt
+wait@plt
+puts@plt
+exit@plt
+fstat@plt
+putchar@plt
+read@plt
+strncmp@plt
+malloc@plt
+fopen@plt
+isdigit@plt
+free@plt
+strlen@plt
+atol@plt
+ptrace@plt
+lseek@plt
+atoi@plt
+execve@plt
+munmap@plt
+fclose@plt
+SHA1@plt
+strncpy@plt
+fork@plt
+fwrite@plt
+perror@plt
+fprintf@plt
+open@plt
+mmap@plt
+isELF
+mapELFToMemory
+mapELF64ToHandleFromFileHandle
+printELFPhdrs
+printELF32Phdrs
+getELFEntry
+getELF32Entry
+getELF64Entry
+printELF64Phdrs
+printELFInfo
+printElfInfoVerbose
+printElf64ElfHeader
+printElf32ElfHeader
+printELF64ProgramHeaders
+attachToProcess
+detachFromProcess
+getRegisterValues
+getSymbolAddr
+beginProcessTrace
+main
+logEvent
+clearLogFile
+basicFileMap
+mapFileToStruct
+sha1File
+printSHA1OfFile
+scanForStrings
+dumpHexBytes
+dumpHexBytesFromFileHandle
+safeAllocateFileHandle
+safeFreeFileHandle
+
+objdump Complete.
+
+Testing Lookup...
+
+Looking Up Address Of:  isELF
+A Failure Has Occured In Lookup Symbols.
+
+b'Unable map isELF into memory\
+ERROR opening file.: No such file or directory\
+'
+Turtle-Scan Lookup Test Failed.
+Lookup Test Successful.
+
+Testing -i Option Of Turtle-Scan.
+
+Comparing Imported Symbols To objdump: 
+Turtle-Scan Results:
+b'printf@GLIBC_2.2.5\
+close@GLIBC_2.2.5\
+wait@GLIBC_2.2.5\
+__gmon_start__\
+puts@GLIBC_2.2.5\
+exit@GLIBC_2.2.5\
+__assert_fail@GLIBC_2.2.5\
+fstat@GLIBC_2.33\
+putchar@GLIBC_2.2.5\
+read@GLIBC_2.2.5\
+strncmp@GLIBC_2.2.5\
+malloc@GLIBC_2.2.5\
+fopen@GLIBC_2.2.5\
+_ITM_deregisterTMCloneTable\
+isdigit@GLIBC_2.2.5\
+free@GLIBC_2.2.5\
+strlen@GLIBC_2.2.5\
+_ITM_registerTMCloneTable\
+__cxa_finalize@GLIBC_2.2.5\
+atol@GLIBC_2.2.5\
+ptrace@GLIBC_2.2.5\
+lseek@GLIBC_2.2.5\
+atoi@GLIBC_2.2.5\
+execve@GLIBC_2.2.5\
+munmap@GLIBC_2.2.5\
+fclose@GLIBC_2.2.5\
+SHA1@OPENSSL_3.0.0\
+strncpy@GLIBC_2.2.5\
+fork@GLIBC_2.2.5\
+fwrite@GLIBC_2.2.5\
+perror@GLIBC_2.2.5\
+fprintf@GLIBC_2.2.5\
+__libc_start_main@GLIBC_2.34\
+open@GLIBC_2.2.5\
+mmap@GLIBC_2.2.5\
+'b''
+"
+b"running objdump....
+
+printf@plt
+close@plt
+wait@plt
+puts@plt
+exit@plt
+fstat@plt
+putchar@plt
+read@plt
+strncmp@plt
+malloc@plt
+fopen@plt
+isdigit@plt
+free@plt
+strlen@plt
+atol@plt
+ptrace@plt
+lseek@plt
+atoi@plt
+execve@plt
+munmap@plt
+fclose@plt
+SHA1@plt
+strncpy@plt
+fork@plt
+fwrite@plt
+perror@plt
+fprintf@plt
+open@plt
+mmap@plt
+isELF
+mapELFToMemory
+mapELF64ToHandleFromFileHandle
+printELFPhdrs
+printELF32Phdrs
+getELFEntry
+getELF32Entry
+getELF64Entry
+printELF64Phdrs
+printELFInfo
+printElfInfoVerbose
+printElf64ElfHeader
+printElf32ElfHeader
+printELF64ProgramHeaders
+attachToProcess
+detachFromProcess
+getRegisterValues
+getSymbolAddr
+beginProcessTrace
+main
+logEvent
+clearLogFile
+basicFileMap
+mapFileToStruct
+sha1File
+printSHA1OfFile
+scanForStrings
+dumpHexBytes
+dumpHexBytesFromFileHandle
+safeAllocateFileHandle
+safeFreeFileHandle
+
+objdump Complete.
+
+Testing Lookup...
+
+Looking Up Address Of:  isELF
+A Failure Has Occured In Lookup Symbols.
+
+b'Unable map isELF into memory\
+ERROR opening file.: No such file or directory\
+'
+Turtle-Scan Lookup Test Failed.
+Lookup Test Successful.
+
+Testing -i Option Of Turtle-Scan.
+
+Comparing Imported Symbols To objdump: 
+Turtle-Scan Results:
+b'printf@GLIBC_2.2.5\
+close@GLIBC_2.2.5\
+wait@GLIBC_2.2.5\
+__gmon_start__\
+puts@GLIBC_2.2.5\
+exit@GLIBC_2.2.5\
+__assert_fail@GLIBC_2.2.5\
+fstat@GLIBC_2.33\
+putchar@GLIBC_2.2.5\
+read@GLIBC_2.2.5\
+strncmp@GLIBC_2.2.5\
+malloc@GLIBC_2.2.5\
+fopen@GLIBC_2.2.5\
+_ITM_deregisterTMCloneTable\
+isdigit@GLIBC_2.2.5\
+free@GLIBC_2.2.5\
+strlen@GLIBC_2.2.5\
+_ITM_registerTMCloneTable\
+__cxa_finalize@GLIBC_2.2.5\
+atol@GLIBC_2.2.5\
+ptrace@GLIBC_2.2.5\
+lseek@GLIBC_2.2.5\
+atoi@GLIBC_2.2.5\
+execve@GLIBC_2.2.5\
+munmap@GLIBC_2.2.5\
+fclose@GLIBC_2.2.5\
+SHA1@OPENSSL_3.0.0\
+strncpy@GLIBC_2.2.5\
+fork@GLIBC_2.2.5\
+fwrite@GLIBC_2.2.5\
+perror@GLIBC_2.2.5\
+fprintf@GLIBC_2.2.5\
+__libc_start_main@GLIBC_2.34\
+open@GLIBC_2.2.5\
+mmap@GLIBC_2.2.5\
+'b''
+"

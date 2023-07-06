@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
 #ifndef _ELF_INFO_
 #define _ELF_INFO_
 
@@ -56,6 +67,7 @@
  *          T_32, T64, or T_NO_ELF
 */
 enum BITS isELF(char* MAG);
+enum BITS getArch(ELF_EXECUTABLE_T * elfHandle);
 
 
 /*
@@ -74,11 +86,13 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T** elfHandle);
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T** elfHandle);
 
+int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle);
+
 /*
  * Checks for active PID with same value as given, if one is found it will be mapped
  * to the union type ELF_EXECUTABLE_T that can be later checked for architecture.
  * */
-int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle);
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle, enum BITS * pArch);
 
 
 uint64_t getELFEntryFromFile(char* filepath);

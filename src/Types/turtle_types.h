@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
+
 #ifndef _TURTLE_TYPES_
 #define _TURTLE_TYPES_
 
@@ -28,6 +40,8 @@
 #define ERR_TRACE_OPERATION_FAILED     35
 
 #define ERR_ILLEGAL_MAPPING_SIZE       40
+
+#define ERR_ELF_BINARY_STRIPPED        50 // NOT a critical error but useful to check for.
 
 #define TRUE_STR         "TRUE"
 #define FALSE_STR        "FALSE"

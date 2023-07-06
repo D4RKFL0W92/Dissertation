@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
+
 #include "elfinfo.h"
 
 static Elf32_Addr getELF32Entry(uint8_t* p_mem)
@@ -1254,6 +1266,28 @@ enum BITS isELF(char* arch)
   }
 }
 
+enum BITS getArch(ELF_EXECUTABLE_T * elfHandle)
+{
+  ELF64_EXECUTABLE_HANDLE_T * tmpHandle = NULL;
+  enum BITS arch = T_NO_ELF;
+
+  tmpHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+
+
+  if(tmpHandle->ehdr->e_ident[EI_CLASS] == ELFCLASS32)
+  {
+    return T_32;
+  }
+  else if(tmpHandle->ehdr->e_ident[EI_CLASS] == ELFCLASS64)
+  {
+    return T_64;
+  }
+  else
+  {
+    return T_NO_ELF;
+  }
+}
+
 char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
 {
   #ifdef DEBUG
@@ -1364,6 +1398,35 @@ int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABL
   return ERR_NONE;
 }
 
+int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle)
+{
+  FILE_HANDLE_T fileHandle = {0};
+  enum BITS arch = T_NO_ELF;
+  int8_t err = ERR_NONE;
+
+  if((err = mapFileToStruct(filepath, &fileHandle)) == ERR_UNKNOWN)
+  {
+    printf("Unable map %s into memory\n", filepath);
+    return err;
+  }
+
+  arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
+  if(arch == T_64)
+  {
+    ELF64_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
+    mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
+    (*elfHandle) = tmp_elfHandle;
+    return ERR_NONE;
+  }
+  else if(arch == T_32)
+  {
+    ELF32_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
+    mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
+    (*elfHandle) = tmp_elfHandle;
+    return ERR_NONE;
+  }
+}
+
 /*
  * A simple helper function to extract the address range read from a line of /proc/<pid>/maps
 */
@@ -1428,26 +1491,45 @@ static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64
  * Helper function to read /proc/<pid>/maps to calculate and allocate
  * the necessary memory to map the section indicated by 'searchStr'
  * to the pointer pointed to by 'pData'.
- * (This function may be made none-static at a later date.)
+ * If NULL is passed as the 'searchStr' argument the function will return
+ * the file path of the running process in the pointer 'pData'.
+ * 
+ * This function allocates memory into the 'pData' pointer so MUST be free'd
+ * accordingly after use.
 */
-static int8_t readProcessPIDMap(char* pidStr, uint8_t * pData, pid_t pid, char* searchStr)
+static int8_t readProcessPIDMap(const char*     pidStr,
+                                void **          pData,
+                                pid_t              pid,
+                                const char * searchStr,
+                                uint64_t * mappingSize)
 {
+  // Used when reading file path instead of calculating mapping area.
+  char filePathStart[] = "/";
+
   char path[20]  = "/proc/";
   char pathEnd[] = "/maps";
-  // Let the length be calculated at compile time.
   char mappingFileLine[PATH_MAX + 100] = {0}; // Typically upto 73+PATH_MAX 
   void * memoryMapping = NULL;
   FILE * pFile = NULL;
+  BOOL readingFilePath = FALSE;
   int err = ERR_NONE;
+  
   strncat(path, pidStr, sizeof(pidStr));
   strncat(path, pathEnd, 5);
 
   if( (pFile = fopen(path, "r")) == NULL)
   {
     #ifdef DEBUG
-    perror("Unable to open /proc/pid/maps\n");
+  /* TODO: Refactor this function. */
+    perror("Unable to open /proc/pid/maps in readProcessPIDMap()\n");
     #endif
     return ERR_FILE_OPERATION_FAILED;
+  }
+
+  if(searchStr == NULL)
+  {
+    readingFilePath = TRUE;
+    searchStr = filePathStart;
   }
 
   while( fgets(mappingFileLine, sizeof(mappingFileLine), pFile) != EOF)
@@ -1457,34 +1539,59 @@ static int8_t readProcessPIDMap(char* pidStr, uint8_t * pData, pid_t pid, char* 
 
     if( (pSearchStr = strstr(mappingFileLine, searchStr)) != NULL)
     {
-      uint64_t startAddr   = 0;
-      uint64_t endAddr     = 0;
-      uint64_t addrRange   = 0;
-
-      // We've found the line giving the memory mapping range.
-      err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
-      addrRange = endAddr - startAddr;
-
-      if((addrRange % PAGE_SIZE) != 0)
+      /* Only handles the case of reading the pathname from file. */
+      if(readingFilePath)
       {
-        err = ERR_ILLEGAL_MAPPING_SIZE;
-        goto cleanup; // We still need to close the file
+        char * tmpPathPtr = NULL;
+        *pData = malloc(PATH_MAX);
+        if( *pData == NULL )
+        {
+          #ifdef DEBUG
+          perror("Unable to allocate memory in readProcessPIDMap()\n");
+          #endif
+          return ERR_MEMORY_ALLOCATION_FAILED;
+        }
+        strncpy((*pData), pSearchStr, PATH_MAX);
+
+        // Null's the last byte to prevent 'open' failure
+        tmpPathPtr = (char *)*pData;
+        if(tmpPathPtr[strlen(tmpPathPtr) - 1] == '\n')
+        {
+          tmpPathPtr[strlen(tmpPathPtr) - 1] = '\0';
+        }
+        return ERR_NONE;
       }
 
-      memoryMapping = malloc(addrRange);
-      if(memoryMapping == NULL)
+      /* We are extracting/mapping a specified memory area of the given process. */
+      else
       {
-        err = ERR_MEMORY_ALLOCATION_FAILED;
-        goto cleanup;
-      }
+        uint64_t startAddr   = 0;
+        uint64_t endAddr     = 0;
+        uint64_t addrRange   = 0;
 
-      if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
-      {
-        err = ERR_PROCESS_ATTACH_FAILED;
-        goto cleanup;
+        // We've found the line giving the memory mapping range.
+        err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
+        addrRange = endAddr - startAddr;
+        *mappingSize = addrRange;
+
+        if((addrRange % PAGE_SIZE) != 0)
+        {
+          err = ERR_ILLEGAL_MAPPING_SIZE;
+          goto cleanup; // We still need to close the file
+        }
+
+        memoryMapping = malloc(addrRange);
+        if(memoryMapping == NULL)
+        {
+          err = ERR_MEMORY_ALLOCATION_FAILED;
+          goto cleanup;
+        }
+
+        
+        err = readProcessMemoryFromPID(pid, startAddr, memoryMapping, addrRange);
+        break;
+
       }
-      err = readProcessMemoryFromPID(pid, startAddr, memoryMapping, addrRange);
-      break;
     }
     else
     {
@@ -1495,18 +1602,13 @@ static int8_t readProcessPIDMap(char* pidStr, uint8_t * pData, pid_t pid, char* 
 
   if(memoryMapping != NULL)
   {
-    pData = memoryMapping;
+    (*pData) = memoryMapping;
     err =  ERR_NONE;
   }
   else
   {
-    pData = NULL;
+    (*pData) = NULL;
     err = ERR_FORMAT_NOT_SUPPORTED;
-  }
-
-  if(ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0)
-  { // Can't really do anything but indicate source of failure.
-    err = ERR_PROCESS_ATTACH_FAILED;
   }
 
 cleanup:
@@ -1516,12 +1618,14 @@ cleanup:
   return err;
 }
 
-int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle, enum BITS * pArch)
 {
   uint8_t * pMem = NULL;
-  pid_t pid = 0;
-  int8_t err = ERR_NONE;
-  enum BITS arch = T_NO_ELF;
+  pid_t     pid = 0;
+  uint64_t  mappingSize = 0;
+  int8_t    err = ERR_NONE;
+
+  *pArch = T_NO_ELF;
 
   err = stringToInteger(pidStr, &pid);
   if(err != ERR_NONE || pid == 0)
@@ -1529,14 +1633,24 @@ int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T * elfHandle)
     return ERR_INVALID_ARGUMENT;
   }
 
-  err = readProcessPIDMap(pidStr, pMem, pid, "r--p");
-  if(err != ERR_NONE)
+  if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
   {
-    return err;
+    return ERR_PROCESS_ATTACH_FAILED;
   }
 
-  arch = isELF(pMem);
+  err = readProcessPIDMap(pidStr, &pMem, pid, NULL, &mappingSize);
+  if(err != ERR_NONE)
+  {
+    goto cleanup;
+  }
 
+  err = mapFile_ElfHandle(pMem, elfHandle);
+
+cleanup:
+  if(ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0)
+  {
+    err = ERR_PROCESS_ATTACH_FAILED;
+  }
   return err;
 }
 
@@ -2017,26 +2131,27 @@ uint64_t lookupSymbolAddress(ELF_EXECUTABLE_T * elfHandle, char* symbolName)
 int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
 {
   // Abritrary which architecture for this check.
-  ELF64_EXECUTABLE_HANDLE_T* p_elfHandle;
+  ELF64_EXECUTABLE_HANDLE_T* p_elfHandle = NULL;
   int8_t err = ERR_NONE;
+  enum BITS arch = T_NO_ELF;
 
   if(elfHandle == NULL)
   {
     return ERR_NULL_ARGUMENT;
   }
 
-  p_elfHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+  arch = getArch(elfHandle);
 
-  switch(p_elfHandle->ehdr->e_ident[EI_CLASS])
+  switch(arch)
   {
-    case ELFCLASS64:
+    case T_64:
       if(printImports)
         err = printSymbolTableDataElf64((ELF64_EXECUTABLE_HANDLE_T *) elfHandle, TRUE);
       else
         err = printSymbolTableDataElf64((ELF64_EXECUTABLE_HANDLE_T *) elfHandle, FALSE);
       break;
     
-    case ELFCLASS32:
+    case T_32:
       if(printImports)
         err = printSymbolTableDataElf32((ELF32_EXECUTABLE_HANDLE_T *) elfHandle, TRUE);
       else
@@ -2044,7 +2159,7 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
       break;
 
     default:
-    case ELFCLASSNONE:
+    case T_NO_ELF:
       break;
   }
   return err;
