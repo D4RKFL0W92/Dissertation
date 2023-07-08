@@ -480,7 +480,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_setitimer*/
 
     case SYS_getpid:
-      printf("getpid()\n"); // PID will be printed in return value by hiogher level function.
+      printf("getpid()\n");
       break; /*SYS_getpid*/
 
     case SYS_sendfile:
@@ -640,14 +640,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         break; // We have already printed execve syscall data in launchSyscallTraceElf64.
         // TODO: Could this be handled more optimally??
       }
-      /*
-       * TODO: Add error checking/handling
-      */
+
       err = readStringFromProcessMemory(executableHandle->pid,
                                         executableHandle->regs.rdi,
                                         &tmpBuffer);
       // All registers except ORIG_RAX are zero. How can
-      // we extract all arguments??? (This may noty be an issue
+      // we extract all arguments??? (This may not be an issue
       // with later calls to execve).
       printf("execve()\n");
       break; /*SYS_execve*/
@@ -664,6 +662,137 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         executableHandle->regs.rdx,
         executableHandle->regs.r10);
       break; /*SYS_clone*/
+
+    case SYS_kill:
+      printf("kill(pid=%d, signal=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
+      break; /*SYS_kill*/
+
+    case SYS_uname:
+      printf("uname(pid=%p)\n",
+        executableHandle->regs.rdi);
+      break; /*SYS_uname*/
+
+    case SYS_semget:
+      printf("semget(key=%d, nsems=%d, semflags=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_semget*/
+
+    case SYS_semop:
+      printf("semop(semid=%d, semops=%p, nsops=%d)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx);
+      break; /*SYS_semop*/
+
+    case SYS_semctl:
+      printf("semctl(semid=%d, semnum=%d, cmd=0x%08x, arg=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi,
+        executableHandle->regs.rdx,
+        executableHandle->regs.r10);
+      break; /*SYS_semctl*/
+
+    case SYS_shmdt:
+      printf("shmdt(shmaddr=%p)\n",
+        executableHandle->regs.rdi);
+      break; /*SYS_shmdt*/
+
+    case SYS_msgget:
+      printf("msgget(key=%d, msgflags=0x%08x)\n",
+        executableHandle->regs.rdi,
+        executableHandle->regs.rsi);
+      break; /*SYS_msgget*/
+
+    case SYS_msgsnd:
+      printf("msgsnd(msqid=%d, msgptr=%p, msgsize=0x%08x, msgflags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+      break; /*SYS_msgsnd*/
+
+    case SYS_msgrcv:
+      printf("msgrcv(msqid=%d, msgptr=%p, msgsize=0x%08x, msgtyp=%d, msgflags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10,
+              executableHandle->regs.r8);
+      break; /*SYS_msgrcv*/
+
+    case SYS_msgctl:
+      printf("msgctl(msqid=%d, cmd=0x%08x, msgptr=%p)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_msgctl*/
+
+    case SYS_fcntl:
+      printf("fcntl(fd=%d, cmd=0x%08x, buff=%p)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_fcntl*/
+
+    case SYS_flock:
+      printf("flock(fd=%d, cmd=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_flock*/
+
+    case SYS_fsync:
+      printf("fsync(fd=%d)\n",
+              executableHandle->regs.rdi);
+      break; /*SYS_fsync*/
+
+    case SYS_fdatasync:
+      printf("fdatasync(fd=%d)\n",
+              executableHandle->regs.rdi);
+      break; /*SYS_fdatasync*/
+
+    case SYS_truncate:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        tmpBuffer,
+                                        &tmpBuffer);
+
+      printf("truncate(path=%s, size=0x%08x)\n",
+              tmpBuffer,
+              executableHandle->regs.rsi);
+      break; /*SYS_truncate*/
+
+    case SYS_ftruncate:
+      printf("ftruncate(fd=%d, size=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_ftruncate*/
+
+    case SYS_getdents:
+      /* TODO: Can we read the directory entries?? */
+      printf("getdents(fd=%d, dirents=%p, nentries=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_getdents*/
+
+    case SYS_getcwd:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      printf("SYS_getcwd(buffer=%d, size=0x%08x)\n",
+              tmpBuffer,
+              executableHandle->regs.rsi);
+      break; /*SYS_getcwd*/
+
+    case SYS_chdir:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      printf("SYS_chdir(path=%d)\n", tmpBuffer);
+      break; /*SYS_chdir*/
 
   }
 
