@@ -77,6 +77,9 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char** pStr)
 
   if( (data = malloc(allocationSize)) == NULL)
   {
+    #ifdef DEBUG
+    perror("ERROR Allocating Memory In readStringFromProcessMemory()\n");
+    #endif
     return ERR_MEMORY_ALLOCATION_FAILED;
   }
   memset(data, 0, allocationSize);
@@ -87,6 +90,7 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char** pStr)
     wordRead = 0;
     wordRead = ptrace(PTRACE_PEEKDATA, pid, offset + charCount, NULL);
     pChar = (char *)& wordRead;
+
     for(uint8_t i = 0; i < sizeof(long); i++)
     {
       if(*pChar == '\0')
@@ -149,7 +153,8 @@ int8_t readProcessMemoryFromPID(pid_t pid, const void * srcAddr, void * dstAddr,
 
 static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, BOOL firstSysCall)
 {
-  char* tmpBuffer = NULL;
+  char * tmpBuffer = NULL;
+  char * tmpBuffer2 = NULL;
   int8_t err = ERR_NONE;
 
   switch(executableHandle->regs.orig_rax)
@@ -294,7 +299,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
     case SYS_pread64:
       /*
        * TODO: Is it worth printing the bytes that are being read?
-       * YES, error handling for if tmpBuffer is null should be added
+       * YES
       */
       tmpBuffer = malloc(executableHandle->regs.rdx);
       if(tmpBuffer == NULL)
@@ -782,7 +787,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       err = readStringFromProcessMemory(executableHandle->pid,
                                         executableHandle->regs.rdi,
                                         &tmpBuffer);
-      printf("SYS_getcwd(buffer=%d, size=0x%08x)\n",
+      printf("getcwd(buffer=%d, size=0x%08x)\n",
               tmpBuffer,
               executableHandle->regs.rsi);
       break; /*SYS_getcwd*/
@@ -791,12 +796,175 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       err = readStringFromProcessMemory(executableHandle->pid,
                                         executableHandle->regs.rdi,
                                         &tmpBuffer);
-      printf("SYS_chdir(path=%d)\n", tmpBuffer);
+      printf("chdir(path=%d)\n", tmpBuffer);
       break; /*SYS_chdir*/
+
+    case SYS_fchdir:
+      printf("fchdir(fd=%d)\n", executableHandle->regs.rdi);
+      break; /*SYS_fchdir*/
+
+    case SYS_rename:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer2);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("rename(old-name=\"%s\", new-name=\"%s\")\n", tmpBuffer, tmpBuffer2);
+      break; /*SYS_rename*/
+
+    case SYS_mkdir:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+
+      /* TODO: Print mode in human readable format.*/
+      printf("mkdir(name=%d, mode=0x%08x)\n",
+             tmpBuffer,
+             executableHandle->regs.rsi);
+      break; /*SYS_mkdir*/
+
+    case SYS_rmdir:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+
+      printf("rmdir(name=%d)\n", tmpBuffer);
+      break; /*SYS_rmdir*/
+
+    case SYS_creat:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+                                        
+      /* TODO: Print mode in human readable format.*/
+      printf("creat(name=%d, mode=0x%08x)\n",
+             tmpBuffer,
+             executableHandle->regs.rsi);
+      break; /*SYS_creat*/
+
+    case SYS_link:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer2);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("link(old-name=\"%s\", new-name=\"%s\")\n", tmpBuffer, tmpBuffer2);
+      break; /*SYS_link*/
+
+    case SYS_unlink:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("unlink(pathname=\"%s\")\n", tmpBuffer);
+      break; /*SYS_unlink*/
+
+    case SYS_symlink:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer2);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("symlink(old-name=\"%s\", new-name=\"%s\")\n", tmpBuffer, tmpBuffer2);
+      break; /*SYS_symlink*/
+
+    case SYS_readlink:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      /* Todo: We could progress to next syscall (syscall exit)
+       * then read the resulting buffer (RSI)
+       */
+
+      printf("readlink(path=\"%s\", buff=%p, buffsize=0x%08x)\n",
+             tmpBuffer,
+             tmpBuffer2,
+             executableHandle->regs.rdx);
+      break; /*SYS_readlink*/
+
+    case SYS_chmod:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("chmod(path=\"%s\", mode=0x%08x)\n",
+             tmpBuffer,
+             executableHandle->regs.rsi);
+      break; /*SYS_chmod*/
+
+    case SYS_fchmod:
+
+      printf("fchmod(fd=%d, mode=0x%08x)\n",
+             executableHandle->regs.rdi,
+             executableHandle->regs.rsi);
+      break; /*SYS_fchmod*/
+
+    case SYS_chown:
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("chown(path=\"%s\", uid=0x%08x, gid=0x%08x)\n",
+             tmpBuffer,
+             executableHandle->regs.rsi,
+             executableHandle->regs.rdx);
+      break; /*SYS_chown*/
 
   }
 
+  free(tmpBuffer2);
   free(tmpBuffer);
+
   return err;
 }
 
