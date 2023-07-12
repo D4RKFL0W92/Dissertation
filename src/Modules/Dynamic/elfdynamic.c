@@ -960,6 +960,80 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
              executableHandle->regs.rdx);
       break; /*SYS_chown*/
 
+    case SYS_fchown:
+      printf("fchown(fd=%d, uid=0x%08x, gid=0x%08x)\n",
+             executableHandle->regs.rdi,
+             executableHandle->regs.rsi,
+             executableHandle->regs.rdx);
+      break; /*SYS_fchown*/
+
+    case SYS_umask:
+      printf("umask(mask=0x%08x)\n", executableHandle->regs.rdi);
+      break; /*SYS_umask*/
+
+    case SYS_gettimeofday:
+      printf("gettimeofday()\n"); // Not really much point printing the received data.
+      break; /*SYS_gettimeofday*/
+
+    case SYS_getrlimit:
+      printf("getrlimit(resource=0x%08x, rlimit=%p)\n",
+             executableHandle->regs.rdi,
+             executableHandle->regs.rsi);
+      break; /*SYS_getrlimit*/
+
+    case SYS_getrusage:
+      printf("getrusage(who=%d)\n", executableHandle->regs.rdi);
+      break; /*SYS_getrusage*/
+
+    case SYS_sysinfo:
+      printf("sysinfo()\n");
+      break; /*SYS_sysinfo*/
+
+    case SYS_times:
+      printf("times(tms-addr=%p)\n", executableHandle->regs.rdi);
+      break; /*SYS_times*/
+
+    case SYS_ptrace:
+      printf("ptrace(request=0x%08x, pid=%d, addr=0x%016x, data=0x%016x)\n",
+             executableHandle->regs.rdi,
+             executableHandle->regs.rsi,
+             executableHandle->regs.rdx,
+             executableHandle->regs.r10);
+      break; /*SYS_ptrace*/
+
+    case SYS_getuid:
+      printf("getuid()\n"); // Prints UID on return.
+      break; /*SYS_getuid*/
+
+    case SYS_syslog:
+      printf("syslog(type=%d, buff=%p, size=0x%08x)\n",
+             executableHandle->regs.rdi,
+             executableHandle->regs.rsi,
+             executableHandle->regs.rdx);
+      /*
+       * TODO: We could get the contents of kernel buffer.
+       * We would have to progress to the syscall exit.
+       */
+      break; /*SYS_syslog*/
+
+    case SYS_getgid:
+      printf("getgid()\n"); // Prints GID on return.
+      break; /*SYS_getgid*/
+
+    case SYS_setuid:
+      printf("setuid(uid=%s)\n", executableHandle->regs.rdi);
+      break; /*SYS_setuid*/
+
+    case SYS_geteuid:
+      printf("geteuid()\n");
+      break; /*SYS_geteuid*/
+
+    case SYS_getegid:
+      printf("getegid()\n");
+      break; /*SYS_getegid*/
+
+    
+
   }
 
   free(tmpBuffer2);
