@@ -236,8 +236,21 @@ int main(int argc, char *argv[], char *envp[])
       else if(strcmp(argv[i], "-trace") == 0 &&
               executionMode == FILE_HANDLE_MODE)
       {
-        // TODO: Add some sanity checks
-        launchTraceProgram(elfHandle, argc-targetFileIndex, &argv[targetFileIndex], envp);
+        char answer = "\0";
+
+        printf("Running Trace On Untrusted Software Is A Security Risk\n" \
+               "Be Sure To Only Run In A Sandboxed Environment.\n" \
+               "Are You Sure You Would Like To Continue?  Y/N ");
+        answer = getchar();
+        if(answer == 'y' || answer == 'Y')
+        {
+          // TODO: Add some sanity checks
+          launchTraceProgram(elfHandle, argc-targetFileIndex, &argv[targetFileIndex], envp);
+        }
+        else
+        {
+          exit(0);
+        }
       }
 
       /* Option: Dump ASCII strings. */
@@ -245,7 +258,8 @@ int main(int argc, char *argv[], char *envp[])
       {
         if(executionMode == PID_MODE)
         {
-          /* TODO: Implement this for PID option. */
+          ELF64_EXECUTABLE_HANDLE_T * tmpElf = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+          scanFileForStrings(tmpElf->fileHandle.path, 3);
         }
         else
         {

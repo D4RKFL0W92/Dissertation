@@ -160,6 +160,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
   switch(executableHandle->regs.orig_rax)
   {
     case SYS_read:
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      
       tmpBuffer = malloc(executableHandle->regs.rdx);
       if(tmpBuffer == NULL)
       {
@@ -174,6 +176,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         executableHandle->regs.rdi,
         tmpBuffer,
         executableHandle->regs.rdx);
+
+      // TODO: Can we check that the read bytes is initialised data before dumping the bytes.
+      // dumpHexBytesFromOffset(tmpBuffer, 0, executableHandle->regs.rdx);
       break; /*SYS_read*/
 
     case SYS_write:
@@ -994,12 +999,122 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       break; /*SYS_times*/
 
     case SYS_ptrace:
-      printf("ptrace(request=0x%08x, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+    {
+      switch(executableHandle->regs.rdi)
+      {
+        case PTRACE_GETREGS:
+          printf("ptrace(request=PTRACE_GETREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_SETREGS:
+          printf("ptrace(request=PTRACE_SETREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_GETFPREGS:
+          printf("ptrace(request=PTRACE_GETFPREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_SETFPREGS:
+          printf("ptrace(request=PTRACE_SETFPREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_GETFPXREGS:
+          printf("ptrace(request=PTRACE_GETFPXREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_SETFPXREGS:
+          printf("ptrace(request=PTRACE_SETFPXREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_OLDSETOPTIONS:
+          printf("ptrace(request=PTRACE_OLDSETOPTIONS, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_GET_THREAD_AREA:
+          printf("ptrace(request=PTRACE_GET_THREAD_AREA, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_SET_THREAD_AREA:
+          printf("ptrace(request=PTRACE_SET_THREAD_AREA, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+#ifdef __x86_64__
+        case PTRACE_ARCH_PRCTL:
+          printf("ptrace(request=PTRACE_ARCH_PRCTL, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rdi,
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+#endif
+
+        case PTRACE_SYSEMU:
+          printf("ptrace(request=PTRACE_SYSEMU, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_SYSEMU_SINGLESTEP:
+          printf("ptrace(request=PTRACE_SYSEMU_SINGLESTEP, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_SINGLEBLOCK:
+          printf("ptrace(request=PTRACE_SINGLEBLOCK, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+        case PTRACE_TRACEME:
+          printf("ptrace(request=PTRACE_TRACEME, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          puts("Anit-Debugging Detected, Exiting Now.");
+          exit(1);
+
+        default:
+          printf("ptrace(request=0x%008x, pid=%d, addr=0x%016x, data=0x%016x)\n",
+                executableHandle->regs.rdi,
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+          break;
+
+      }
       break; /*SYS_ptrace*/
+
+    }
 
     case SYS_getuid:
       printf("getuid()\n"); // Prints UID on return.
@@ -1031,6 +1146,221 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
     case SYS_getegid:
       printf("getegid()\n");
       break; /*SYS_getegid*/
+
+    case SYS_setpgid:
+      printf("setpgid(pid=%s, pgid=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_setpgid*/
+
+    case SYS_getppid:
+      printf("getppid()\n");
+      break; /*SYS_getppid*/
+
+    case SYS_getpgrp:
+      printf("getpgrp()\n");
+      break; /*SYS_getpgrp*/
+
+    case SYS_setsid:
+      printf("setsid()\n");
+      break; /*SYS_setsid*/
+
+    case SYS_setreuid:
+      printf("setreuid(uid=%d, euid=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_setreuid*/
+
+    case SYS_setregid:
+      printf("setregid(gid=%d, egid=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_setregid*/
+
+    case SYS_getgroups:
+      printf("getgroups(groupentsize=%d, groups-addr=%p)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_getgroups*/
+
+    case SYS_setgroups:
+      printf("setgroups(groupentsize=%d, groups-addr=%p)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_setgroups*/
+
+    case SYS_setresuid:
+      printf("setresuid(ruid=%d, euid=%d, suid=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_setresuid*/
+
+    case SYS_getresuid:
+      // TODO: Progress to syscall exit and receive the actual values.
+      printf("getresuid(ruid=%p, euid=%p, suid=%p)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_getresuid*/
+
+    case SYS_setresgid:
+      printf("setresgid(rgid=%d, egid=%d, sgid=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_setresgid*/
+
+    case SYS_getresgid:
+      // TODO: Progress to syscall exit and receive the actual values.
+      printf("getresgid(rgid=%p, egid=%p, sgid=%p)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_getresgid*/
+
+    case SYS_getpgid:
+      printf("getpgid(pid=%d)\n",
+              executableHandle->regs.rdi);
+      break; /*SYS_getpgid*/
+
+    case SYS_setfsuid:
+      printf("setfsuid(uid=%d)\n",
+              executableHandle->regs.rdi);
+      break; /*SYS_setfsuid*/
+
+    case SYS_setfsgid:
+      printf("setfsgid(gid=%d)\n",
+              executableHandle->regs.rdi);
+      break; /*SYS_setfsgid*/
+
+    case SYS_getsid:
+      printf("getsid(pid=%d)\n",
+              executableHandle->regs.rdi);
+      break; /*SYS_getsid*/
+
+    case SYS_capget:
+      // TODO: Look into what data we can get from capget/capset
+      printf("capget()\n");
+      break; /*SYS_capget*/
+
+    case SYS_capset:
+      printf("capset()\n");
+      break; /*SYS_capset*/
+
+    case SYS_rt_sigpending:
+      printf("rt_sigpending(set=%p, sigentsize=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_rt_sigpending*/
+
+    case SYS_rt_sigtimedwait:
+      printf("rt_sigtimedwait(*uthese=%p, uinfo=%p, *uts=%p, sigentsize=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+      break; /*SYS_rt_sigtimedwait*/
+
+    case SYS_rt_sigqueueinfo:
+      printf("rt_sigqueueinfo(pid=%d, sig=0x%08x, *uinfo=%p)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_rt_sigqueueinfo*/
+
+    case SYS_rt_sigsuspend:
+      printf("rt_sigsuspend(*newset=%p, sigentsize=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_rt_sigsuspend*/
+
+    case SYS_sigaltstack:
+      // TODO we could receive the signal stack at the syscall exit.
+      printf("sigaltstack(*uss=%p, *uoss=%p)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_sigaltstack*/
+
+    case SYS_utime:
+      struct utimbuf timeBuff = {0};
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &timeBuff,
+                                     sizeof(struct utimbuf));
+                                     
+      printf("utime(filename=%s, act-time=%d, mod-time=%d)\n",
+              executableHandle->regs.rdi,
+              timeBuff.actime,
+              timeBuff.modtime);
+      break; /*SYS_utime*/
+
+    case SYS_mknod:
+      printf("mknod(filename=%s, mode=0x%08x, dev=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_mknod*/
+
+    case SYS_personality:
+      printf("personality(personality=0x%08x)\n",
+              executableHandle->regs.rdi);
+      break; /*SYS_personality*/
+
+    case SYS_ustat:
+      printf("ustat(dev=%d)\n", executableHandle->regs.rdi); // This function is deprecated
+      break; /*SYS_ustat*/
+
+    case SYS_statfs:
+      tmpBuffer = malloc(PATH_MAX);
+      if(tmpBuffer == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("statfs(path=\"%s\")\n", tmpBuffer); // TODO: progress to end of syscall and try to extract statfs struct.
+      break; /*SYS_statfs*/
+
+    case SYS_fstatfs:
+      printf("fstatfs(fd=%d)\n", executableHandle->regs.rdi); // This function is deprecated
+      break; /*SYS_fstatfs*/
+
+    case SYS_sysfs:
+      tmpBuffer = malloc(PATH_MAX);
+      if(tmpBuffer == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rsi, &tmpBuffer);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("sysfs(option=0x%08x, path=\"%s\")\n", tmpBuffer);
+      break; /*SYS_sysfs*/
+
+    case SYS_getpriority:
+      printf("getpriority(which=%d, who=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      break; /*SYS_getpriority*/
+
+    case SYS_setpriority:
+      printf("setpriority(which=%d, who=%d, priority=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      break; /*SYS_setpriority*/
+
+    
 
     
 
@@ -1136,9 +1466,10 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
         printf("Returned With: %d\n\n", executableHandle->regs.rax);
       }
 
+      oldRegisters = executableHandle->regs;
+
       /* Continue to the next syscall. */        
       ptrace(PTRACE_SYSCALL, executableHandle->pid, NULL, NULL);
-      oldRegisters = executableHandle->regs;
     }
 
   } while(executableHandle->isExecuting);
