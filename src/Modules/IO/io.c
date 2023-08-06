@@ -30,7 +30,7 @@ BOOL isHexadecimalCharacter(char digit)
   return FALSE;
 }
 
-uint8_t hexToDecimal(const char* hexString, uint64_t * value)
+BOOL hexToDecimal(const char* hexString, uint64_t * value)
 {
   uint8_t  offsetExponent  = 0;
   int16_t  hexStrLen     = 0;
@@ -114,7 +114,7 @@ uint8_t hexToDecimal(const char* hexString, uint64_t * value)
   return ERR_NONE;
 }
 
-uint8_t stringToInteger(const char* numString, uint64_t* value)
+BOOL stringToInteger(const char* numString, uint64_t* value)
 {
   uint8_t err = 0;
   uint64_t lValue = 0;
@@ -155,9 +155,21 @@ uint8_t stringToInteger(const char* numString, uint64_t* value)
   return ERR_NONE;
 }
 
+BOOL isAsciidata(const char * data, uint64_t uCount)
+{
+  for(int i = 0; i < uCount; i++)
+  {
+    if((data[i] != '\0') && data[i] < 0x20 || data[i] >= 0x7E)
+    {
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
 #ifdef UNITTEST
 
-void unittest_isHexadecimalCharacter_legalChars()
+static void unittest_isHexadecimalCharacter_legalChars()
 {
   assert( isHexadecimalCharacter('0') == TRUE );
   assert( isHexadecimalCharacter('1') == TRUE );
@@ -183,7 +195,7 @@ void unittest_isHexadecimalCharacter_legalChars()
   assert( isHexadecimalCharacter('F') == TRUE );
 }
 
-void unittest_isHexadecimalCharacter_illegalChars()
+static void unittest_isHexadecimalCharacter_illegalChars()
 {
   assert( isHexadecimalCharacter('z') == FALSE );
   assert( isHexadecimalCharacter('y') == FALSE );
@@ -209,7 +221,7 @@ void unittest_isHexadecimalCharacter_illegalChars()
   assert( isHexadecimalCharacter('\"') == FALSE );
 }
 
-void unittest_stringToInteger_legalUsage()
+static void unittest_stringToInteger_legalUsage()
 {
   uint64_t value = 0;
   uint8_t err = ERR_NONE;
@@ -255,7 +267,7 @@ void unittest_stringToInteger_legalUsage()
   assert(value == 9000);
 }
 
-void unittest_stringToInteger_illegalUsage()
+static void unittest_stringToInteger_illegalUsage()
 {
   uint64_t value = 0;
   uint8_t err = ERR_NONE;
@@ -270,7 +282,7 @@ void unittest_stringToInteger_illegalUsage()
   assert(err == ERR_NULL_ARGUMENT);
 }
 
-void unittest_hexToDecimal_valid()
+static void unittest_hexToDecimal_valid()
 {
   uint8_t err = 0;
   uint64_t value = 0;
@@ -429,6 +441,24 @@ void unittest_hexToDecimal_valid()
 
 }
 
+static void unittest_isAsciidata_validASCII()
+{
+  char buff[] = "Random Text";
+  assert(isAsciidata(buff, sizeof(buff)) == TRUE);
+
+  char buff2[] = "/\\<<-_';/*[]&^$#@%!*()";
+  assert(isAsciidata(buff2, sizeof(buff2)) == TRUE);
+}
+
+static void unittest_isAsciidata_invalidASCII()
+{
+  char buff[] = "Random Text";
+  assert(isAsciidata(buff, sizeof(buff)) == TRUE);
+
+  char buff2[] = "/\\<<-_';/*[]&^$#@%!*()";
+  assert(isAsciidata(buff2, sizeof(buff2)) == TRUE);
+}
+
 void ioTestSuite()
 {
   unittest_isHexadecimalCharacter_legalChars();
@@ -438,6 +468,8 @@ void ioTestSuite()
   unittest_stringToInteger_illegalUsage();
 
   unittest_hexToDecimal_valid();
+
+  unittest_isAsciidata_validASCII();
 }
 
 #endif

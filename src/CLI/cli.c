@@ -36,8 +36,9 @@ int main(int argc, char *argv[], char *envp[])
   MODE executionMode = UNKNOWN_MODE;
   char pidStr[5] = {0};
   BOOL usingPid = FALSE;
-  int targetFileIndex = 0;
-  int i = 1;
+  uint16_t targetFileIndex = 0;
+  uint16_t i = 1;
+  uint16_t endOfProgArgs = argc;
   uint8_t err = ERR_NONE;
 
   if(argc < 2 || strcmp(argv[1], "-h") == 0)
@@ -46,7 +47,7 @@ int main(int argc, char *argv[], char *envp[])
     exit(-1);
   }
 
-  if(argc > 1)
+  else
   {
     /*
      * Check for options that specific ordering to their arguments.
@@ -156,7 +157,16 @@ int main(int argc, char *argv[], char *envp[])
         executionMode = FILE_HANDLE_MODE;
         found = TRUE;
         targetFileIndex = j;
-        break;
+      }
+      // Check if any bash special operators are present in the args
+      else if(strncmp(argv[j], "|", 1) != 0 ||
+              strncmp(argv[j], "&", 1) != 0 ||
+              strncmp(argv[j], ">", 1) != 0 ||
+              strncmp(argv[j], ">>", 2) != 0)
+      {
+        // TODO: It seems the program works in not processing these special commands but
+        // they do not seem to work on the terminal.
+        endOfProgArgs = j;
       }
     }
     
@@ -173,7 +183,7 @@ int main(int argc, char *argv[], char *envp[])
     /*
      * All functionality that relies on an elf/file handle
     */
-    while(i < argc)
+    while(i <= endOfProgArgs)
     {
       /* Header info related options. */
       /*
@@ -219,7 +229,7 @@ int main(int argc, char *argv[], char *envp[])
       else if(strcmp(argv[i], "-f") == 0 ||
               strcmp(argv[i], "-functions") == 0)
       {
-        if(i != argc-1)
+        if(i != endOfProgArgs-1)
         {
           if(strcmp(argv[i + 1], "-v") == 0)
           {
@@ -245,7 +255,7 @@ int main(int argc, char *argv[], char *envp[])
         if(answer == 'y' || answer == 'Y')
         {
           // TODO: Add some sanity checks
-          launchTraceProgram(elfHandle, argc-targetFileIndex, &argv[targetFileIndex], envp);
+          launchTraceProgram(elfHandle, endOfProgArgs-targetFileIndex, &argv[targetFileIndex], envp);
         }
         else
         {

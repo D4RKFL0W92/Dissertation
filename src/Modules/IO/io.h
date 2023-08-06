@@ -19,8 +19,10 @@
 #include "../../Types/turtle_types.h"
 
 BOOL isHexadecimalCharacter(char digit);
-uint8_t hexToDecimal(const char* hexString, uint64_t * value);
-uint8_t stringToInteger(const char* numString, uint64_t* value);
+BOOL hexToDecimal(const char* hexString, uint64_t * value);
+BOOL stringToInteger(const char* numString, uint64_t* value);
+
+BOOL isAsciidata(const char * data, uint64_t uCount);
 
 #ifdef UNITTEST
 void ioTestSuite();

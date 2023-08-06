@@ -23,6 +23,9 @@
 #include <sys/swap.h>
 #include <sys/reboot.h>
 #include <sys/xattr.h>
+#include <linux/aio_abi.h>
+#include <linux/futex.h>
+#include <linux/types.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/user.h>
@@ -30,6 +33,7 @@
 #include <sys/wait.h>
 #include <sys/syscall.h>
 #include <linux/ptrace.h>
+#include <time.h>
 #include "../Headers/elftypes.h"
 #include "../../Logging/logging.h"
 #include "../../Types/turtle_types.h"
@@ -54,7 +58,6 @@ int8_t readProcessMemoryFromPID(pid_t pid, const void * offset, void * dstAddr, 
 int8_t mapELF32ToHandleFromProcessMemory(const void ** pMem, ELF32_EXECUTABLE_HANDLE_T ** elfHandle, const uint64_t uCount);
 int8_t mapELF64ToHandleFromProcessMemory(const void ** pMem, ELF64_EXECUTABLE_HANDLE_T ** elfHandle, const uint64_t uCount);
 
-int8_t isAsciidata(const char * data, uint64_t uCount);
 
 #ifdef UNITTEST
 void elfDynamicTestSuite();
