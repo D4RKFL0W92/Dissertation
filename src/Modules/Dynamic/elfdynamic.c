@@ -2797,10 +2797,527 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       printf("Returned With: %d\n\n", executableHandle->regs.rax);
       break; /*SYS_io_getevents*/
 
+/***********************************************************************************/
+    case SYS_io_submit:
+      uint64_t address = 0;
+
+      err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rdx, &address, sizeof(uint64_t));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("io_submit(context=0x%016x, nr=%ld, iocb-addr=%p\n)",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              address);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_io_submit*/
+
+/***********************************************************************************/
+    case SYS_io_cancel:
+      printf("io_cancel(context-ID=0x%016x, iocb-struct-addr=%p, result-addr=%p\n)",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_io_cancel*/
+
+/***********************************************************************************/
+    case SYS_lookup_dcookie:
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi, tmpBuffer1, sizeof(uint64_t));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+      printf("lookup_dcookie(cookie=0x%016x, buffer=\"%s\", length=%d\n)",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx);
+
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_lookup_dcookie*/
+
+/***********************************************************************************/
+    case SYS_epoll_create:
+      printf("epoll_create(length=%d\n)",
+              executableHandle->regs.rdi);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_epoll_create*/
+
+/***********************************************************************************/
+    case SYS_remap_file_pages:
+      printf("remap_file_pages(virtual-addr=%p, size=0x%08x, protections=size=0x%016x" \
+             "page-offset=size=0x%016x, flags=size=0x%08x\n)",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10,
+              executableHandle->regs.r8);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_remap_file_pages*/
+
+// /***********************************************************************************/
+//     case SYS_getdents64:
+//       struct linux_dirent d = {0};
+//       printf("getdents64(fd=%u, size=0x%08x, protections=size=0x%016x)",
+//               executableHandle->regs.rdi,
+//               executableHandle->regs.rsi,
+//               executableHandle->regs.rdx,                    // DEPRECATED
+//               executableHandle->regs.r10,
+//               executableHandle->regs.r8);
+
+//       PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+//       printf("Returned With: %d\n\n", executableHandle->regs.rax);
+//       break; /*SYS_getdents64*/
+
+/***********************************************************************************/
+    case SYS_set_tid_address:
+      int tid = 0;
+
+      err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rdi, &tid, sizeof(int));
+      printf("set_tid_address(tid=%u\n)", tid);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_set_tid_address*/
+
+/***********************************************************************************/
+    case SYS_restart_syscall:
+      printf("restart_syscall()\n");
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_restart_syscall*/
+
+  /***********************************************************************************/
+    case SYS_semtimedop:
+      struct sembuf sBuff = {0};
+
+      if(executableHandle->regs.rdx == 0) // There are no sembuf structures
+      {
+        printf("semtimedop(semid=%d, no-ops)\n",
+                executableHandle->regs.rdi);
+        break;
+      }
+
+      tmpBuffer1 = (struct sembuf *) malloc(executableHandle->regs.rdx * sizeof(struct sembuf));
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      printf("semtimedop(semid=%d, ",
+              executableHandle->regs.rdi);
+      for(int i = 0; i < executableHandle->regs.rdx; i++)
+      {
+        err = readProcessMemoryFromPID(executableHandle->pid,
+                                       executableHandle->regs.rsi + (i * sizeof(struct sembuf)),
+                                       &sBuff,
+                                       sizeof(struct sembuf));
+        
+        printf("sembuf: %d", i+1);
+        if(i == executableHandle->regs.rdx - 1)
+        {
+          printf("sem-num=%d, sem-op=0x%04x, sem-flag=0x%04x, ",
+                  sBuff.sem_num,
+                  sBuff.sem_op,
+                  sBuff.sem_flg);
+        }
+        else
+        {
+          printf("sem-num=%d, sem-op=0x%04x, sem-flag=0x%04x\n\n",
+                  sBuff.sem_num,
+                  sBuff.sem_op,
+                  sBuff.sem_flg);
+        }
+      }
+      printf("nsops=%d)\n", executableHandle->regs.rdx);
+      
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_semtimedop*/
+
+/***********************************************************************************/
+    case SYS_fadvise64:
+
+      switch(executableHandle->regs.r10)
+      {
+        case POSIX_FADV_NORMAL:
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_NORMAL\n)",
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
+          break;
+
+        case POSIX_FADV_SEQUENTIAL:
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_SEQUENTIAL\n)",
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
+          break;
+
+        case POSIX_FADV_RANDOM:
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_RANDOM\n)",
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
+          break;
+
+        case POSIX_FADV_NOREUSE:
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_NOREUSE\n)",
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
+          break;
+
+        case POSIX_FADV_WILLNEED:
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_WILLNEED\n)",
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
+          break;
+
+        case POSIX_FADV_DONTNEED:
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_DONTNEED\n)",
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
+          break;
+      }
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_fadvise64*/
+
+/***********************************************************************************/
+    case SYS_timer_create:
+      char clockID[50] = {0};
+      timer_t time = 0;
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      /* Get clockid argument in human readable format. */
+      switch(executableHandle->regs.rdi)
+      {
+        case CLOCK_REALTIME:
+          strcpy(clockID, "CLOCK_REALTIME");
+          break;
+
+        case CLOCK_MONOTONIC:
+          strcpy(clockID, "CLOCK_MONOTONIC");
+          break;
+
+        case CLOCK_PROCESS_CPUTIME_ID:
+          strcpy(clockID, "CLOCK_PROCESS_CPUTIME_ID");
+          break;
+
+        case CLOCK_THREAD_CPUTIME_ID:
+          strcpy(clockID, "CLOCK_THREAD_CPUTIME_ID");
+          break;
+
+        case CLOCK_BOOTTIME:
+          strcpy(clockID, "CLOCK_BOOTTIME");
+          break;
+
+        case CLOCK_REALTIME_ALARM:
+          strcpy(clockID, "CLOCK_REALTIME_ALARM");
+          break;
+
+        case CLOCK_BOOTTIME_ALARM:
+          strcpy(clockID, "CLOCK_BOOTTIME_ALARM");
+          break;
+
+        case CLOCK_TAI:
+          strcpy(clockID, "CLOCK_TAI");
+          break;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rdx, &time, sizeof(timer_t));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("timer_create(clockID\"%s\", sevp-addr=%p, timerID=%d)\n", clockID, executableHandle->regs.rsi, time);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_timer_create*/
+
+/***********************************************************************************/
+    case SYS_timer_settime:
+      struct itimerspec oldTime = {0};
+      struct itimerspec newTime = {0};
+
+      err= readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rdx, &newTime, sizeof(struct itimerspec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err= readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.r10, &oldTime, sizeof(struct itimerspec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
 
 
+      printf("timer_settime(timerID=%d, flags=0x%08x, newtime-interval=%d, newtime-value=%d", \
+             "oldtime-interval=%d, oldtime-value=%d\n)",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              newTime.it_interval,
+              newTime.it_value,
+              oldTime.it_interval,
+              oldTime.it_value);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_timer_settime*/
+
+/***********************************************************************************/
+    case SYS_timer_gettime:
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      struct itimerspec Time = {0};
+
+      err= readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rdi, &Time, sizeof(struct itimerspec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("timer_gettime(timerID=%d, flags=0x%08x, time-interval=%d, time-value=%d\n)",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              Time.it_interval,
+              Time.it_value);
+
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_timer_gettime*/
+
+/***********************************************************************************/
+    case SYS_timer_getoverrun:
+      printf("timer_getoverrun(timerID=%d)\n", executableHandle->regs.rdi);
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\t(overrun-time)\n\n", executableHandle->regs.rax);
+      break; /*SYS_timer_getoverrun*/
+
+/***********************************************************************************/
+    case SYS_timer_delete:
+      printf("timer_delete(timerID=%d)\n", executableHandle->regs.rdi);
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_timer_delete*/
+
+/***********************************************************************************/
+    case SYS_clock_settime:
+      struct timespec ts1 = {0};
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &ts1,
+                                     sizeof(struct timespec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("clock_settime(timerID=%d, seconds=%d, nano-seconds=%d)\n",
+              executableHandle->regs.rdi,
+              ts1.tv_sec,
+              ts1.tv_nsec);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_clock_settime*/
+
+/***********************************************************************************/
+    case SYS_clock_gettime:
+      struct timespec ts2 = {0};
+      
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &ts2,
+                                     sizeof(struct timespec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("clock_gettime(timerID=%d, seconds=%d, nano-seconds=%d)\n",
+              executableHandle->regs.rdi,
+              ts2.tv_sec,
+              ts2.tv_nsec);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_clock_gettime*/
+
+/***********************************************************************************/
+    case SYS_clock_getres:
+      struct timespec ts3 = {0};
+      
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &ts3,
+                                     sizeof(struct timespec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("clock_getres(timerID=%d, seconds=%d, nano-seconds=%d)\n",
+              executableHandle->regs.rdi,
+              ts3.tv_sec,
+              ts3.tv_nsec);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_clock_getres*/
+
+/***********************************************************************************/
+    case SYS_clock_nanosleep:
+      struct timespec req1 = {0};
+      struct timespec remain1 = {0};
 
 
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &req1,
+                                     sizeof(struct timespec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &remain1,
+                                     sizeof(struct timespec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("clock_nanosleep(timerID=%d, seconds=%d, nano-seconds=%d)\n",
+              executableHandle->regs.rdi,
+              req1.tv_sec,
+              req1.tv_nsec,
+              remain1.tv_sec, // TODO: This may be NULL (will this matter?)
+              remain1.tv_nsec);
+              
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\n\n", executableHandle->regs.rax);
+      break; /*SYS_clock_nanosleep*/
+
+/***********************************************************************************/
+    case SYS_exit_group:
+      printf("exit_group(errror-code=%d)\n", executableHandle->regs.rdi);
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d\t(overrun-time)\n\n", executableHandle->regs.rax);
+      break; /*SYS_exit_group*/
+
+/***********************************************************************************/
+    case SYS_epoll_wait:
+      struct epoll_event events1 = {0};
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rdi,
+                                     &events1,
+                                     sizeof(struct epoll_event));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+      
+      printf("epoll_wait(epfd=%d, epoll-event=0x%08x, max-events=%d, timeout=%d)\n",
+              executableHandle->regs.rdi,
+              events1.events,
+              executableHandle->regs.rsi,
+              executableHandle->regs.r10);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_epoll_wait*/
+
+/***********************************************************************************/
+    case SYS_epoll_ctl:
+      struct epoll_event events2 = {0};
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.r10,
+                                     &events2,
+                                     sizeof(struct epoll_event));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+      
+      printf("epoll_ctl(epfd=%d, op=0x%08x, fd=%d, epoll-event=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              events2.events
+            );
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_epoll_ctl*/
+
+/***********************************************************************************/
+    case SYS_tgkill:
+      printf("tgkill(tgid=%d, pid=%d, signal=0x%08x, timeout=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx);
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_tgkill*/
+
+/***********************************************************************************/
+    case SYS_utimes:
+      struct utimbuf utimeBuff = {0};
+
+      // Read in filename
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+      
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      // Read in time buffer
+      err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi,
+                                     &utimeBuff,
+                                     sizeof(struct utimbuf));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+      
+      printf("utimes(filename=\"%s\", access-time=%d, modification-time=%d)\n",
+              tmpBuffer1,
+              utimeBuff.actime,
+              utimeBuff.modtime);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_utimes*/
 
   }
 
