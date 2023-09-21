@@ -4358,7 +4358,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
         return err;
       }
 
-      printf("keyctl(cmd=%s, arg1=0x%08x, arg2=0x%08x, arg3=0x%08x, arg4=0x%08x,)\n",
+      printf("keyctl(cmd=%s, arg1=0x%08x, arg2=0x%08x, arg3=0x%08x, arg4=0x%08x)\n",
               tmpBuffer1,
               executableHandle->regs.rsi,
               executableHandle->regs.rdx,
