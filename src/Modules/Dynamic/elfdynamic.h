@@ -21,7 +21,9 @@
 #include <time.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <mqueue.h>
 #include <sys/sem.h>
+#include <sys/resource.h>
 #include <sys/time.h>
 #include <sys/epoll.h>
 #include <sys/timex.h>
@@ -39,6 +41,8 @@
 #include <linux/aio_abi.h>
 #include <linux/futex.h>
 #include <linux/types.h>
+#include <linux/kexec.h>
+#include <linux/keyctl.h>
 #include "../Headers/elftypes.h"
 #include "../../Logging/logging.h"
 #include "../../Types/turtle_types.h"
