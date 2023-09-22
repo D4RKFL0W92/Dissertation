@@ -3501,7 +3501,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       int tid = 0;
 
       err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rdi, &tid, sizeof(int));
-      printf("set_tid_address(tid=%u\n)", tid);
+      printf("set_tid_address(tid=%u)\n", tid);
 
       PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
       printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3568,42 +3568,42 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       switch(executableHandle->regs.r10)
       {
         case POSIX_FADV_NORMAL:
-          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_NORMAL\n)",
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_NORMAL)\n",
                   executableHandle->regs.rdi,
                   executableHandle->regs.rsi,
                   executableHandle->regs.rdx);
           break;
 
         case POSIX_FADV_SEQUENTIAL:
-          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_SEQUENTIAL\n)",
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_SEQUENTIAL)\n",
                   executableHandle->regs.rdi,
                   executableHandle->regs.rsi,
                   executableHandle->regs.rdx);
           break;
 
         case POSIX_FADV_RANDOM:
-          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_RANDOM\n)",
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_RANDOM)\n",
                   executableHandle->regs.rdi,
                   executableHandle->regs.rsi,
                   executableHandle->regs.rdx);
           break;
 
         case POSIX_FADV_NOREUSE:
-          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_NOREUSE\n)",
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_NOREUSE)\n",
                   executableHandle->regs.rdi,
                   executableHandle->regs.rsi,
                   executableHandle->regs.rdx);
           break;
 
         case POSIX_FADV_WILLNEED:
-          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_WILLNEED\n)",
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_WILLNEED)\n",
                   executableHandle->regs.rdi,
                   executableHandle->regs.rsi,
                   executableHandle->regs.rdx);
           break;
 
         case POSIX_FADV_DONTNEED:
-          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_DONTNEED\n)",
+          printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_DONTNEED)\n",
                   executableHandle->regs.rdi,
                   executableHandle->regs.rsi,
                   executableHandle->regs.rdx);
@@ -4368,6 +4368,105 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_keyctl*/
 
+/***********************************************************************************/
+    case SYS_ioprio_set:
+      int prio = IOPRIO_PRIO_VALUE(IOPRIO_PRIO_CLASS(executableHandle->regs.rdx),
+                                   IOPRIO_PRIO_DATA(executableHandle->regs.rdx));
+      
+      switch(executableHandle->regs.rdi)
+      {
+        case IOPRIO_WHO_PROCESS:
+          printf("ioprio_set(which=IOPRIO_WHO_PROCESS, who=%d, prio=%d)\n",
+                             executableHandle->regs.rsi,
+                             prio);
+          break;
+
+        case IOPRIO_WHO_PGRP:
+          printf("ioprio_set(which=IOPRIO_WHO_PGRP, who=%d, prio=%d)\n",
+                             executableHandle->regs.rsi,
+                             prio);
+          break;
+
+        case IOPRIO_WHO_USER:
+          printf("ioprio_set(which=IOPRIO_WHO_USER, who=%d, prio=%d)\n",
+                             executableHandle->regs.rsi,
+                             prio);
+          break;
+      }
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_ioprio_set*/
+
+/***********************************************************************************/
+    case SYS_ioprio_get:
+      // I've decided to repeat this code as using a separate function
+      // would rely on a pointer to return the string in. (that is less safe) 
+      switch(executableHandle->regs.rdi)
+      {
+        case IOPRIO_WHO_PROCESS:
+          printf("ioprio_get(which=IOPRIO_WHO_PROCESS, who=%d)\n",
+                             executableHandle->regs.rsi);
+          break;
+
+        case IOPRIO_WHO_PGRP:
+          printf("ioprio_get(which=IOPRIO_WHO_PGRP, who=%d)\n",
+                             executableHandle->regs.rsi);
+          break;
+
+        case IOPRIO_WHO_USER:
+          printf("ioprio_get(which=IOPRIO_WHO_USER, who=%d)\n",
+                             executableHandle->regs.rsi);
+          break;
+      }
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_ioprio_get*/
+
+/***********************************************************************************/
+    case SYS_inotify_init:
+      printf("inotify_init()\n");
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_inotify_init*/
+
+/***********************************************************************************/
+    case SYS_inotify_add_watch:
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("inotify_add_watch(fd=%d, path=\"%s\", mask=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx);
+      
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_inotify_add_watch*/
+
+/***********************************************************************************/
+    case SYS_inotify_rm_watch:
+
+      printf("inotify_rm_watch(fd=%d, wd=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+      
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_inotify_rm_watch*/
 
 
 
@@ -4377,7 +4476,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 
 
 
-  }
+
+  } /* END OF MAIN SWITCH STATEMENT */
 
   free(tmpBuffer3);
   free(tmpBuffer2);

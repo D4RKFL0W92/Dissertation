@@ -37,6 +37,7 @@
 #include <sys/reg.h>
 #include <sys/wait.h>
 #include <sys/syscall.h>
+#include <linux/ioprio.h>
 #include <linux/ptrace.h>
 #include <linux/aio_abi.h>
 #include <linux/futex.h>
