@@ -4372,7 +4372,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
     case SYS_ioprio_set:
       int prio = IOPRIO_PRIO_VALUE(IOPRIO_PRIO_CLASS(executableHandle->regs.rdx),
                                    IOPRIO_PRIO_DATA(executableHandle->regs.rdx));
-      
+
       switch(executableHandle->regs.rdi)
       {
         case IOPRIO_WHO_PROCESS:
@@ -4401,7 +4401,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 /***********************************************************************************/
     case SYS_ioprio_get:
       // I've decided to repeat this code as using a separate function
-      // would rely on a pointer to return the string in. (that is less safe) 
+      // would rely on a pointer to return the string in. (that is less safe)
       switch(executableHandle->regs.rdi)
       {
         case IOPRIO_WHO_PROCESS:
@@ -4452,7 +4452,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
               executableHandle->regs.rdi,
               tmpBuffer1,
               executableHandle->regs.rdx);
-      
+
       PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_inotify_add_watch*/
@@ -4463,10 +4463,785 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       printf("inotify_rm_watch(fd=%d, wd=%d)\n",
               executableHandle->regs.rdi,
               executableHandle->regs.rsi);
-      
+
       PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_inotify_rm_watch*/
+
+/***********************************************************************************/
+    case SYS_migrate_pages:
+
+      unsigned long oldNodes = 0;
+      unsigned long newNodes = 0;
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     &oldNodes,
+                                     sizeof(unsigned long));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.r10,
+                                     &newNodes,
+                                     sizeof(unsigned long));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("migrate_pages(pid=%d, max-nodes=%ld, old-nodes=%ld, new-nodes=%ld)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              oldNodes,
+              newNodes);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_migrate_pages*/
+
+/***********************************************************************************/
+    case SYS_openat:
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("openat(dir-fd=%d, filename=\"%s\", flags=0x%08x, mode=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_openat*/
+
+/***********************************************************************************/
+    case SYS_mkdirat:
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("mkdirat(dir-fd=%d, path=\"%s\", mode=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_mkdirat*/
+
+/***********************************************************************************/
+    case SYS_mknodat:
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("mknodat(dir-fd=%d, filename=\"%s\", mode=0x%08x, dev=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_mknodat*/
+
+/***********************************************************************************/
+    case SYS_fchownat:
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("fchownat(dir-fd=%d, filename=\"%s\", uid=%d, gid=%d, flag=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10,
+              executableHandle->regs.r8);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_fchownat*/
+
+/***********************************************************************************/
+    case SYS_futimesat:
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      /*
+       * I have chosen to only print the address of utimes as there is
+       * not that much to gleen from the structures fields.
+      */
+      printf("futimesat(dir-fd=%d, filename=\"%s\", utimes-addr=%p)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_futimesat*/
+
+/***********************************************************************************/
+    case SYS_newfstatat:
+
+      struct stat newst = {0};
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     &newst,
+                                     sizeof(struct stat));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      // We could print more of the stat fields but I think size is enough for now.
+      printf("newfstatat(dir-fd=%d, filename=\"%s\", stat-size=0x%08x, flag=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              newst.st_size,
+              executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_newfstatat*/
+
+/***********************************************************************************/
+    case SYS_unlinkat:
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("unlinkat(dir-fd=%d, filename=\"%s\", flag=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_unlinkat*/
+
+/***********************************************************************************/
+    case SYS_renameat:
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      tmpBuffer2 = malloc(PATH_MAX);
+      if(tmpBuffer2 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.r10,
+                                        &tmpBuffer2);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("renameat(old-fd=%d, oldname=\"%s\", new-fd=%d, newname=\"%s\")\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx,
+              tmpBuffer2);
+
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_renameat*/
+
+/***********************************************************************************/
+    case SYS_linkat:
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      tmpBuffer2 = malloc(PATH_MAX);
+      if(tmpBuffer2 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.r10,
+                                        &tmpBuffer2);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("linkat(old-fd=%d, oldname=\"%s\", new-fd=%d, newname=\"%s\", flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx,
+              tmpBuffer2,
+              executableHandle->regs.r8);
+
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_linkat*/
+
+/***********************************************************************************/
+    case SYS_symlinkat:
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      tmpBuffer2 = malloc(PATH_MAX);
+      if(tmpBuffer2 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rdx,
+                                        &tmpBuffer2);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("symlinkat(oldname=\"%s\", new-dfd=%d, newname=\"%s\")\n",
+              tmpBuffer1,
+              executableHandle->regs.rsi,
+              tmpBuffer2);
+
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_symlinkat*/
+
+/***********************************************************************************/
+    case SYS_readlinkat:
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      // Allocate buffsize bytes to tmpBuffer2 including the NULL byte
+      tmpBuffer2 = malloc(executableHandle->regs.r10 + 1);
+      if(tmpBuffer2 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     tmpBuffer2,
+                                     executableHandle->regs.r10);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+      tmpBuffer2[executableHandle->regs.r10] = '\0';
+
+      printf("readlinkat(dfd=%d, path=\"%s\", buff=\"%s\", buff-size=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              tmpBuffer2,
+              executableHandle->regs.r10);
+
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_readlinkat*/
+
+/***********************************************************************************/
+    case SYS_fchmodat:
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("fchmodat(dfd=%d, filename=\"%s\", mode=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_fchmodat*/
+
+/***********************************************************************************/
+    case SYS_faccessat:
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("faccessat(dfd=%d, filename=\"%s\", mode=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              executableHandle->regs.rdx);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_faccessat*/
+
+/***********************************************************************************/
+    case SYS_pselect6:
+      struct timeval tmStruct = {0};
+      fd_set set1 = {0};
+      fd_set set2 = {0};
+      fd_set set3 = {0};
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.r8,
+                                     &tmStruct,
+                                     sizeof(struct timeval));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &set1,
+                                     sizeof(fd_set));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     &set2,
+                                     sizeof(fd_set));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.r10,
+                                     &set3,
+                                     sizeof(fd_set));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+      printf("pselect6(nfds=%d, set1-mask=0x%08x, set2-mask=0x%08x, set3-mask=0x%08x, seconds=%d)\n",
+              executableHandle->regs.rdi,
+              set1.__fds_bits,
+              set2.__fds_bits,
+              set3.__fds_bits,
+              tmStruct.tv_sec);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_pselect6*/
+
+/***********************************************************************************/
+    case SYS_ppoll:
+      struct timeval ppolltmStruct = {0};
+      struct pollfd  pollFd        = {0};
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdi,
+                                     &pollFd,
+                                     sizeof(struct pollfd));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     &ppolltmStruct,
+                                     sizeof(struct timeval));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("ppoll(pollfd-fd=%d, pollfd-events=0x%04x, pollfd-revents=0x%04x, " \
+                   "nfds=0x%08x, timestruct-seconds=%d, sigmask=0x%08x)\n",
+              pollFd.fd,
+              pollFd.events,
+              pollFd.revents,
+              executableHandle->regs.rsi,
+              ppolltmStruct.tv_sec,
+              executableHandle->regs.r10);
+
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_ppoll*/
+
+/***********************************************************************************/
+    case SYS_unshare:
+      /* TODO: Write code (function) to handle printing OR'd flags. */
+      printf("unshare(flags=0x%08x)\n",
+              executableHandle->regs.rdi);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_unshare*/
+
+/***********************************************************************************/
+    case SYS_set_robust_list:
+      /*
+       * NOTE: I have decided to only print the address of list head.
+       * This is because there are only three data fields in this struct
+       * and none really give us much usful information.
+      */
+      printf("set_robust_list(list-head=%p, len=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_set_robust_list*/
+
+/***********************************************************************************/
+    case SYS_get_robust_list:
+      size_t len = 0;
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     &len,
+                                     sizeof(size_t));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("get_robust_list(pid=%d, list-head=%p, len=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              len);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_get_robust_list*/
+
+/***********************************************************************************/
+    case SYS_splice:
+      /*
+       * TODO: I don't think the commented code following would work
+       * as the PIPE would surely be a different process address space
+       * so reading from executableHandle->pid would be incorrect.
+       * We may need to open a handle to a different process in order
+       * to get this data. (that may not be feasible for the time being).
+      */
+
+      // tmpBuffer1 = malloc(executableHandle->regs.r10);
+      // if(tmpBuffer1 == NULL)
+      // {
+      //   return ERR_MEMORY_ALLOCATION_FAILED;
+      // }
+
+      // // Read in from fd_in accounting for offset
+      // err = readProcessMemoryFromPID(executableHandle->pid,
+      //                                executableHandle->regs.rdi + executableHandle->regs.rsi,
+      //                                tmpBuffer1,
+      //                                executableHandle->regs.r10);
+      // if(err != ERR_NONE)
+      // {
+      //   return err;
+      // }
+
+      printf("splice(fd_in=%d, inOffset=0x%08x, fd_out=%d, outOffset=0x%08x, len=%d, flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10,
+              len,
+              executableHandle->regs.r9);
+      // printf("DATA:\n");
+      // TODO: Print these bytes in hex (may not be feasible).
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_splice*/
+
+/***********************************************************************************/
+    case SYS_tee:
+      printf("tee(fd_in=%d, fd_out=%d, len=%d, flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_tee*/
+
+/***********************************************************************************/
+    case SYS_sync_file_range:
+      printf("sync_file_range(fd=%d, offset=%ld, nbytes=%ld, flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_sync_file_range*/
+
+/***********************************************************************************/
+    case SYS_vmsplice:
+      // TODO: We could read/dump the memory described by iov
+      printf("vmsplice(fd=%d, iov-addr=%p, nr_segs=%ld, flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_vmsplice*/
+
+/***********************************************************************************/
+    case SYS_move_pages:
+      // TODO: We could read/dump the memory described by pages/nodes
+      printf("move_pages(fd=%d, count=%d, pages-addr=%p, nodes-addr=%p, flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10,
+              executableHandle->regs.r8);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_move_pages*/
+
+/***********************************************************************************/
+    case SYS_utimensat:
+      struct timespec times = {0};
+
+      tmpBuffer1 = malloc(PATH_MAX);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     &times,
+                                     sizeof(struct timespec));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("utimensat(dir-fd=%d, pathname=\"%s\", seconds=%d, nano-seconds=%d, flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              tmpBuffer1,
+              times.tv_sec,
+              times.tv_nsec,
+              executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_utimensat*/
+
+/***********************************************************************************/
+    case SYS_epoll_pwait:
+      // TODO: We could read/dump the memory described by events
+      printf("epoll_pwait(ep-fd=%d, events-addr=%p, max-events=%d, timeouts=%d)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi,
+              executableHandle->regs.rdx,
+              executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_epoll_pwait*/
+
+/***********************************************************************************/
+    case SYS_signalfd:
+      sigset_t sigset = {0};
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &sigset,
+                                     sizeof(sigset_t));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("signalfd(ufd=%d, sig-val=0x%08x, flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              sigset.__val,
+              executableHandle->regs.rdx);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_signalfd*/
+
+/***********************************************************************************/
+    case SYS_timerfd_create:
+      printf("timerfd_create(clockid=%d, flags=0x%08x)\n",
+              executableHandle->regs.rdi,
+              executableHandle->regs.rsi);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_timerfd_create*/
+
+/***********************************************************************************/
+    case SYS_eventfd:
+      printf("eventfd(count=%u)\n",
+              executableHandle->regs.rdi);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_eventfd*/
 
 
 
@@ -4556,6 +5331,7 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
     }
     else
     {
+      // Query process for register state
       if(ptrace(PTRACE_GETREGS, executableHandle->pid,
                 NULL, &executableHandle->regs) < 0)
       {

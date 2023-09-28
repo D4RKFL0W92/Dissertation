@@ -290,7 +290,7 @@ int main(int argc, char *argv[], char *envp[])
         elfDynamicTestSuite();
         ioTestSuite();
         TVectorTestSuite();
-        printf("Unit Tests Successful.\n");
+        printf("\nUnit Tests Successful.\n");
       }
     #endif
 
