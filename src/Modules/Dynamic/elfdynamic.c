@@ -298,7 +298,7 @@ static int getKeyctlOperation(int cmd, char * operationBuff)
   return ERR_NONE;
 }
 
-static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle, BOOL firstSysCall)
+static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
 {
   char * tmpBuffer1 = NULL;
   char * tmpBuffer2 = NULL;
@@ -1049,11 +1049,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
 
 /***********************************************************************************/
     case SYS_execve:
-      if(firstSysCall)
-      {
-        break; // We have already printed execve syscall data in launchSyscallTraceElf64.
-        // TODO: Could this be handled more optimally??
-      }
 
       err = readStringFromProcessMemory(executableHandle->pid,
                                         executableHandle->regs.rdi,
@@ -5284,7 +5279,6 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
 {
   static REGS oldRegisters = {0};
   struct ptrace_syscall_info syscallInfo = {0};
-  BOOL firstSysCall  = TRUE;
   long syscallNumber = 0;
   int status         = 0;
   int8_t err         = ERR_NONE;
@@ -5338,14 +5332,8 @@ static int8_t launchSyscallTraceElf64(ELF64_EXECUTABLE_HANDLE_T * executableHand
         return ERR_PROCESS_OPERATION_FAILED;
       }
 
-      if(isRepeatedSyscallX64(&executableHandle->regs, &oldRegisters) == FALSE)
-      {
-        printf("Entering sycall number: %d\n", executableHandle->regs.orig_rax);
-        printSyscallInfoElf64(executableHandle, firstSysCall);
-        firstSysCall = FALSE;
-      }
-
-      oldRegisters = executableHandle->regs;
+      printf("Entering sycall number: %d\n", executableHandle->regs.orig_rax);
+      printSyscallInfoElf64(executableHandle);
 
       /* Continue to the next syscall. */
       ptrace(PTRACE_SYSCALL, executableHandle->pid, NULL, NULL);
