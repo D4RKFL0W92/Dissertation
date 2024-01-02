@@ -33,6 +33,7 @@
 #include <sys/timex.h>
 #include <sys/xattr.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/ptrace.h>
 #include <sys/reboot.h>
@@ -45,6 +46,7 @@
 #include <linux/ptrace.h>
 #include <linux/keyctl.h>
 #include <linux/aio_abi.h>
+#include <linux/perf_event.h>
 #include "../Headers/elftypes.h"
 #include "../ELFinfo/elfinfo.h"
 #include "../../Logging/logging.h"
@@ -89,6 +91,15 @@ void elfDynamicTestSuite();
                               // 2.6.4); offset is (d_reclen - 1)
     */
   };
+#endif /* linux_dirent */
+
+#ifndef mmsghdr
+  struct mmsghdr
+  {
+    struct msghdr msg_hdr;  /* Message header */
+    unsigned int  msg_len;  /* Number of received bytes for header */
+  };
 #endif
 
-#endif
+
+#endif /* _ELF_DYNAMIC_INFO_ */
