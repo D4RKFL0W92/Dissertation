@@ -99,7 +99,16 @@ void elfDynamicTestSuite();
     struct msghdr msg_hdr;  /* Message header */
     unsigned int  msg_len;  /* Number of received bytes for header */
   };
-#endif
+#endif /* mmsghdr */
 
+#ifndef file_handle
+  struct file_handle
+  {
+    unsigned int  handle_bytes;   /* Size of f_handle [in, out] */
+    int           handle_type;    /* Handle type [out] */
+    unsigned char f_handle[0];    /* File identifier (sized by
+                                    caller) [out] */
+  };
+#endif /* file_handle */
 
 #endif /* _ELF_DYNAMIC_INFO_ */

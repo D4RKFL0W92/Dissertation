@@ -66,7 +66,7 @@ static uint8_t printMmapFlags(int flags)
 
 int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char** pStr)
 {
-  uint16_t allocationSize = 40;
+  uint16_t allocationSize = PATH_MAX; // A lot of the syscalss rely on pathnames so seems as good a value as any.
   char *   data       = NULL;
   char *   pChar      = NULL;
   int8_t   err        = ERR_NONE;
@@ -139,6 +139,11 @@ int8_t readProcessMemoryFromPID(pid_t pid, const void * srcAddr, void * dstAddr,
     return ERR_INVALID_ARGUMENT;
   }
 
+  if(dstAddr == 0)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+  
   memset(dstAddr, 0, uCount);
 
   for(uint16_t i = 0; i < iterations; i++)
@@ -5552,7 +5557,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       // TODO: There is other information in the (struct msghdr) structure we could print.
       for(int i = 0; i < executableHandle->regs.rdx; i++)
       {
-        msg = (struct msghdr *) tmpBuffer1;
+        msg = (struct msghdr *) (tmpBuffer1 + sizeof(struct msghdr) * i);
         printf("\nMessage-header.name=%s, Message-len=%d",
                 msg->msg_name, msg->msg_namelen);
       }
@@ -5560,6 +5565,153 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_recvmmsg*/
+
+  /***********************************************************************************/
+    case SYS_fanotify_init:
+      
+      /*
+       * TODO: Print flags in a human readable format.
+      */
+      printf("fanotify_init(flags=0x%08x, event-flags=0x%08x)",
+             executableHandle->regs.rdi,
+             executableHandle->regs.rsi);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_fanotify_init*/
+
+    /***********************************************************************************/
+    case SYS_fanotify_mark:
+      
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.r8,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+      
+      printf("fanotify_mark(fanotify-fd=%d, flags=0x%08x, mask=0x%16x, fd=%s)",
+             executableHandle->regs.rdi,
+             executableHandle->regs.rsi,
+             executableHandle->regs.rdx,
+             executableHandle->regs.r10);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_fanotify_mark*/
+
+  /***********************************************************************************/
+    case SYS_prlimit64:
+
+      struct rlimit * oldLimit = NULL;
+      struct rlimit * newLimit = NULL;
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     oldLimit,
+                                     sizeof(struct rlimit));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.r10,
+                                     newLimit,
+                                     sizeof(struct rlimit));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      if(oldLimit == NULL) // These structures are NULL'able
+      {
+        if(newLimit == NULL)
+        {
+          printf("prlimit64(pid=%d, resource=%d, newLimit=NULL, oldLimit=NULL)",
+                executableHandle->regs.rdi,
+                executableHandle->regs.rsi);
+
+        }
+        else
+        {
+          printf("prlimit64(pid=%d, resource=%d, newLimit-rlim_cur=%d, newLimit-rlim_max=%d, oldLimit=NULL)",
+                executableHandle->regs.rdi,
+                executableHandle->regs.rsi,
+                newLimit->rlim_cur,
+                newLimit->rlim_max);
+        }
+      }
+      else
+      {
+        if(newLimit == NULL)
+        {
+          printf("prlimit64(pid=%d, resource=%d, newLimit=NULL, oldLimit-rlim_cur=%d, oldLimit-rlim_max=%d)",
+                executableHandle->regs.rdi,
+                executableHandle->regs.rsi,
+                oldLimit->rlim_cur,
+                oldLimit->rlim_max);
+
+        }
+        else
+        {
+          printf("prlimit64(pid=%d, resource=%d,  oldLimit-rlim_cur=%d, oldLimit-rlim_max=%d, newLimit-rlim_cur=%d, newLimit-rlim_max=%d)",
+                executableHandle->regs.rdi,
+                executableHandle->regs.rsi,
+                oldLimit->rlim_cur,
+                oldLimit->rlim_max,
+                newLimit->rlim_cur,
+                newLimit->rlim_max);
+        }
+      }
+
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_prlimit64*/
+
+  /***********************************************************************************/
+    case SYS_name_to_handle_at:
+      struct file_handle fHandle = {0};
+      int mntID = 0;
+      
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rdx,
+                                     &fHandle,
+                                     sizeof(struct file_handle));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.r10,
+                                     &mntID,
+                                     sizeof(int));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+      
+      printf("name_to_handle_at(dfd=%d, pathname=%s, handle-type=%d, mnt-ID=%d, flags=0x%08x)",
+             executableHandle->regs.rdi,
+             tmpBuffer1,
+             fHandle.handle_type,
+             mntID,
+             executableHandle->regs.r8);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_name_to_handle_at*/
 
 
 
