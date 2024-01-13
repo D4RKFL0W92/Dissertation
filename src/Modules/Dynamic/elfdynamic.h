@@ -29,6 +29,7 @@
 #include <sys/swap.h>
 #include <sys/user.h>
 #include <sys/wait.h>
+#include <sys/timex.h>
 #include <sys/epoll.h>
 #include <sys/timex.h>
 #include <sys/xattr.h>

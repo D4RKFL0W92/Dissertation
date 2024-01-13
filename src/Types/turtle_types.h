@@ -35,6 +35,10 @@
 
 #define ERR_FILE_OPERATION_FAILED      20
 
+// Used for when a checked value does not match any
+// of it's expected values included in its definition.
+#define ERR_UNKNOWN_EXPECTED_VALUE     25
+
 #define ERR_PROCESS_OPERATION_FAILED   30
 #define ERR_PROCESS_ATTACH_FAILED      31
 #define ERR_PROCESS_MEMORY_READ_FAILED 32

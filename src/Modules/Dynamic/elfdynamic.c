@@ -303,6 +303,49 @@ static int getKeyctlOperation(int cmd, char * operationBuff)
   return ERR_NONE;
 }
 
+static void printNamespaceType(int fd, int namespaceType)
+{
+  switch(namespaceType)
+  {
+
+    case 0x02000000: // CLONE_NEWCGROUP
+      printf("setns(fd=%d, nstype=CLONE_NEWCGROUP)", fd);
+      break;
+
+    case 0x08000000: // CLONE_NEWIPC
+      printf("setns(fd=%d, nstype=CLONE_NEWIPC)", fd);
+      break;
+
+    case 0x40000000: // CLONE_NEWNET
+      printf("setns(fd=%d, nstype=CLONE_NEWNET)", fd);
+      break;
+
+    case 0x00020000: // CLONE_NEWNS
+      printf("setns(fd=%d, nstype=CLONE_NEWNS)", fd);
+      break;
+
+    case 0x20000000: // CLONE_NEWPID
+      printf("setns(fd=%d, nstype=CLONE_NEWPID)", fd);
+      break;
+
+    case 0x00000080: // CLONE_NEWTIME
+      printf("setns(fd=%d, nstype=CLONE_NEWTIME)", fd);
+      break;
+
+    case 0x10000000: // CLONE_NEWUSER
+      printf("setns(fd=%d, nstype=CLONE_NEWUSER)", fd);
+      break;
+
+    case 0x04000000: // CLONE_NEWUTS
+      printf("setns(fd=%d, nstype=CLONE_NEWUTS)", fd);
+      break;
+
+    default:
+      printf("setns(fd=%d, nstype=UNKNOWN)", fd);
+      break;
+  }
+}
+
 static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
 {
   sigset_t sigset    = {0};
@@ -5527,6 +5570,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       struct msghdr * msg = NULL; // May have to define this ourselves.
       struct timespec timeout_secs = {0};
 
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
       // Read in the entire msg vector.
       tmpBuffer1 = malloc(sizeof(struct mmsghdr) * executableHandle->regs.rdx);
       err = readProcessMemoryFromPID(executableHandle->pid,
@@ -5562,11 +5607,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
                 msg->msg_name, msg->msg_namelen);
       }
 
-      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_recvmmsg*/
 
-  /***********************************************************************************/
+/***********************************************************************************/
     case SYS_fanotify_init:
       
       /*
@@ -5580,7 +5624,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_fanotify_init*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
     case SYS_fanotify_mark:
       
       err = readStringFromProcessMemory(executableHandle->pid,
@@ -5601,7 +5645,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_fanotify_mark*/
 
-  /***********************************************************************************/
+/***********************************************************************************/
     case SYS_prlimit64:
 
       struct rlimit * oldLimit = NULL;
@@ -5611,7 +5655,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
                                      executableHandle->regs.rdx,
                                      oldLimit,
                                      sizeof(struct rlimit));
-      if(err != ERR_NONE)
+      if(err != ERR_NONE && err != ERR_NULL_ARGUMENT) // We need this as two of the args are NULL'able.
       {
         return err;
       }
@@ -5620,7 +5664,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
                                      executableHandle->regs.r10,
                                      newLimit,
                                      sizeof(struct rlimit));
-      if(err != ERR_NONE)
+      if(err != ERR_NONE && err != ERR_NULL_ARGUMENT)
       {
         return err;
       }
@@ -5671,7 +5715,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_prlimit64*/
 
-  /***********************************************************************************/
+/***********************************************************************************/
     case SYS_name_to_handle_at:
       struct file_handle fHandle = {0};
       int mntID = 0;
@@ -5712,6 +5756,120 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T * executableHandle
       PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
       printf("Returned With: %d)\n\n", executableHandle->regs.rax);
       break; /*SYS_name_to_handle_at*/
+
+/***********************************************************************************/
+    case SYS_open_by_handle_at:
+      struct file_handle f_Handle = {0};
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &f_Handle,
+                                     sizeof(struct file_handle));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      printf("open_by_handle_at(mountdirfd=%d, handle-type=%d, flags=0x%08x)",
+             executableHandle->regs.rdi,
+             f_Handle.handle_type,
+             executableHandle->regs.rdx);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_open_by_handle_at*/
+
+/***********************************************************************************/
+    case SYS_clock_adjtime:
+      struct timex timexStruct = {0};
+
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                     executableHandle->regs.rsi,
+                                     &timexStruct,
+                                     sizeof(struct timex));
+      if(err != ERR_NONE)
+      {
+        return err;
+      }
+
+      /*
+       * TODO: We could print much more information from the times
+       * struct, but it may not really be useful.
+      */
+      printf("clock_adjtime(which-clock=%d, timex-offset=%ld)",
+             executableHandle->regs.rdi,
+             timexStruct.offset);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_clock_adjtime*/
+
+/***********************************************************************************/
+    case SYS_syncfs:
+      printf("syncfs(fd=%d)",
+             executableHandle->regs.rdi);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_syncfs*/
+
+/***********************************************************************************/
+    case SYS_sendmmsg:
+      struct mmsghdr * msgV = NULL;
+      int vecLen = executableHandle->regs.rdx;
+
+      printf("sendmmsg(fd=%d, msg-vector-length=%d, flags=0x%08x)",
+                       executableHandle->regs.rdi,
+                       vecLen,
+                       executableHandle->regs.r10);
+      if(vecLen > 0)
+      {
+        struct msghdr * tmpMsgHdr = NULL;
+        tmpBuffer1 = (struct mmsghdr *) malloc(sizeof(struct msghdr) * vecLen);
+        
+        err = readProcessMemoryFromPID(executableHandle->pid,
+                                      executableHandle->regs.rsi,
+                                      &tmpBuffer1,
+                                      sizeof(struct msghdr) * vecLen);
+        if(err != ERR_NONE)
+        {
+          return err;
+        }
+
+        /*
+         * TODO: We need to somehow extract the data from all of the pointers of
+         * the structure (msghdr).
+         * 
+         * Could we use the pointer address value stored in the struct and
+         * read that address of the virtual memory.
+        */
+
+        // tmpMsgHdr = (struct msghdr *) tmpBuffer1;
+
+        // for(int i = 0; i < vecLen; i++)
+        // {
+        //   printf("");
+        // }
+      }
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_sendmmsg*/
+
+/***********************************************************************************/
+    case SYS_setns:
+      int namespaceType = executableHandle->regs.rsi;
+
+      /*
+       * Some versions of Unix will not
+       * support certain namespaces.
+      */
+
+      printNamespaceType(executableHandle->regs.rdi, namespaceType);
+
+      PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+      printf("Returned With: %d)\n\n", executableHandle->regs.rax);
+      break; /*SYS_setns*/
 
 
 
@@ -5956,6 +6114,7 @@ int8_t mapELF64ToHandleFromProcessMemory(const void ** pMem, ELF64_EXECUTABLE_HA
 
   return ERR_NONE;
 }
+
 
 #ifdef UNITTEST
 
@@ -6361,7 +6520,179 @@ void unittest_mapELF64ToHandleFromProcessMemory_nullMemoryPtr()
   /* TODO: Add case where uCount == 0 */
 }
 
+void unittest_printNamespaceType()
+{
+  char buffer[100];
+  int pipefd[2];
+  char * testOutput = NULL;
+  int  stdoutOutput; // fd for stdout so we can check the output.
 
+  stdoutOutput = dup(fileno(stdout));
+
+  pipe2(pipefd, 0);
+
+  // What used to be stdout will now go to the pipe.
+  dup2(pipefd[1], fileno(stdout));
+
+  // First flush and read any bytes left in the stream.
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+
+  // First test.
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=UNKNOWN");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0x02000000);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=CLONE_NEWCGROUP");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0x08000000);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=CLONE_NEWIPC");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0x40000000);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=CLONE_NEWNET");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0x00020000);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=CLONE_NEWNS");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0x20000000);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=CLONE_NEWPID");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0x00000080);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=CLONE_NEWTIME");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0x10000000);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=CLONE_NEWUSER");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, 0x04000000);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=CLONE_NEWUTS");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  // Test some values for namespace argument that aren't defined.
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(3, 0x01234567); // The fd argument is not actually used in the logic of this function.
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=UNKNOWN");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(1, 67);
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=UNKNOWN");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  testOutput = NULL;
+  memset(buffer, 0, sizeof(buffer));
+  printNamespaceType(0, -1); // The fd argument is not actually used in the logic of this function.
+  fflush(stdout);
+  read(pipefd[0], buffer, sizeof(buffer));
+  
+  testOutput = strstr(buffer, "nstype=UNKNOWN");
+  if(testOutput == NULL)
+  {
+    goto testFail;
+  }
+
+  end:
+    dup2(stdoutOutput, fileno(stdout));//return stdout to previous state.
+    puts("unittest_printNamespaceType() Ran Successfully.\n");
+    return;
+
+  testFail:
+    dup2(stdoutOutput, fileno(stdout));//return stdout to previous state.
+    perror("FAILURE IN printNamespaceType()\n");
+}
 
 void elfDynamicTestSuite()
 {
@@ -6377,5 +6708,7 @@ void elfDynamicTestSuite()
   unittest_mapELF64ToHandleFromProcessMemory_legalEhdr();
   unittest_mapELF64ToHandleFromProcessMemory_legalEhdr_differentValues();
   unittest_mapELF64ToHandleFromProcessMemory_nullMemoryPtr();
+
+  unittest_printNamespaceType();
 }
 #endif /* UNITTEST */
