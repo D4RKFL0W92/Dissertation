@@ -23,6 +23,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include <mqueue.h>
+#include <sys/uio.h>
 #include <sys/sem.h>
 #include <sys/reg.h>
 #include <sys/time.h>
@@ -40,6 +41,7 @@
 #include <sys/reboot.h>
 #include <sys/syscall.h>
 #include <sys/resource.h>
+#include <linux/kcmp.h>
 #include <linux/futex.h>
 #include <linux/types.h>
 #include <linux/kexec.h>
