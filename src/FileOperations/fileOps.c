@@ -313,7 +313,7 @@ int8_t scanFileForStrings(char* filepath, uint16_t toFindLen)
   return err;
 }
 
-int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t offsetIntoMemory, uint64_t uCount)
+int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_t uCount)
 {
   uint64_t counter = 0;
   uint64_t currOffset = 0;
@@ -337,13 +337,13 @@ int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t offsetIntoMemory, uint64_t
   printf("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
   printf("--------------------------------------------------------\n");
   
-  char buff[16];
-  while(counter < (uCount))
+  uint8_t buff[16];
+  while(counter < uCount)
   {
     memset(buff, 0, sizeof(buff));
     uint8_t i = 0;
 
-    while(i < 0x10) // Write upto 16 bytes into the buffer at both end.
+    while(i < 0x10 && i < uCount) // Write upto 16 bytes into the buffer at both end.
     {
       buff[i] = pMem[counter];
       counter++;
@@ -352,32 +352,32 @@ int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t offsetIntoMemory, uint64_t
 
     for(int a = 0; a < 2; a++)
     {
-      for(int b = 0; b < 0x10; b++)
+      for(int byteCount = 0; byteCount < 0x10; byteCount++)
       {
         if(a == 0)
         {
-          uint8_t byte = buff[b];
-          if(b == 0)
+          uint8_t byte = pMem[byteCount];
+          if(byteCount == 0)
           {
             printf("%08x ", offsetIntoMemory + currOffset);
           }
           printf("%02x ", byte);
-          if(b == 0xF)
+          if(byteCount == 0xF)
           {
             printf(" ");
           }
         }
         else
         {
-          if(b == 0)
+          if(byteCount == 0)
           {
             printf("|");
           }
 
-          if(buff[b] >= 33 && buff[b] <= 126)
+          if(pMem[byteCount] >= 33 && pMem[byteCount] <= 126)
           {
             // Check if it's a printable character.
-            printf("%c", buff[b]);
+            printf("%c", pMem[byteCount]);
 
           }
           else
@@ -385,7 +385,7 @@ int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t offsetIntoMemory, uint64_t
             printf(".");
           }
 
-          if(b == 0xF)
+          if(byteCount == 0xF)
           {
             printf("|\n");
           }

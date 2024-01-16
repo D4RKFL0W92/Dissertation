@@ -119,7 +119,7 @@ int8_t scanFileForStrings(char* filepath, uint16_t toFindLen);
  * Return:  Returns an error code indicating the success or
  *          failure of the function.
 */
-int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t startAddress, uint64_t uCount);
+int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t startAddress, uint64_t uCount);
 
 /* Dumps a given amount of bytes in hex from a given offset into a file.
  * Prints the bytes and the ASCII representation if there is one.

@@ -84,6 +84,7 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
   }
   memset(data, 0, allocationSize);
 
+
   while (nullRead == FALSE)
   {
 
@@ -113,12 +114,16 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
     }
 
     memcpy(data + charCount, &wordRead, cpySize);
+    if(data[0] == '\0') // There is no ASCII data at the base location.
+    {
+      return ERR_NULL_VALUE_READ_FROM_MEMORY;
+    }
 
     charCount += sizeof(long);
     // TODO: Is the reallocation code correct??
     if (charCount >= allocationSize && nullRead == FALSE)
     {
-      realloc(data, (allocationSize + 40));
+      realloc(data, (allocationSize + 500)); // Arbitrary increase in memory allocation.
       memset(data + allocationSize, 0, allocationSize);
       allocationSize += 40;
     }
@@ -349,6 +354,10 @@ static void printNamespaceType(int fd, int namespaceType)
   }
 }
 
+/*
+ * Helper function for kcmp syscall case in syscall trace.
+ * Printf the macro name of the type arhgument.
+*/
 static int print_kcmpType(int type)
 {
   switch (type)
@@ -391,6 +400,67 @@ static int print_kcmpType(int type)
   }
 }
 
+/*
+ * Helper function for bpf() syscall case in syscall trace function. The
+ * function will print relavent information from the bpf_attr union and the
+ * anonymous struct's contained within. It decides what the union represents
+ * based off the 'cmd' argument.
+*/
+static int8_t processBPFUnion(const union bpf_attr * bpfAttr, int cmd)
+{
+  switch(cmd)
+  {
+    case BPF_MAP_CREATE:
+      printf("map_type=%u, key_size=%u, value_size=%u, max_entries=%u",
+              bpfAttr->map_type,
+              bpfAttr->key_size,
+              bpfAttr->value_size,
+              bpfAttr->max_entries);
+      return BPF_MAP_CREATE;
+
+    case BPF_MAP_LOOKUP_ELEM:
+      printf("map_fd=%u, key=0x%x",
+              bpfAttr->map_fd,
+              bpfAttr->key);
+      // I've decided to omit the anonymous union within this struct
+      // as it's not clear how it is decided which value is supposed to
+      // be represented by the union members.
+      return BPF_MAP_LOOKUP_ELEM;
+
+    case BPF_MAP_UPDATE_ELEM:
+      printf("map_fd=%u, key=0x%x",
+              bpfAttr->map_fd,
+              bpfAttr->key);
+      return BPF_MAP_UPDATE_ELEM;
+
+    case BPF_MAP_DELETE_ELEM:
+      printf("map_fd=%u, key=0x%x",
+              bpfAttr->map_fd,
+              bpfAttr->key);
+      return BPF_MAP_DELETE_ELEM;
+
+    case BPF_MAP_GET_NEXT_KEY:
+      printf("map_fd=%u, key=0x%x",
+              bpfAttr->map_fd,
+              bpfAttr->key);
+      return BPF_MAP_GET_NEXT_KEY;
+
+    case BPF_PROG_LOAD:
+      // I have omitted several of the members of the anonymous struct, this is due to the fact
+      // that they represent pointers to other structs or buffers. This would become very convoluted.
+      printf("prog_type=%u, insn_cnt=%u, log_level=%u, log_size=%u, kern_version=%u",
+              bpfAttr->prog_type,
+              bpfAttr->insn_cnt,
+              bpfAttr->log_level,
+              bpfAttr->log_size,
+              bpfAttr->kern_version);
+      return BPF_PROG_LOAD;
+
+    default:
+      return ERR_UNKNOWN_EXPECTED_VALUE;
+  }
+}
+
 static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 {
   sigset_t sigset = {0};
@@ -403,7 +473,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
   switch (executableHandle->regs.orig_rax)
   {
-    /***********************************************************************************/
+
+/***********************************************************************************/
   case SYS_read:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
@@ -6055,6 +6126,344 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_finit_module*/
 
+/***********************************************************************************/
+  case SYS_sched_setattr:
+    struct sched_attr setAttr = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &setAttr,
+                                   sizeof(struct sched_attr));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("sched_setattr(PID=%d, setattr-addr=%p, flags=0x%08x)\n",
+           executableHandle->regs.rdi,
+           executableHandle->regs.rsi,
+           executableHandle->regs.rdx);
+
+    printf("struct sched_attr\n"             \
+           "{\n"                             \
+           "  uint32_t size=%d;\n"           \
+           "  uint32_t sched_policy=%d;\n"   \
+           "  uint64_t sched_flags=%d;\n"    \
+           "  int32_t  sched_nice=%d;\n"     \
+           "  uint32_t sched_priority=%d;\n" \
+           "  uint64_t sched_runtime=%d;\n"  \
+           "  uint64_t sched_deadline=%d;\n" \
+           "  uint64_t sched_period=%d;\n"   \
+           "};\n\n",
+           setAttr.size,
+           setAttr.sched_policy,
+           setAttr.sched_flags,
+           setAttr.sched_nice,
+           setAttr.sched_priority,
+           setAttr.sched_runtime,
+           setAttr.sched_deadline,
+           setAttr.sched_period);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_sched_setattr*/
+
+/***********************************************************************************/
+  case SYS_sched_getattr:
+    struct sched_attr getAttr = {0};
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &getAttr,
+                                   sizeof(struct sched_attr));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("sched_getattr(PID=%d, getattr-addr=%p, flags=0x%08x)\n",
+                          executableHandle->regs.rdi,
+                          executableHandle->regs.rsi,
+                          executableHandle->regs.rdx);
+
+    printf("struct sched_attr\n"             \
+           "{\n"                             \
+           "  uint32_t size=%d;\n"           \
+           "  uint32_t sched_policy=%d;\n"   \
+           "  uint64_t sched_flags=%d;\n"    \
+           "  int32_t  sched_nice=%d;\n"     \
+           "  uint32_t sched_priority=%d;\n" \
+           "  uint64_t sched_runtime=%d;\n"  \
+           "  uint64_t sched_deadline=%d;\n" \
+           "  uint64_t sched_period=%d;\n"   \
+           "};\n\n",
+           getAttr.size,
+           getAttr.sched_policy,
+           getAttr.sched_flags,
+           getAttr.sched_nice,
+           getAttr.sched_priority,
+           getAttr.sched_runtime,
+           getAttr.sched_deadline,
+           getAttr.sched_period);
+
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_sched_getattr*/
+
+/***********************************************************************************/
+  case SYS_renameat2:
+
+    tmpBuffer1 = malloc(PATH_MAX);
+    if(tmpBuffer1 == NULL)
+    {
+      return ERR_MEMORY_ALLOCATION_FAILED;
+    }
+
+    tmpBuffer2 = malloc(PATH_MAX);
+    if(tmpBuffer2 == NULL)
+    {
+      return ERR_MEMORY_ALLOCATION_FAILED;
+    }
+
+    err = readStringFromProcessMemory(executableHandle->pid,
+                                      executableHandle->regs.rsi,
+                                      &tmpBuffer1);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    err = readStringFromProcessMemory(executableHandle->pid,
+                                      executableHandle->regs.r10,
+                                      &tmpBuffer2);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("renameat2(olddfd=%u, oldname=\"%s\", newdfd=%u, newname=\"%s\", flags=0x%08x)\n",
+                      executableHandle->regs.rdi,
+                      tmpBuffer1,
+                      executableHandle->regs.rdx,
+                      tmpBuffer2,
+                      executableHandle->regs.r8);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_renameat2*/
+
+/***********************************************************************************/
+  case SYS_seccomp:
+
+    struct sock_fprog seccompArgs = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdx,
+                                   &seccompArgs,
+                                   sizeof(struct sock_fprog));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    /*
+     * TODO: Use the sock_fprog structure to determine how much data we
+     * would need if I can work out a way to parse the data if it
+     * contains multiple args.
+    */
+
+    printf("seccomp(fd=%d, flags=0x%08x, args-addr=%p)\n",
+                    executableHandle->regs.rdi,
+                    executableHandle->regs.rsi,
+                    executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_seccomp*/
+
+/***********************************************************************************/
+  case SYS_getrandom:
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+    tmpBuffer1 = malloc(executableHandle->regs.rsi);
+    if(tmpBuffer1 == NULL)
+    {
+      return ERR_MEMORY_ALLOCATION_FAILED;
+    }
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdi,
+                                   tmpBuffer1,
+                                   executableHandle->regs.rsi);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+
+    printf("getrandom(buffer-addr=%p, buffer-length=%d, flags=0x%08x)\n",
+                      executableHandle->regs.rdi,
+                      executableHandle->regs.rsi,
+                      executableHandle->regs.rdx);
+
+    puts("Data:\n");
+    /*
+     * FIX BUG: This works fine in the debugger but when
+     * executed on the terminal the program just prints
+     * all bytes with all their bits set.
+    */
+    dumpHexBytesFromOffset(tmpBuffer1, 0, executableHandle->regs.rsi);
+
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_getrandom*/
+
+/***********************************************************************************/
+  case SYS_memfd_create:
+
+    tmpBuffer1 = malloc(PATH_MAX);
+    if(tmpBuffer1 == NULL)
+    {
+      return ERR_MEMORY_ALLOCATION_FAILED;
+    }
+
+    err = readStringFromProcessMemory(executableHandle->pid,
+                                      executableHandle->regs.rdi,
+                                      &tmpBuffer1);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+
+    printf("memfd_create(name=%s, flags=0x%08x)\n",
+                         tmpBuffer1,
+                         executableHandle->regs.rsi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_memfd_create*/
+
+/***********************************************************************************/
+  case SYS_kexec_file_load:
+
+    tmpBuffer1 = malloc(executableHandle->regs.rdx);
+    if(tmpBuffer1 == NULL)
+    {
+      return ERR_MEMORY_ALLOCATION_FAILED;
+    }
+
+    // NULL the buffer as we will print data from this address as a string.
+    memset(tmpBuffer1, 0, executableHandle->regs.rdx);
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r10,
+                                   tmpBuffer1,
+                                   executableHandle->regs.rdx);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("kexec_file_load(kernel-fd=%d, initrd_fd=%d, cmdline-len=%d, cmdline=%s, flags=0x%08x)\n",
+                            executableHandle->regs.rdi,
+                            executableHandle->regs.rsi,
+                            executableHandle->regs.rdx,
+                            tmpBuffer1,
+                            executableHandle->regs.r8);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_kexec_file_load*/
+
+/***********************************************************************************/
+  case SYS_bpf:
+    union bpf_attr bpfAttr = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &bpfAttr,
+                                   sizeof(union bpf_attr));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("bpf(cmd=%d, ", executableHandle->regs.rdi);
+    processBPFUnion(&bpfAttr, executableHandle->regs.rdi);
+    printf(", size=%u)\n", executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_bpf*/
+
+/***********************************************************************************/
+  case SYS_execveat:
+
+    uint64_t argvStartAddr = executableHandle->regs.rdx;
+    uint64_t envpStartAddr = 0;
+    char * pArgv = NULL;
+    char * pEnvp = NULL;
+
+    err = readStringFromProcessMemory(executableHandle->pid,
+                                      executableHandle->regs.rsi,
+                                      &tmpBuffer1);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+    
+
+    printf("execveat(dfd=%d, pathname=\"%s\", ",
+                     executableHandle->regs.rdi,
+                     tmpBuffer1);
+
+    if(argvStartAddr > 0) // If argv is not NULL
+    {
+      BOOL nullTerminatorFound = false;
+      char * arg = NULL;
+
+
+
+      while(nullTerminatorFound != TRUE)
+      {
+        // Read the pointer value for the next
+        // agument in vector from the given address
+        err = readProcessMemoryFromPID(executableHandle->pid,
+                                       argvStartAddr,
+                                       &arg,
+                                       sizeof(uint64_t));
+        if(err != ERR_NONE)
+        {
+          return err;
+        }
+
+        pArgv = (char *) argvStartAddr;
+
+        err = readStringFromProcessMemory(executableHandle->pid,
+                                          arg,
+                                          &tmpBuffer2);
+        if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+        {
+          nullTerminatorFound = TRUE;
+          break;
+        }
+        else if(err != ERR_NONE)
+        {
+          return err;
+        }
+        printf("\"%s\", ", tmpBuffer2);
+        argvStartAddr += sizeof(char *);
+      }
+
+    }
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_execveat*/
+
+
 
 
 
@@ -6906,6 +7315,41 @@ static void unittest_print_kcmpType()
   puts("\n");
 }
 
+static void unittest_processBPFUnion()
+{
+  union bpf_attr bpfAttr = {0};
+  int8_t err = ERR_NONE;
+
+  bpfAttr.map_type = 1;
+  bpfAttr.key_size = 100;
+  bpfAttr.value_size = 8;
+  bpfAttr.max_entries = 10;
+
+  assert(processBPFUnion(&bpfAttr , BPF_MAP_CREATE) == BPF_MAP_CREATE);
+  printf("\n");
+  memset(&bpfAttr, 0, sizeof(union bpf_attr));
+
+  bpfAttr.prog_type    = 1;
+  bpfAttr.insn_cnt     = 1000;
+  bpfAttr.log_level    = 3;
+  bpfAttr.log_size     = 4096;
+  bpfAttr.kern_version = 3; // We don't need to check any of the fields as the union is const.
+  assert(processBPFUnion(&bpfAttr , BPF_MAP_LOOKUP_ELEM) == BPF_MAP_LOOKUP_ELEM);
+  printf("\n");
+  assert(processBPFUnion(&bpfAttr , BPF_MAP_DELETE_ELEM) == BPF_MAP_DELETE_ELEM);
+  printf("\n");
+  assert(processBPFUnion(&bpfAttr , BPF_MAP_GET_NEXT_KEY) == BPF_MAP_GET_NEXT_KEY);
+  printf("\n");
+
+  assert(processBPFUnion(&bpfAttr , BPF_MAP_UPDATE_ELEM) == BPF_MAP_UPDATE_ELEM);
+  printf("\n");
+
+  assert(processBPFUnion(&bpfAttr , -1) == ERR_UNKNOWN_EXPECTED_VALUE);
+  printf("\n");
+  assert(processBPFUnion(&bpfAttr , 9999) == ERR_UNKNOWN_EXPECTED_VALUE);
+  printf("\n");
+}
+
 void elfDynamicTestSuite()
 {
   unittest_getKeyctlOperation_validOperations(); // TODO: Confirm this test works.
@@ -6924,5 +7368,7 @@ void elfDynamicTestSuite()
   unittest_printNamespaceType();
 
   unittest_print_kcmpType();
+
+  unittest_processBPFUnion();
 }
 #endif /* UNITTEST */

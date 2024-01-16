@@ -41,6 +41,7 @@
 #include <sys/reboot.h>
 #include <sys/syscall.h>
 #include <sys/resource.h>
+#include <linux/bpf.h>
 #include <linux/kcmp.h>
 #include <linux/futex.h>
 #include <linux/types.h>
@@ -48,12 +49,14 @@
 #include <linux/ioprio.h>
 #include <linux/ptrace.h>
 #include <linux/keyctl.h>
+#include <linux/filter.h>
 #include <linux/aio_abi.h>
 #include <linux/perf_event.h>
 #include "../Headers/elftypes.h"
 #include "../ELFinfo/elfinfo.h"
 #include "../../Logging/logging.h"
 #include "../../Types/turtle_types.h"
+
 
 #define PROGRESS_TO_SYSCALL_EXIT(pid) ptrace(PTRACE_SYSCALL, pid, NULL, NULL)
 
@@ -78,40 +81,69 @@ int8_t mapELF64ToHandleFromProcessMemory(const void ** pMem, ELF64_EXECUTABLE_HA
 #ifdef UNITTEST
 void elfDynamicTestSuite();
 #endif /* UNITTEST */
-
+////////////////////////////////////////////////////////////////
 #ifndef linux_dirent
-  struct linux_dirent
-  {
-    unsigned long  d_ino;     /* Inode number */
-    unsigned long  d_off;     /* Offset to next linux_dirent */
-    unsigned short d_reclen;  /* Length of this linux_dirent */
-    char           d_name[];  /* Filename (null-terminated) */
-                      /* length is actually (d_reclen - 2 -
-                        offsetof(struct linux_dirent, d_name)) */
-    /*
-    char           pad;       // Zero padding byte
-    char           d_type;    // File type (only since Linux
-                              // 2.6.4); offset is (d_reclen - 1)
-    */
-  };
+struct linux_dirent
+{
+  unsigned long  d_ino;     /* Inode number */
+  unsigned long  d_off;     /* Offset to next linux_dirent */
+  unsigned short d_reclen;  /* Length of this linux_dirent */
+  char           d_name[];  /* Filename (null-terminated) */
+                    /* length is actually (d_reclen - 2 -
+                      offsetof(struct linux_dirent, d_name)) */
+  /*
+  char           pad;       // Zero padding byte
+  char           d_type;    // File type (only since Linux
+                            // 2.6.4); offset is (d_reclen - 1)
+  */
+};
 #endif /* linux_dirent */
 
+////////////////////////////////////////////////////////////////
 #ifndef mmsghdr
-  struct mmsghdr
-  {
-    struct msghdr msg_hdr;  /* Message header */
-    unsigned int  msg_len;  /* Number of received bytes for header */
-  };
+struct mmsghdr
+{
+  struct msghdr msg_hdr;  /* Message header */
+  unsigned int  msg_len;  /* Number of received bytes for header */
+};
+
 #endif /* mmsghdr */
 
+////////////////////////////////////////////////////////////////
 #ifndef file_handle
-  struct file_handle
-  {
-    unsigned int  handle_bytes;   /* Size of f_handle [in, out] */
-    int           handle_type;    /* Handle type [out] */
-    unsigned char f_handle[0];    /* File identifier (sized by
-                                    caller) [out] */
-  };
+
+struct file_handle
+{
+  unsigned int  handle_bytes;   /* Size of f_handle [in, out] */
+  int           handle_type;    /* Handle type [out] */
+  unsigned char f_handle[0];    /* File identifier (sized by caller) [out] */
+};
+
 #endif /* file_handle */
+
+////////////////////////////////////////////////////////////////
+#ifndef sched_attr
+
+struct sched_attr
+{
+  uint32_t size;              /* Size of this structure */
+  uint32_t sched_policy;      /* Policy (SCHED_*) */
+  uint64_t sched_flags;       /* Flags */
+  int32_t  sched_nice;        /* Nice value (SCHED_OTHER, SCHED_BATCH) */
+  uint32_t sched_priority;    /* Static priority (SCHED_FIFO, SCHED_RR) */
+  /* Remaining fields are for SCHED_DEADLINE */
+  uint64_t sched_runtime;
+  uint64_t sched_deadline;
+  uint64_t sched_period;
+};
+
+#endif /* sched_attr */
+
+
+
+
+
+
+
 
 #endif /* _ELF_DYNAMIC_INFO_ */
