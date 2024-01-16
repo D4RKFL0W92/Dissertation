@@ -67,13 +67,18 @@ static uint8_t printMmapFlags(int flags)
 int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
 {
   uint16_t allocationSize = PATH_MAX; // A lot of the syscalss rely on pathnames so seems as good a value as any.
-  char *data = NULL;
-  char *pChar = NULL;
+  char * data = NULL;
+  char * pChar = NULL;
   int8_t err = ERR_NONE;
   long wordRead = 0;
   BOOL nullRead = FALSE;
   uint8_t charCount = 0;
   uint8_t cpySize = 0;
+
+  if(offset == 0)
+  {
+    return ERR_INVALID_ARGUMENT;
+  }
 
   if ((data = malloc(allocationSize)) == NULL)
   {
@@ -84,13 +89,17 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
   }
   memset(data, 0, allocationSize);
 
-
-  while (nullRead == FALSE)
+  do
   {
+    errno = 0;
 
     wordRead = 0;
     wordRead = ptrace(PTRACE_PEEKDATA, pid, offset + charCount, NULL);
-    pChar = (char *)&wordRead;
+    if(wordRead == -1 && (errno == EFAULT || errno == EIO))
+    {
+      return ERR_PROCESS_MEMORY_READ_FAILED;
+    }
+    pChar = &wordRead;
 
     for (uint8_t i = 0; i < sizeof(long); i++)
     {
@@ -127,7 +136,8 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
       memset(data + allocationSize, 0, allocationSize);
       allocationSize += 40;
     }
-  }
+  }while(nullRead == FALSE);
+
   (*pStr) = data;
   return ERR_NONE;
 }
@@ -2170,12 +2180,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_statfs:
     // TODO: Could we grab the stat struct data
-
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -4657,12 +4661,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_openat:
 
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer1);
@@ -4796,12 +4794,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_newfstatat:
 
     struct stat newst = {0};
-
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
@@ -5027,12 +5019,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_fchmodat:
 
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer1);
@@ -5052,12 +5038,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_faccessat:
-
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
@@ -6402,28 +6382,27 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_execveat:
 
     uint64_t argvStartAddr = executableHandle->regs.rdx;
-    uint64_t envpStartAddr = 0;
-    char * pArgv = NULL;
-    char * pEnvp = NULL;
+    uint64_t envpStartAddr = executableHandle->regs.r10;
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer1);
-    if(err != ERR_NONE)
+    if(err != ERR_NONE && err != ERR_NULL_VALUE_READ_FROM_MEMORY)
     {
       return err;
     }
-    
 
-    printf("execveat(dfd=%d, pathname=\"%s\", ",
-                     executableHandle->regs.rdi,
-                     tmpBuffer1);
+    printf("execveat(dfd=%d, pathname=\"%s\", argv[",
+                    executableHandle->regs.rdi,
+                    tmpBuffer1);
+    
+    free(tmpBuffer1);
 
     if(argvStartAddr > 0) // If argv is not NULL
     {
-      BOOL nullTerminatorFound = false;
+      BOOL nullTerminatorFound = FALSE;
+      uint64_t nextAddr = 0;
       char * arg = NULL;
-
 
 
       while(nullTerminatorFound != TRUE)
@@ -6432,30 +6411,45 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
         // agument in vector from the given address
         err = readProcessMemoryFromPID(executableHandle->pid,
                                        argvStartAddr,
-                                       &arg,
+                                       &nextAddr,
                                        sizeof(uint64_t));
         if(err != ERR_NONE)
         {
           return err;
         }
 
-        pArgv = (char *) argvStartAddr;
-
-        err = readStringFromProcessMemory(executableHandle->pid,
-                                          arg,
-                                          &tmpBuffer2);
-        if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+        if(nextAddr == NULL)
         {
           nullTerminatorFound = TRUE;
-          break;
         }
-        else if(err != ERR_NONE)
+        else
         {
-          return err;
+          // Read argv[i] from the given address.
+          readStringFromProcessMemory(executableHandle->pid,
+                                      nextAddr,
+                                      &tmpBuffer1);
+          if(err != ERR_NONE)
+          {
+            // The end of **argv memory address has been reached.
+            if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+            {
+              nullTerminatorFound = TRUE;
+            }
+            else
+            {
+              return err;
+            }
+          }
+          else if(tmpBuffer1[0] != '\0')
+          {
+            printf("%s,  ", tmpBuffer1);
+          }
+
+          nextAddr += sizeof(long);
+          free(tmpBuffer1);
         }
-        printf("\"%s\", ", tmpBuffer2);
-        argvStartAddr += sizeof(char *);
       }
+      printf("], ");
 
     }
 

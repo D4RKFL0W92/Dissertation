@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
 #include <time.h>
 #include <poll.h>
 #include <sched.h>
