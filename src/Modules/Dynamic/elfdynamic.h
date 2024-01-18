@@ -15,12 +15,12 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <errno.h>
 #include <time.h>
 #include <poll.h>
 #include <sched.h>
 #include <fcntl.h>
 #include <utime.h>
+#include <errno.h>
 #include <signal.h>
 #include <dirent.h>
 #include <mqueue.h>

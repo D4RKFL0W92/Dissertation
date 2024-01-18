@@ -476,6 +476,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   sigset_t sigset = {0};
   siginfo_t sigInfo = {0};
   struct iovec *vec = NULL;
+  uint64_t argvStartAddr = 0;
+  uint64_t envpStartAddr = 0;
+  BOOL nullTerminatorFound = FALSE;
   char *tmpBuffer1 = NULL;
   char *tmpBuffer2 = NULL;
   char *tmpBuffer3 = NULL;
@@ -1225,14 +1228,114 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_execve:
+    
+    argvStartAddr = executableHandle->regs.rdx;
+    envpStartAddr = executableHandle->regs.r10;
 
-    err = readStringFromProcessMemory(executableHandle->pid,
-                                      executableHandle->regs.rdi,
+    // Read in the path name argument first.
+    if(executableHandle->regs.rsi != 0) // Don't try to read from illegal address.
+    {
+      err = readStringFromProcessMemory(executableHandle->pid,
+                                        executableHandle->regs.rsi,
+                                        &tmpBuffer1);
+      if(err != ERR_NONE && err != ERR_NULL_VALUE_READ_FROM_MEMORY)
+      {
+        return err;
+      }
+    }
+    else
+    {
+      tmpBuffer1 = malloc(5);
+      strncpy(tmpBuffer1, "NULL", 4);
+    }
+
+    printf("execve(dfd=%d, pathname=\"%s\", argv[",
+                   executableHandle->regs.rdi,
+                   tmpBuffer1);
+    
+
+    while(nullTerminatorFound != TRUE)
+    {
+      if(argvStartAddr == NULL)
+      {
+        nullTerminatorFound = TRUE;
+      }
+      else
+      {
+        // free() memory allocated for tmpBuffer1 before it's reallocated
+        // in readStringFromProcessMemory.
+        free(tmpBuffer1);
+
+        // Read argv[i] from the given address.
+        readStringFromProcessMemory(executableHandle->pid,
+                                    argvStartAddr,
+                                    &tmpBuffer1);
+        if(err != ERR_NONE)
+        {
+          // The end of **argv memory address has been reached.
+          if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+          {
+            nullTerminatorFound = TRUE;
+          }
+          else
+          {
+            return err;
+          }
+        }
+        else if(tmpBuffer1[0] != '\0')
+        {
+          printf("%s,  ", tmpBuffer1);
+        }
+        else
+        {
+          argvStartAddr += sizeof(long);
+          free(tmpBuffer1);
+        }
+
+      }
+    }
+
+    nullTerminatorFound = FALSE;
+    printf("], envp=[");
+    
+    if(envpStartAddr > 0) // If argv is not NULL
+    {
+      while(nullTerminatorFound != TRUE)
+      {
+        if(envpStartAddr == NULL)
+        {
+          nullTerminatorFound = TRUE;
+        }
+        else
+        {
+          free(tmpBuffer1);
+          // Read argv[i] from the given address.
+          readStringFromProcessMemory(executableHandle->pid,
+                                      envpStartAddr,
                                       &tmpBuffer1);
-    // All registers except ORIG_RAX are zero. How can
-    // we extract all arguments??? (This may not be an issue
-    // with later calls to execve).
-    printf("execve()\n");
+          if(err != ERR_NONE)
+          {
+            // The end of **argv memory address has been reached.
+            if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+            {
+              nullTerminatorFound = TRUE;
+            }
+            else
+            {
+              return err;
+            }
+          }
+          else if(tmpBuffer1[0] != '\0')
+          {
+            printf("%s,  ", tmpBuffer1);
+          }
+
+          envpStartAddr += sizeof(long);
+        }
+      }
+    }
+
+    printf("])\n");
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -6380,53 +6483,78 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_execveat:
+    argvStartAddr = executableHandle->regs.rdx;
+    envpStartAddr = executableHandle->regs.r10;
 
-    uint64_t argvStartAddr = executableHandle->regs.rdx;
-    uint64_t envpStartAddr = executableHandle->regs.r10;
-
-    err = readStringFromProcessMemory(executableHandle->pid,
-                                      executableHandle->regs.rsi,
-                                      &tmpBuffer1);
-    if(err != ERR_NONE && err != ERR_NULL_VALUE_READ_FROM_MEMORY)
+    // Read in the path name argument first.
+    if(executableHandle->regs.rsi)
     {
-      return err;
+      tmpBuffer1 = malloc(5);
+      strncpy(tmpBuffer1, "NULL", 4);
     }
 
     printf("execveat(dfd=%d, pathname=\"%s\", argv[",
-                    executableHandle->regs.rdi,
-                    tmpBuffer1);
-    
-    free(tmpBuffer1);
+                   executableHandle->regs.rdi,
+                   tmpBuffer1);
 
-    if(argvStartAddr > 0) // If argv is not NULL
+    while(nullTerminatorFound != TRUE)
     {
-      BOOL nullTerminatorFound = FALSE;
-      uint64_t nextAddr = 0;
-      char * arg = NULL;
-
-
-      while(nullTerminatorFound != TRUE)
+      if(argvStartAddr == NULL)
       {
-        // Read the pointer value for the next
-        // agument in vector from the given address
-        err = readProcessMemoryFromPID(executableHandle->pid,
-                                       argvStartAddr,
-                                       &nextAddr,
-                                       sizeof(uint64_t));
+        nullTerminatorFound = TRUE;
+      }
+      else
+      {
+        // free() memory allocated for tmpBuffer1 before it's reallocated
+        // in readStringFromProcessMemory.
+        free(tmpBuffer1);
+
+        // Read argv[i] from the given address.
+        readStringFromProcessMemory(executableHandle->pid,
+                                    argvStartAddr,
+                                    &tmpBuffer1);
         if(err != ERR_NONE)
         {
-          return err;
+          // The end of **argv memory address has been reached.
+          if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+          {
+            nullTerminatorFound = TRUE;
+          }
+          else
+          {
+            return err;
+          }
+        }
+        else if(tmpBuffer1[0] != '\0')
+        {
+          printf("%s,  ", tmpBuffer1);
+        }
+        else
+        {
+          argvStartAddr += sizeof(long);
+          free(tmpBuffer1);
         }
 
-        if(nextAddr == NULL)
+      }
+    }
+
+    nullTerminatorFound = FALSE;
+    printf("], envp=[");
+    
+    if(envpStartAddr > 0) // If argv is not NULL
+    {
+      while(nullTerminatorFound != TRUE)
+      {
+        if(envpStartAddr == NULL)
         {
           nullTerminatorFound = TRUE;
         }
         else
         {
+          free(tmpBuffer1);
           // Read argv[i] from the given address.
           readStringFromProcessMemory(executableHandle->pid,
-                                      nextAddr,
+                                      envpStartAddr,
                                       &tmpBuffer1);
           if(err != ERR_NONE)
           {
@@ -6445,17 +6573,26 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
             printf("%s,  ", tmpBuffer1);
           }
 
-          nextAddr += sizeof(long);
-          free(tmpBuffer1);
+          envpStartAddr += sizeof(long);
         }
       }
-      printf("], ");
-
     }
+
+    printf("], flags=0x%08x)\n", executableHandle->regs.r8);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_execveat*/
+
+/***********************************************************************************/
+  case SYS_userfaultfd:
+
+    printf("userfaultfd(flags=0x%08x)\n",
+            executableHandle->regs.rdi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_userfaultfd*/
 
 
 
