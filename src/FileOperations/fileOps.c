@@ -336,63 +336,38 @@ int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_
 
   printf("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
   printf("--------------------------------------------------------\n");
-  
-  uint8_t buff[16];
-  while(counter < uCount)
+
+  // Print content
+  size_t offset = 0;
+  while (offset < uCount)
   {
-    memset(buff, 0, sizeof(buff));
-    uint8_t i = 0;
+    // Print offset
+    printf("%08X ", offset);
 
-    while(i < 0x10 && i < uCount) // Write upto 16 bytes into the buffer at both end.
+    // Print hexadecimal bytes
+    for (int i = 0; i <= 0x0F; ++i)
     {
-      buff[i] = pMem[counter];
-      counter++;
-      i++;
-    }
-
-    for(int a = 0; a < 2; a++)
-    {
-      for(int byteCount = 0; byteCount < 0x10; byteCount++)
+      if (offset + i < uCount)
       {
-        if(a == 0)
-        {
-          uint8_t byte = pMem[byteCount];
-          if(byteCount == 0)
-          {
-            printf("%08x ", offsetIntoMemory + currOffset);
-          }
-          printf("%02x ", byte);
-          if(byteCount == 0xF)
-          {
-            printf(" ");
-          }
-        }
-        else
-        {
-          if(byteCount == 0)
-          {
-            printf("|");
-          }
-
-          if(pMem[byteCount] >= 33 && pMem[byteCount] <= 126)
-          {
-            // Check if it's a printable character.
-            printf("%c", pMem[byteCount]);
-
-          }
-          else
-          {
-            printf(".");
-          }
-
-          if(byteCount == 0xF)
-          {
-            printf("|\n");
-          }
-        }
+          printf("%02X ", pMem[offset + i]);
       }
+      // else
+      // {
+      //     printf("   ");  // Padding for the last line
+      // }
     }
-    currOffset += 0x10;
+
+    // Print ASCII representation
+    printf("|");
+    
+    for (int i = 0; i <= 16 && offset + i <= uCount; ++i)
+    {
+      printf("%c", (pMem[offset + i] >= 32 && pMem[offset + i] <= 126) ? pMem[offset + i] : '.');
+    }
+
+    printf("|\n");
+
+    offset += 16;
   }
   return err;
 }
@@ -420,7 +395,7 @@ int8_t dumpHexBytesFromFile(char* filepath, uint64_t startAddress, uint64_t uCou
     return ERR_UNKNOWN;
   }
 
-  err = dumpHexBytesFromOffset(&p_mem[startAddress], startAddress, uCount);
+  err = dumpHexBytesFromOffset(p_mem, startAddress, uCount);
   if(err != ERR_NONE)
   {
     return err;
