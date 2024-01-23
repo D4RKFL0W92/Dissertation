@@ -6836,7 +6836,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
                                    sizeof(struct iovec) * executableHandle->regs.rdx);
 
     printf("preadv2(fd=%d, iovec-base-addr=0x%016x, iovec-cnt=%d, " \
-           "offset=0x%016x, flags=0x%08x)\n",
+                    "offset=0x%016x, flags=0x%08x)\n",
                     executableHandle->regs.rdi,
                     executableHandle->regs.rsi,
                     executableHandle->regs.rdx,
@@ -6849,6 +6849,128 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_preadv2*/
+
+/***********************************************************************************/
+  case SYS_pwritev2:
+
+    tmpBuffer1 = malloc(sizeof(struct iovec) * executableHandle->regs.rdx);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   tmpBuffer1,
+                                   sizeof(struct iovec) * executableHandle->regs.rdx);
+
+    printf("pwrite2(fd=%d, iovec-base-addr=0x%016x, iovec-cnt=%d, " \
+                    "offset=0x%016x, flags=0x%08x)\n",
+                    executableHandle->regs.rdi,
+                    executableHandle->regs.rsi,
+                    executableHandle->regs.rdx,
+                    executableHandle->regs.r10,
+                    executableHandle->regs.r8);
+
+    printIoVectorData64(executableHandle->pid,
+                        tmpBuffer1,
+                        executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_pwritev2*/
+
+/***********************************************************************************/
+  case SYS_pkey_mprotect:
+
+    printf("pkey_mprotect(start-addr=0x%016x, len=0x%016x, protections=0x%016x, pkey=0x%08x)\n",
+            executableHandle->regs.rdi,
+            executableHandle->regs.rsi,
+            executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_pkey_mprotect*/
+
+/***********************************************************************************/
+  case SYS_pkey_alloc:
+
+    // flags is reserved for future use and currently
+    // must always be specified as 0.
+    printf("pkey_alloc(flags=0x%08x, access-rights=0x%08x)\n",
+                       executableHandle->regs.rdi,
+                       executableHandle->regs.rsi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_pkey_alloc*/
+
+/***********************************************************************************/
+  case SYS_pkey_free:
+
+    printf("pkey_free(pkey=0x%08x)\n", executableHandle->regs.rdi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_pkey_free*/
+
+/***********************************************************************************/
+  case SYS_statx:
+    struct statx fileStatx = {0};
+
+    
+    tmpBuffer1 = malloc(PATH_MAX);
+    if(tmpBuffer1 == NULL)
+    {
+      return ERR_MEMORY_ALLOCATION_FAILED;
+    }
+
+    err = readStringFromProcessMemory(executableHandle->pid,
+                                      executableHandle->regs.rsi,
+                                      &tmpBuffer1);
+    if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      strcpy(tmpBuffer1, "NULL");
+    }
+    else if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("statx(dfd=%u, path=%s, flags=0x%08x, mask=0x%08x, statx-buffer-addr=%p)\n",
+                  executableHandle->regs.rdi,
+                  tmpBuffer1,
+                  executableHandle->regs.rdx,
+                  executableHandle->regs.r10,
+                  executableHandle->regs.r8);
+
+    // Print the statx structure fields.
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r8,
+                                   &fileStatx,
+                                   sizeof(struct statx));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    // TODO: The information gained from this structure seems incorect.
+    // There must be a way to fix this.
+    printf("Filesize: 0x%016x\n"       \
+           "Last Accessed: %ld\n"      \
+           "Creation: %ld\n"           \
+           "Last Status Change: %ld\n" \
+           "Last Modified: %ld\n\n",
+           fileStatx.stx_size,
+           fileStatx.stx_atime.tv_sec,
+           fileStatx.stx_btime.tv_sec,
+           fileStatx.stx_ctime.tv_sec,
+           fileStatx.stx_mtime.tv_sec);
+
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_statx*/
 
 
 

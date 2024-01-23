@@ -141,6 +141,61 @@ struct sched_attr
 
 #endif /* sched_attr */
 
+////////////////////////////////////////////////////////////////
+#ifndef statx_timestamp
+
+struct statx_timestamp
+{
+    __s64 tv_sec;    /* Seconds since the Epoch (UNIX time) */
+    __u32 tv_nsec;   /* Nanoseconds since tv_sec */
+};
+
+#endif
+
+////////////////////////////////////////////////////////////////
+#ifndef statx
+
+
+struct statx {
+  __u32 stx_mask;        /* Mask of bits indicating
+                            filled fields */
+  __u32 stx_blksize;     /* Block size for filesystem I/O */
+  __u64 stx_attributes;  /* Extra file attribute indicators */
+  __u32 stx_nlink;       /* Number of hard links */
+  __u32 stx_uid;         /* User ID of owner */
+  __u32 stx_gid;         /* Group ID of owner */
+  __u16 stx_mode;        /* File type and mode */
+  __u64 stx_ino;         /* Inode number */
+  __u64 stx_size;        /* Total size in bytes */
+  __u64 stx_blocks;      /* Number of 512B blocks allocated */
+  __u64 stx_attributes_mask;
+                        /* Mask to show what's supported
+                            in stx_attributes */
+
+  /* The following fields are file timestamps */
+  struct statx_timestamp stx_atime;  /* Last access */
+  struct statx_timestamp stx_btime;  /* Creation */
+  struct statx_timestamp stx_ctime;  /* Last status change */
+  struct statx_timestamp stx_mtime;  /* Last modification */
+
+  /* If this file represents a device, then the next two
+    fields contain the ID of the device */
+  __u32 stx_rdev_major;  /* Major ID */
+  __u32 stx_rdev_minor;  /* Minor ID */
+
+  /* The next two fields contain the ID of the device
+    containing the filesystem where the file resides */
+  __u32 stx_dev_major;   /* Major ID */
+  __u32 stx_dev_minor;   /* Minor ID */
+
+  __u64 stx_mnt_id;      /* Mount ID */
+
+  /* Direct I/O alignment restrictions */
+  __u32 stx_dio_mem_align;
+  __u32 stx_dio_offset_align;
+};
+
+#endif
 
 
 
