@@ -43,6 +43,7 @@
 #include <sys/syscall.h>
 #include <sys/resource.h>
 #include <linux/bpf.h>
+#include <linux/rseq.h>
 #include <linux/kcmp.h>
 #include <linux/futex.h>
 #include <linux/types.h>
@@ -83,121 +84,171 @@ int8_t mapELF64ToHandleFromProcessMemory(const void ** pMem, ELF64_EXECUTABLE_HA
 #ifdef UNITTEST
 void elfDynamicTestSuite();
 #endif /* UNITTEST */
+
 ////////////////////////////////////////////////////////////////
+
 #ifndef linux_dirent
-struct linux_dirent
-{
-  unsigned long  d_ino;     /* Inode number */
-  unsigned long  d_off;     /* Offset to next linux_dirent */
-  unsigned short d_reclen;  /* Length of this linux_dirent */
-  char           d_name[];  /* Filename (null-terminated) */
-                    /* length is actually (d_reclen - 2 -
-                      offsetof(struct linux_dirent, d_name)) */
-  /*
-  char           pad;       // Zero padding byte
-  char           d_type;    // File type (only since Linux
-                            // 2.6.4); offset is (d_reclen - 1)
-  */
-};
+  struct linux_dirent
+  {
+    unsigned long  d_ino;     /* Inode number */
+    unsigned long  d_off;     /* Offset to next linux_dirent */
+    unsigned short d_reclen;  /* Length of this linux_dirent */
+    char           d_name[];  /* Filename (null-terminated) */
+                      /* length is actually (d_reclen - 2 -
+                        offsetof(struct linux_dirent, d_name)) */
+    /*
+    char           pad;       // Zero padding byte
+    char           d_type;    // File type (only since Linux
+                              // 2.6.4); offset is (d_reclen - 1)
+    */
+  };
 #endif /* linux_dirent */
 
 ////////////////////////////////////////////////////////////////
-#ifndef mmsghdr
-struct mmsghdr
-{
-  struct msghdr msg_hdr;  /* Message header */
-  unsigned int  msg_len;  /* Number of received bytes for header */
-};
 
+#ifndef mmsghdr
+  struct mmsghdr
+  {
+    struct msghdr msg_hdr;  /* Message header */
+    unsigned int  msg_len;  /* Number of received bytes for header */
+  };
 #endif /* mmsghdr */
 
 ////////////////////////////////////////////////////////////////
+
 #ifndef file_handle
-
-struct file_handle
-{
-  unsigned int  handle_bytes;   /* Size of f_handle [in, out] */
-  int           handle_type;    /* Handle type [out] */
-  unsigned char f_handle[0];    /* File identifier (sized by caller) [out] */
-};
-
+  struct file_handle
+  {
+    unsigned int  handle_bytes;   /* Size of f_handle [in, out] */
+    int           handle_type;    /* Handle type [out] */
+    unsigned char f_handle[0];    /* File identifier (sized by caller) [out] */
+  };
 #endif /* file_handle */
 
 ////////////////////////////////////////////////////////////////
+
 #ifndef sched_attr
-
-struct sched_attr
-{
-  uint32_t size;              /* Size of this structure */
-  uint32_t sched_policy;      /* Policy (SCHED_*) */
-  uint64_t sched_flags;       /* Flags */
-  int32_t  sched_nice;        /* Nice value (SCHED_OTHER, SCHED_BATCH) */
-  uint32_t sched_priority;    /* Static priority (SCHED_FIFO, SCHED_RR) */
-  /* Remaining fields are for SCHED_DEADLINE */
-  uint64_t sched_runtime;
-  uint64_t sched_deadline;
-  uint64_t sched_period;
-};
-
+  struct sched_attr
+  {
+    uint32_t size;              /* Size of this structure */
+    uint32_t sched_policy;      /* Policy (SCHED_*) */
+    uint64_t sched_flags;       /* Flags */
+    int32_t  sched_nice;        /* Nice value (SCHED_OTHER, SCHED_BATCH) */
+    uint32_t sched_priority;    /* Static priority (SCHED_FIFO, SCHED_RR) */
+    /* Remaining fields are for SCHED_DEADLINE */
+    uint64_t sched_runtime;
+    uint64_t sched_deadline;
+    uint64_t sched_period;
+  };
 #endif /* sched_attr */
 
 ////////////////////////////////////////////////////////////////
-#ifndef statx_timestamp
 
-struct statx_timestamp
-{
+#ifndef statx_timestamp
+  struct statx_timestamp
+  {
     __s64 tv_sec;    /* Seconds since the Epoch (UNIX time) */
     __u32 tv_nsec;   /* Nanoseconds since tv_sec */
-};
-
+  };
 #endif
 
 ////////////////////////////////////////////////////////////////
+
 #ifndef statx
+  struct statx
+  {
+    __u32 stx_mask;        /* Mask of bits indicating
+                              filled fields */
+    __u32 stx_blksize;     /* Block size for filesystem I/O */
+    __u64 stx_attributes;  /* Extra file attribute indicators */
+    __u32 stx_nlink;       /* Number of hard links */
+    __u32 stx_uid;         /* User ID of owner */
+    __u32 stx_gid;         /* Group ID of owner */
+    __u16 stx_mode;        /* File type and mode */
+    __u64 stx_ino;         /* Inode number */
+    __u64 stx_size;        /* Total size in bytes */
+    __u64 stx_blocks;      /* Number of 512B blocks allocated */
+    __u64 stx_attributes_mask;
+                          /* Mask to show what's supported
+                              in stx_attributes */
 
+    /* The following fields are file timestamps */
+    struct statx_timestamp stx_atime;  /* Last access */
+    struct statx_timestamp stx_btime;  /* Creation */
+    struct statx_timestamp stx_ctime;  /* Last status change */
+    struct statx_timestamp stx_mtime;  /* Last modification */
 
-struct statx {
-  __u32 stx_mask;        /* Mask of bits indicating
-                            filled fields */
-  __u32 stx_blksize;     /* Block size for filesystem I/O */
-  __u64 stx_attributes;  /* Extra file attribute indicators */
-  __u32 stx_nlink;       /* Number of hard links */
-  __u32 stx_uid;         /* User ID of owner */
-  __u32 stx_gid;         /* Group ID of owner */
-  __u16 stx_mode;        /* File type and mode */
-  __u64 stx_ino;         /* Inode number */
-  __u64 stx_size;        /* Total size in bytes */
-  __u64 stx_blocks;      /* Number of 512B blocks allocated */
-  __u64 stx_attributes_mask;
-                        /* Mask to show what's supported
-                            in stx_attributes */
+    /* If this file represents a device, then the next two
+      fields contain the ID of the device */
+    __u32 stx_rdev_major;  /* Major ID */
+    __u32 stx_rdev_minor;  /* Minor ID */
 
-  /* The following fields are file timestamps */
-  struct statx_timestamp stx_atime;  /* Last access */
-  struct statx_timestamp stx_btime;  /* Creation */
-  struct statx_timestamp stx_ctime;  /* Last status change */
-  struct statx_timestamp stx_mtime;  /* Last modification */
+    /* The next two fields contain the ID of the device
+      containing the filesystem where the file resides */
+    __u32 stx_dev_major;   /* Major ID */
+    __u32 stx_dev_minor;   /* Minor ID */
 
-  /* If this file represents a device, then the next two
-    fields contain the ID of the device */
-  __u32 stx_rdev_major;  /* Major ID */
-  __u32 stx_rdev_minor;  /* Minor ID */
+    __u64 stx_mnt_id;      /* Mount ID */
 
-  /* The next two fields contain the ID of the device
-    containing the filesystem where the file resides */
-  __u32 stx_dev_major;   /* Major ID */
-  __u32 stx_dev_minor;   /* Minor ID */
-
-  __u64 stx_mnt_id;      /* Mount ID */
-
-  /* Direct I/O alignment restrictions */
-  __u32 stx_dio_mem_align;
-  __u32 stx_dio_offset_align;
-};
-
+    /* Direct I/O alignment restrictions */
+    __u32 stx_dio_mem_align;
+    __u32 stx_dio_offset_align;
+  };
 #endif
 
+////////////////////////////////////////////////////////////////
 
+#ifndef io_sqring_offsets
+  struct io_sqring_offsets
+  {
+    __u32 head;
+    __u32 tail;
+    __u32 ring_mask;
+    __u32 ring_entries;
+    __u32 flags;
+    __u32 dropped;
+    __u32 array;
+    __u32 resv1;
+    __u64 user_addr;
+  };
+#endif
+
+////////////////////////////////////////////////////////////////
+
+#ifndef io_cqring_offsets
+  struct io_cqring_offsets
+  {
+    __u32 head;
+    __u32 tail;
+    __u32 ring_mask;
+    __u32 ring_entries;
+    __u32 overflow;
+    __u32 cqes;
+    __u32 flags;
+    __u32 resv1;
+    __u64 user_addr;
+  };
+#endif
+
+////////////////////////////////////////////////////////////////
+
+#ifndef io_uring_params
+  struct io_uring_params
+  {
+    __u32 sq_entries;
+    __u32 cq_entries;
+    __u32 flags;
+    __u32 sq_thread_cpu;
+    __u32 sq_thread_idle;
+    __u32 features;
+    __u32 wq_fd;
+    __u32 resv[3];
+    struct io_sqring_offsets sq_off;
+    struct io_cqring_offsets cq_off;
+  };
+#endif
+
+////////////////////////////////////////////////////////////////
 
 
 

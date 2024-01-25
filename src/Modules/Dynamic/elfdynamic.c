@@ -513,6 +513,64 @@ static int8_t printIoVectorData64(int executablePID, struct iovec * vec, int vec
   }
 }
 
+/*
+ * A general helper function as the io_uring_register syscall uses different
+ * data structs for the arg array.
+ * This function will not be realistic to write unit tests for as it relies on
+ * an actively running PID to read the arg array from.
+*/
+static int8_t uring_registerProcessBasedOnOpcode(ELF64_EXECUTABLE_HANDLE_T * executableHandle)
+{
+  unsigned int opcode  = 0;
+  unsigned int nr_args = 0;
+
+  if(executableHandle == NULL)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+  if(executableHandle->regs.r10 == 0)
+  {
+    return ERR_INVALID_ARGUMENT;
+  }
+
+  opcode  = executableHandle->regs.rsi;
+  nr_args = executableHandle->regs.r10;
+
+  // I have used if, else if statements instead of a switch so I
+  // can keep the different structs definitions constained to there
+  // own code blocks.
+  if(opcode == 0) // IORING_REGISTER_BUFFERS
+  {
+    printf("IORING_REGISTER_BUFFERS");
+  }
+  else if(opcode == 1) // IORING_UNREGISTER_BUFFERS
+  {
+    printf("IORING_UNREGISTER_BUFFERS");
+
+  }
+  else if(opcode == 2) // IORING_REGISTER_FILES
+  {
+    printf("IORING_REGISTER_FILES");
+
+  }
+  else if(opcode == 3) // IORING_UNREGISTER_FILES
+  {
+    printf("IORING_UNREGISTER_FILES");
+    
+  }
+  else if(opcode == 4) // IORING_REGISTER_EVENTFD
+  {
+    printf("IORING_REGISTER_EVENTFD");
+    
+  }
+  else if(opcode == 5) // IORING_UNREGISTER_EVENTFD
+  {
+    printf("IORING_UNREGISTER_EVENTFD");
+  }
+
+  return ERR_NONE;
+}
+
 static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 {
   sigset_t sigset = {0};
@@ -6971,6 +7029,175 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_statx*/
+
+/***********************************************************************************/
+  case SYS_io_pgetevents:
+    struct io_event events = {0};
+    struct timespec pgeventsTimeout = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r10,
+                                   &events,
+                                   sizeof(struct io_event));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r8,
+                                   &pgeventsTimeout,
+                                   sizeof(struct timespec));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("io_pgetevents(context=%lu, mimimum-number-requested=%d, maximum-requested-events=%d, " \
+           "event-data=%lu, event-object=%lu, event-res=%ld, event-res2=%ld, timeout=%ld.%ld)\n",
+                          executableHandle->regs.rdi,
+                          executableHandle->regs.rsi,
+                          executableHandle->regs.rdx,
+                          events.data,
+                          events.obj,
+                          events.res,
+                          events.res2,
+                          pgeventsTimeout.tv_sec,
+                          pgeventsTimeout.tv_nsec);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_io_pgetevents*/
+
+/***********************************************************************************/
+  case SYS_rseq:
+    struct rseq rseq = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdi,
+                                   &rseq,
+                                   sizeof(struct rseq));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("rseq(rseq-cpu_id_start=0x%08x, rseq-cpu_id=%d, rseq-rseq_cs=0x%016x, " \
+                "rseq-flags=0x%08x, rseq-node_id=0x%08x, rseq-mm_cid=0x%08x, " \
+                "rseq_len=0x%08x, flags=0x%08x, signal=0x%08x)\n",
+                rseq.cpu_id_start,
+                rseq.cpu_id,
+                rseq.rseq_cs,
+                rseq.flags,
+                rseq.node_id,
+                rseq.mm_cid,
+                executableHandle->regs.rsi,
+                executableHandle->regs.rdx,
+                executableHandle->regs.r10);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_rseq*/
+
+
+/*
+ * There is a large gap in the defined constants that
+ * represent the different syscalls, (334 - 424).
+ * Refer to syscall.h for specifics.
+*/
+
+/***********************************************************************************/
+  case SYS_pidfd_send_signal:
+    siginfo_t sendSignalInfo = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdx,
+                                   &sendSignalInfo,
+                                   sizeof(siginfo_t));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("pidfd_send_signal(pidfd=%d, signal=0x%08x, siginfo-si_code=0x%08x, "  \
+                             "siginfo-si_signo=0x%08x, siginfo-si_errno=0x%08x, " \
+                             "siginfo-si_uid=0x%08x, siginfo-si_pid=%d, flags=0x%08x)\n",
+                              executableHandle->regs.rdi,
+                              executableHandle->regs.rsi,
+                              sendSignalInfo.si_code,
+                              sendSignalInfo.si_signo,
+                              sendSignalInfo.si_errno,
+                              sendSignalInfo.si_uid,
+                              sendSignalInfo.si_pid,
+                              executableHandle->regs.r10);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_pidfd_send_signal*/
+
+/***********************************************************************************/
+  case SYS_io_uring_setup:
+    struct io_uring_params setupParams = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &setupParams,
+                                   sizeof(struct io_uring_params));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    /*
+     * TODO: Read the syscall documentationn more thoughrougly to check if
+     * there would be any more useful data to print from the io_uring_params struct.
+    */
+
+    printf("io_uring_setup(entries=%d, submission-queue=0x%08x, completion-queue=0x%08x, uring-flags=0x%08x)\n",
+                           executableHandle->regs.rdi,
+                           setupParams.sq_entries,
+                           setupParams.cq_entries,
+                           setupParams.flags);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_io_uring_setup*/
+
+/***********************************************************************************/
+  case SYS_io_uring_enter:
+
+    printf("io_uring_enter(fd=%d, ot_submit=%d, min_complete=%d, flags=0x%08x)\n",
+                           executableHandle->regs.rdi,
+                           executableHandle->regs.rsi,
+                           executableHandle->regs.rdx,
+                           executableHandle->regs.r10);
+
+    /*
+     * TODO: Look in to reading argp to see if it's data
+     * worth printing.
+    */
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_io_uring_enter*/
+
+/***********************************************************************************/
+  case SYS_io_uring_register:
+
+    printf("io_uring_register(fd=%d, ", executableHandle->regs.rdi);
+    uring_registerProcessBasedOnOpcode(executableHandle);
+    printf(")\n");
+    
+    /*
+     * TODO: Look in to reading argp to see if it's data
+     * worth printing. I have began writing a helper function
+     * but reading the documentation there may not really be
+     * useful data to print in the trace
+    */
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_io_uring_register*/
 
 
 
