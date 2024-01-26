@@ -66,7 +66,7 @@ static uint8_t printMmapFlags(int flags)
 
 int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
 {
-  uint16_t allocationSize = PATH_MAX; // A lot of the syscalss rely on pathnames so seems as good a value as any.
+  uint16_t allocationSize = PATH_MAX; // A lot of the syscalls rely on pathnames so seems as good a value as any.
   char * data = NULL;
   char * pChar = NULL;
   int8_t err = ERR_NONE;
@@ -97,9 +97,10 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
     wordRead = ptrace(PTRACE_PEEKDATA, pid, offset + charCount, NULL);
     if(wordRead == -1 && (errno == EFAULT || errno == EIO))
     {
+      free(data);
       return ERR_PROCESS_MEMORY_READ_FAILED;
     }
-    pChar = &wordRead;
+    pChar = (char *) &wordRead;
 
     for (uint8_t i = 0; i < sizeof(long); i++)
     {
@@ -125,6 +126,7 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
     memcpy(data + charCount, &wordRead, cpySize);
     if(data[0] == '\0') // There is no ASCII data at the base location.
     {
+      free(data);
       return ERR_NULL_VALUE_READ_FROM_MEMORY;
     }
 
@@ -134,9 +136,10 @@ int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char **pStr)
     {
       realloc(data, (allocationSize + 500)); // Arbitrary increase in memory allocation.
       memset(data + allocationSize, 0, allocationSize);
-      allocationSize += 40;
+      allocationSize += 500;
     }
-  }while(nullRead == FALSE);
+
+  } while(nullRead == FALSE);
 
   (*pStr) = data;
   return ERR_NONE;
@@ -579,9 +582,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   uint64_t argvStartAddr = 0;
   uint64_t envpStartAddr = 0;
   BOOL nullTerminatorFound = FALSE;
-  char *tmpBuffer1 = NULL;
-  char *tmpBuffer2 = NULL;
-  char *tmpBuffer3 = NULL;
+  char nullBuff[] = "NULL";
+  char * tmpBuffer1 = NULL;
+  char * tmpBuffer2 = NULL;
+  char * tmpBuffer3 = NULL;
   int8_t err = ERR_NONE;
 
   switch (executableHandle->regs.orig_rax)
@@ -591,11 +595,15 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_read:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
-    tmpBuffer1 = malloc(executableHandle->regs.rdx);
-    if (tmpBuffer1 == NULL)
+    if(executableHandle->regs.rdx > 0)
     {
-      return ERR_MEMORY_ALLOCATION_FAILED;
+      tmpBuffer1 = malloc(executableHandle->regs.rdx);
+      if (tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
     }
+
     err = readProcessMemoryFromPID(executableHandle->pid,
                                    executableHandle->regs.rsi,
                                    tmpBuffer1,
@@ -613,14 +621,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       // TODO: Write a function to print hex bytes as a string
       printf("read(fd=%d, buffer-addr=%p, count=%d)\n",
              executableHandle->regs.rdi,
-             executableHandle->regs.rdx,
+             executableHandle->regs.rsi,
              executableHandle->regs.rdx);
 
       puts("\nBuffer Data:\n");
       // TODO: Can we check that the read bytes is initialised data before dumping the bytes.
-      dumpHexBytesFromOffset(tmpBuffer1,
-                             0,
-                             executableHandle->regs.rdx);
+      dumpHexBytesFromOffset(tmpBuffer1, 0, executableHandle->regs.rdx);
     }
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -5028,15 +5034,21 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_futimesat*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_newfstatat:
-
     struct stat newst = {0};
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer1);
-    if (err != ERR_NONE)
+    if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      tmpBuffer1 = malloc(5);
+      strcpy(tmpBuffer1, "NULL");
+    }
+    else if (err != ERR_NONE)
     {
       return err;
     }
@@ -5057,7 +5069,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
            newst.st_size,
            executableHandle->regs.r10);
 
-    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_newfstatat*/
 
@@ -7187,7 +7198,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("io_uring_register(fd=%d, ", executableHandle->regs.rdi);
     uring_registerProcessBasedOnOpcode(executableHandle);
     printf(")\n");
-    
+
     /*
      * TODO: Look in to reading argp to see if it's data
      * worth printing. I have began writing a helper function
@@ -7198,6 +7209,228 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_io_uring_register*/
+
+/***********************************************************************************/
+  case SYS_open_tree:
+
+    err = readStringFromProcessMemory(executableHandle->pid,
+                                      executableHandle->regs.rsi,
+                                      &tmpBuffer1);
+    if(err != ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      tmpBuffer1 = malloc(5);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      memset(tmpBuffer1, 0, 5);
+      strcpy(tmpBuffer1, "NULL");
+    }
+
+    printf("open_tree(fd=%d, path=\"%s\", flags=0x%08x)\n",
+                      executableHandle->regs.rdi,
+                      tmpBuffer1,
+                      executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_open_tree*/
+
+/***********************************************************************************/
+  case SYS_move_mount:
+
+    // Get the from path.
+    tmpBuffer1 = readStringFromProcessMemory(executableHandle->pid,
+                                             executableHandle->regs.rsi,
+                                             &tmpBuffer1);
+    if(err != ERR_NONE && err != ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      goto cleanup;
+    }
+    if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      tmpBuffer1 = malloc(5);
+      if(tmpBuffer1 != NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      memset(tmpBuffer1, 0, 5);
+      strcpy(tmpBuffer1, "NULL");
+    }
+
+    // Get the to path.
+    tmpBuffer2 = readStringFromProcessMemory(executableHandle->pid,
+                                             executableHandle->regs.rsi,
+                                             &tmpBuffer2);
+    if(err != ERR_NONE && err != ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      goto cleanup;
+    }
+    if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      tmpBuffer2 = malloc(5);
+      if(tmpBuffer2 != NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      memset(tmpBuffer2, 0, 5);
+      strcpy(tmpBuffer2, "NULL");
+    }
+
+    printf("move_mount(from_dfd=%d, from_path=\"%s\", to_dfd=%d, to_path=\"%s\", ms_flags=0x%08x)\n",
+                           executableHandle->regs.rdi,
+                           tmpBuffer1,
+                           executableHandle->regs.rdx,
+                           tmpBuffer2,
+                           executableHandle->regs.r8);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_move_mount*/
+
+/***********************************************************************************/
+  case SYS_fsopen:
+
+    // Get the fs_name.
+    tmpBuffer1 = readStringFromProcessMemory(executableHandle->pid,
+                                             executableHandle->regs.rdi,
+                                             &tmpBuffer1);
+    if(err != ERR_NONE && err != ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      goto cleanup;
+    }
+    if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      tmpBuffer1 = malloc(5);
+      if(tmpBuffer1 != NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      memset(tmpBuffer1, 0, 5);
+      strcpy(tmpBuffer1, "NULL");
+    }
+
+    printf("fsopen(fs_name=\"%s\", flags=0x%08x)\n",
+                   tmpBuffer1,
+                   executableHandle->regs.rsi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_fsopen*/
+
+/***********************************************************************************/
+  case SYS_fsconfig:
+
+    // TODO: Find some reliable documentation for this syscall.
+
+    // There is minimal documentation for this syscall
+    // so for now I'm only printing the first two arguments.
+    printf("fsconfig(fs_fd=%d, cmd=0x%08x)\n",
+                     executableHandle->regs.rdi,
+                     executableHandle->regs.rsi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_fsconfig*/
+
+/***********************************************************************************/
+  case SYS_fsmount:
+
+    printf("fsmount(fs_fd=%d, flags=0x%08x, ms_flags=0x%08x)\n",
+                     executableHandle->regs.rdi,
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_fsmount*/
+
+/***********************************************************************************/
+  case SYS_fspick:
+
+    // Get the fs_name.
+    tmpBuffer1 = readStringFromProcessMemory(executableHandle->pid,
+                                             executableHandle->regs.rsi,
+                                             &tmpBuffer1);
+    if(err != ERR_NONE && err != ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      goto cleanup;
+    }
+    if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      tmpBuffer1 = malloc(5);
+      if(tmpBuffer1 != NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+
+      memset(tmpBuffer1, 0, 5);
+      strcpy(tmpBuffer1, "NULL");
+    }
+
+    printf("fspick(dfd=%d, fs_name=\"%s\", flags=0x%08x)\n",
+                   executableHandle->regs.rdi,
+                   tmpBuffer1,
+                   executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_fspick*/
+
+/***********************************************************************************/
+  case SYS_pidfd_open:
+
+    printf("pidfd_open(PID=%d, flags=0x%08x)\n",
+                       executableHandle->regs.rdi,
+                       executableHandle->regs.rsi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_pidfd_open*/
+
+/***********************************************************************************/
+  case SYS_clone3:
+    struct clone_args clone3Args = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdi,
+                                   &clone3Args,
+                                   sizeof(struct clone_args));
+
+    printf("clone3(size=0x%016x)\n");
+
+    printf("clone3 Args Structure:\n"       \
+                  "flags:        0x%016x\n" \
+                  "pidfd:        0x%016x\n" \
+                  "child_tid:    0x%016x\n" \
+                  "parent_tid:   0x%016x\n" \
+                  "exit_signal:  0x%016x\n" \
+                  "stack:        0x%016x\n" \
+                  "stack_size:   0x%016x\n" \
+                  "tls:          0x%016x\n" \
+                  "set_tid:      0x%016x\n" \
+                  "set_tid_size: 0x%016x\n" \
+                  "cgroup:       0x%016x\n" \
+                  "\n\n",
+                  clone3Args.flags,
+                  clone3Args.pidfd,
+                  clone3Args.child_tid,
+                  clone3Args.parent_tid,
+                  clone3Args.exit_signal,
+                  clone3Args.stack,
+                  clone3Args.stack_size,
+                  clone3Args.tls,
+                  clone3Args.set_tid,
+                  clone3Args.set_tid_size,
+                  clone3Args.cgroup);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_clone3*/
 
 
 
@@ -7215,9 +7448,13 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
   } /* END OF MAIN SWITCH STATEMENT */
 
+cleanup:
   free(tmpBuffer3);
   free(tmpBuffer2);
   free(tmpBuffer1);
+  tmpBuffer3 = NULL;
+  tmpBuffer2 = NULL;
+  tmpBuffer1 = NULL;
 
   return err;
 }

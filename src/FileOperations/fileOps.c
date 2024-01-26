@@ -351,10 +351,10 @@ int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_
       {
           printf("%02X ", pMem[offset + i]);
       }
-      // else
-      // {
-      //     printf("   ");  // Padding for the last line
-      // }
+      else
+      {
+          printf("   ");  // Padding for the last line
+      }
     }
 
     // Print ASCII representation
