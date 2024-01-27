@@ -52,6 +52,7 @@
 #include <linux/ptrace.h>
 #include <linux/keyctl.h>
 #include <linux/filter.h>
+#include <linux/openat2.h>
 #include <linux/aio_abi.h>
 #include <linux/membarrier.h>
 #include <linux/perf_event.h>
