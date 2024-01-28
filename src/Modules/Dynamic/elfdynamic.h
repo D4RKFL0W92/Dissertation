@@ -48,12 +48,14 @@
 #include <linux/futex.h>
 #include <linux/types.h>
 #include <linux/kexec.h>
+#include <linux/mount.h>
 #include <linux/ioprio.h>
 #include <linux/ptrace.h>
 #include <linux/keyctl.h>
 #include <linux/filter.h>
 #include <linux/openat2.h>
 #include <linux/aio_abi.h>
+#include <linux/landlock.h>
 #include <linux/membarrier.h>
 #include <linux/perf_event.h>
 #include "../Headers/elftypes.h"

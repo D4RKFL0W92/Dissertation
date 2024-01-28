@@ -592,6 +592,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   char * tmpBuffer1 = NULL;
   char * tmpBuffer2 = NULL;
   char * tmpBuffer3 = NULL;
+  uint64_t addr = 0;
   int8_t err = ERR_NONE;
 
   switch (executableHandle->regs.orig_rax)
@@ -7516,14 +7517,139 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_epoll_pwait2:
 
-    printf("epoll_pwait2(epollfd=%d, len=0x%016x, protections=0x%016x, pkey=0x%08x)\n",
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &epollEvents,
+                                   sizeof(struct epoll_event));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r10,
+                                   &timeSpec,
+                                   sizeof(struct timespec));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r8,
+                                   &sigset,
+                                   sizeof(sigset_t));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    /*
+     * TODO: We should be able to read the whole sigset array. Check if this is worth doing.
+    */
+    printf("epoll_pwait2(epollfd=%d, epoll-events=0x%08x, max-events=%d, " \
+                        "timeout=%d.%d, sigmask=0x%08x, sigset-size=%d)\n",
                          executableHandle->regs.rdi,
-                         executableHandle->regs.rsi,
-                         executableHandle->regs.rdx);
+                         epollEvents.events,
+                         executableHandle->regs.rdx,
+                         timeSpec.tv_sec,
+                         timeSpec.tv_nsec,
+                         sigset.__val[0],
+                         executableHandle->regs.r9);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_epoll_pwait2*/
+
+/***********************************************************************************/
+  case SYS_mount_setattr:
+    struct mount_attr mountAttr = {0};
+
+    err = readStringFromProcessMemory(executableHandle->pid,
+                                      executableHandle->regs.rsi,
+                                      &tmpBuffer1);
+    if(err == ERR_NULL_VALUE_READ_FROM_MEMORY)
+    {
+      tmpBuffer1 = malloc(5);
+      if(tmpBuffer1 == NULL)
+      {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+      }
+      memset(tmpBuffer1, 0, 5);
+      strcpy(tmpBuffer1, "NULL");
+    }
+    else if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r10,
+                                   &mountAttr,
+                                   sizeof(struct mount_attr));
+    if(err != ERR_NONE)
+    {
+      return err; 
+    }
+
+    printf("mount_setattr(dfd=%d, path=\"%s\", flags=0x%08x, attr_set=0x%016x, " \
+                         "attr_clr=0x%016x, attr_propagation=0x%016x, attr_userns_fd=0x%016x, usize=0x%016x)\n",
+                          executableHandle->regs.rdi,
+                          tmpBuffer1,
+                          executableHandle->regs.rdx,
+                          mountAttr.attr_set,
+                          mountAttr.attr_clr,
+                          mountAttr.propagation,
+                          mountAttr.userns_fd,
+                          executableHandle->regs.r9);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_mount_setattr*/
+
+/***********************************************************************************/
+  case SYS_quotactl_fd:
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r10,
+                                   &addr,
+                                   sizeof(void *));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("quotactl_fd(fd=%d, cmd=0x%08x, id=%d, addr=0x%016x)\n",
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx,
+                        addr);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_quotactl_fd*/
+
+/***********************************************************************************/
+  case SYS_landlock_create_ruleset:
+    struct landlock_ruleset_attr landlockCreateAttr = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdi,
+                                   &landlockCreateAttr,
+                                   sizeof(struct landlock_ruleset_attr));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("landlock_create_ruleset(ruleset-handled_access_fs=0x%016x, size=0x%08x, flags=0x%08x)\n",
+                                    landlockCreateAttr.handled_access_fs,
+                                    executableHandle->regs.rsi,
+                                    executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_landlock_create_ruleset*/
 
 
 
