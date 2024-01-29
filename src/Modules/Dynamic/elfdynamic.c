@@ -171,6 +171,10 @@ int8_t readProcessMemoryFromPID(pid_t pid, const void *srcAddr, void *dstAddr, u
 
   for (uint16_t i = 0; i < iterations; i++)
   {
+    // DO NOT DELETE!!! The sleep is required for the correct data to be read
+    // when ran on the terminal, else the result is just a bunch of 0xFF bytes.
+    sleep(0.05);
+
     wordRead = 0;
     wordRead = ptrace(PTRACE_PEEKDATA, pid, (long *)(srcAddr + i * sizeof(long)), NULL);
     memcpy(dstAddr + i * sizeof(long), &wordRead, sizeof(long));
@@ -7650,6 +7654,49 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_landlock_create_ruleset*/
+
+/***********************************************************************************/
+  case SYS_landlock_add_rule:
+    struct landlock_path_beneath_attr rule_attr = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdx,
+                                   &rule_attr,
+                                   sizeof(struct landlock_path_beneath_attr));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("landlock_add_rule(ruleset_fd=%d, rule_type=0x%08x, rule_attr-allow_access=0x%016x, " \
+                             "rule_attr-parent_fd=%d, flags=0x%08x)\n",
+                              executableHandle->regs.rdi,
+                              executableHandle->regs.rsi,
+                              rule_attr.allowed_access,
+                              rule_attr.parent_fd,
+                              executableHandle->regs.r10);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_landlock_add_rule*/
+
+/***********************************************************************************/
+  case SYS_landlock_restrict_self:
+    printf("landlock_restrict_self(pidfd=%d, flags=0x%08x)\n",
+                                   executableHandle->regs.rdi,
+                                   executableHandle->regs.rsi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_landlock_restrict_self*/
+
+/***********************************************************************************/
+  case SYS_memfd_secret:
+    printf("memfd_secret(flags=0x%08x)\n", executableHandle->regs.rdi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_memfd_secret*/
 
 
 
