@@ -35,7 +35,7 @@ BOOL hexToDecimal(const char* hexString, uint64_t * value)
   uint8_t  offsetExponent  = 0;
   int16_t  hexStrLen     = 0;
 
-  uint64_t lValue       = 0;
+  uint64_t tmpValue       = 0;
 
   if(hexString == NULL)
   {
@@ -55,62 +55,62 @@ BOOL hexToDecimal(const char* hexString, uint64_t * value)
     switch (hexString[digitOffset])
     {
       case '0':
-        lValue += 0 * pow(16, offsetExponent);
+        tmpValue += 0 * pow(16, offsetExponent);
         break;
       case '1':
-        lValue += 1 * pow(16, offsetExponent);
+        tmpValue += 1 * pow(16, offsetExponent);
         break;
       case '2':
-        lValue += 2 * pow(16, offsetExponent);
+        tmpValue += 2 * pow(16, offsetExponent);
         break;
       case '3':
-        lValue += 3 * pow(16, offsetExponent);
+        tmpValue += 3 * pow(16, offsetExponent);
         break;
       case '4':
-        lValue += 4 * pow(16, offsetExponent);
+        tmpValue += 4 * pow(16, offsetExponent);
         break;
       case '5':
-        lValue += 5 * pow(16, offsetExponent);
+        tmpValue += 5 * pow(16, offsetExponent);
         break;
       case '6':
-        lValue += 6 * pow(16, offsetExponent);
+        tmpValue += 6 * pow(16, offsetExponent);
         break;
       case '7':
-        lValue += 7 * pow(16, offsetExponent);
+        tmpValue += 7 * pow(16, offsetExponent);
         break;
       case '8':
-        lValue += 8 * pow(16, offsetExponent);
+        tmpValue += 8 * pow(16, offsetExponent);
         break;
       case '9':
-        lValue += 9 * pow(16, offsetExponent);
+        tmpValue += 9 * pow(16, offsetExponent);
         break;
       case 'a':
       case 'A':
-        lValue += 10 * pow(16, offsetExponent);
+        tmpValue += 10 * pow(16, offsetExponent);
         break;
       case 'b':
       case 'B':
-        lValue += 11 * pow(16, offsetExponent);
+        tmpValue += 11 * pow(16, offsetExponent);
         break;
       case 'c':
       case 'C':
-        lValue += 12 * pow(16, offsetExponent);
+        tmpValue += 12 * pow(16, offsetExponent);
         break;
       case 'd':
       case 'D':
-        lValue += 13 * pow(16, offsetExponent);
+        tmpValue += 13 * pow(16, offsetExponent);
         break;
       case 'e':
       case 'E':
-        lValue += 14 * pow(16, offsetExponent);
+        tmpValue += 14 * pow(16, offsetExponent);
         break;
       case 'f':
       case 'F':
-        lValue += 15 * pow(16, offsetExponent);
+        tmpValue += 15 * pow(16, offsetExponent);
         break;
     }
   }
-  *value = lValue;
+  *value = tmpValue;
   return ERR_NONE;
 }
 
@@ -129,7 +129,7 @@ BOOL stringToInteger(const char* numString, uint64_t* value)
     err = hexToDecimal(numString, &lValue);
     if(err != ERR_NONE)
     {
-      return err; // Propergate the error from hexToDecimal
+      return err;
     }
   }
   // TODO: Add logic to handle binary numbers
@@ -157,9 +157,29 @@ BOOL stringToInteger(const char* numString, uint64_t* value)
 
 BOOL isAsciidata(const char * data, uint64_t uCount)
 {
-  for(int i = 0; i < uCount; i++)
+  if(data[0] == '\0' || data[uCount-1] != '\0' && data[uCount-1] != '\n')
   {
-    if((data[i] != '\0') && data[i] < 0x20 || data[i] >= 0x7E)
+    return FALSE;
+  }
+  for(int i = 0; i < uCount-1; i++)
+  {
+    if((data[i] != '\t' || data[i] != '\n') && (data[i] < 0x20 && data[i] >= 0x7E))
+    {
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+BOOL isAsciiString(const char * data, uint64_t uCount)
+{
+  if(data[0] == '\0' || data[uCount-1] != '\0')
+  {
+    return FALSE;
+  }
+  for(int i = 0; i < uCount-1; i++)
+  {
+    if(data[i] < 0x20 || data[i] >= 0x7E)
     {
       return FALSE;
     }
@@ -444,19 +464,19 @@ static void unittest_hexToDecimal_valid()
 static void unittest_isAsciidata_validASCII()
 {
   char buff[] = "Random Text";
-  assert(isAsciidata(buff, sizeof(buff)) == TRUE);
+  assert(isAsciiString(buff, sizeof(buff)) == TRUE);
 
   char buff2[] = "/\\<<-_';/*[]&^$#@%!*()";
-  assert(isAsciidata(buff2, sizeof(buff2)) == TRUE);
+  assert(isAsciiString(buff2, sizeof(buff2)) == TRUE);
 }
 
 static void unittest_isAsciidata_invalidASCII()
 {
   char buff[] = "Random Text";
-  assert(isAsciidata(buff, sizeof(buff)) == TRUE);
+  assert(isAsciiString(buff, sizeof(buff)) == TRUE);
 
   char buff2[] = "/\\<<-_';/*[]&^$#@%!*()";
-  assert(isAsciidata(buff2, sizeof(buff2)) == TRUE);
+  assert(isAsciiString(buff2, sizeof(buff2)) == TRUE);
 }
 
 void ioTestSuite()

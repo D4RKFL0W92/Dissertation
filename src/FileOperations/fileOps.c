@@ -334,15 +334,15 @@ int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_
     return ERR_INVALID_ARGUMENT;
   }
 
-  printf("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
-  printf("--------------------------------------------------------\n");
+  printf("                   00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
+  printf("-------------------------------------------------------------------------------------\n");
 
   // Print content
   size_t offset = 0;
   while (offset < uCount)
   {
     // Print offset
-    printf("%08X ", offset);
+    printf("0x%016X ", offsetIntoMemory);
 
     // Print hexadecimal bytes
     for (int i = 0; i <= 0x0F; ++i)
@@ -353,16 +353,17 @@ int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_
       }
       else
       {
-          printf("   ");  // Padding for the last line
+        printf("   ");  // Padding for the last line
       }
     }
 
     // Print ASCII representation
     printf("|");
     
-    for (int i = 0; i <= 16 && offset + i <= uCount; ++i)
+    int counter = 0;
+    for (counter; counter <= 16; counter++)
     {
-      printf("%c", (pMem[offset + i] >= 32 && pMem[offset + i] <= 126) ? pMem[offset + i] : '.');
+      printf("%c", (pMem[offset + counter] >= 32 && pMem[offset + counter] <= 126) ? pMem[offset + counter] : '.');
     }
 
     printf("|\n");

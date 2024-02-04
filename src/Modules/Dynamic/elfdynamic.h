@@ -25,6 +25,7 @@
 #include <dirent.h>
 #include <mqueue.h>
 #include <sys/uio.h>
+#include <sys/vfs.h>
 #include <sys/sem.h>
 #include <sys/reg.h>
 #include <sys/time.h>
@@ -127,6 +128,9 @@ void elfDynamicTestSuite();
     unsigned char f_handle[0];    /* File identifier (sized by caller) [out] */
   };
 #endif /* file_handle */
+
+////////////////////////////////////////////////////////////////
+
 
 ////////////////////////////////////////////////////////////////
 
@@ -279,7 +283,25 @@ void elfDynamicTestSuite();
 
 ////////////////////////////////////////////////////////////////
 
+#ifndef cachestat_range
+  struct cachestat_range
+  {
+    __u64 off;
+    __u64 len;
+  };
+#endif
 
+////////////////////////////////////////////////////////////////
 
+#ifndef cachestat
+  struct cachestat
+  {
+  __u64 nr_cache;
+  __u64 nr_dirty;
+  __u64 nr_writeback;
+  __u64 nr_evicted;
+  __u64 nr_recently_evicted;
+  };
+#endif
 
 #endif /* _ELF_DYNAMIC_INFO_ */

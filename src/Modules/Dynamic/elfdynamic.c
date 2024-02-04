@@ -173,7 +173,7 @@ int8_t readProcessMemoryFromPID(pid_t pid, const void *srcAddr, void *dstAddr, u
   {
     // DO NOT DELETE!!! The sleep is required for the correct data to be read
     // when ran on the terminal, else the result is just a bunch of 0xFF bytes.
-    sleep(0.05);
+    sleep(0.05); // This is an arbitrary value but it seems reasonable in its tracing speed.
 
     wordRead = 0;
     wordRead = ptrace(PTRACE_PEEKDATA, pid, (long *)(srcAddr + i * sizeof(long)), NULL);
@@ -604,8 +604,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_read:
-    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     if(executableHandle->regs.rdx > 0)
     {
       tmpBuffer1 = malloc(executableHandle->regs.rdx);
@@ -620,7 +620,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
                                    tmpBuffer1,
                                    executableHandle->regs.rdx);
 
-    if (isAsciidata(tmpBuffer1, executableHandle->regs.rdx) == TRUE)
+    if ( isAsciidata(tmpBuffer1, executableHandle->regs.rdx) == TRUE)
     {
       printf("read(fd=%d, buffer=\"%s\", count=%d)\n",
              executableHandle->regs.rdi,
@@ -635,8 +635,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
              executableHandle->regs.rdx);
 
       puts("\nBuffer Data:\n");
-      // TODO: Can we check that the read bytes is initialised data before dumping the bytes.
-      dumpHexBytesFromOffset(tmpBuffer1, 0, executableHandle->regs.rdx);
+      dumpHexBytesFromOffset(tmpBuffer1, executableHandle->regs.rsi, executableHandle->regs.rdx);
     }
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -655,14 +654,31 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
                                      executableHandle->regs.rsi,
                                      tmpBuffer1,
                                      executableHandle->regs.rdx);
+      if(err != ERR_NONE)
+      {
+        return err;;
+      }
+    }
 
+    if( isAsciidata(tmpBuffer1, executableHandle->regs.rdx) == TRUE)
+    {
       tmpBuffer1 = realloc(tmpBuffer1, executableHandle->regs.rdx + 1);
       tmpBuffer1[executableHandle->regs.rdx] = '\0'; // Remove extra \n that may be output by command.
+      printf("write(fd=%d, buffer=\"%s\", count=%d)\n",
+            executableHandle->regs.rdi,
+            tmpBuffer1,
+            executableHandle->regs.rdx);
     }
-    printf("write(fd=%d, buffer=\"%s\", count=%d)\n",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx);
+    else
+    {
+      printf("write(fd=%d, buffer-addr=%p, count=%d)\n",
+             executableHandle->regs.rdi,
+             executableHandle->regs.rsi,
+             executableHandle->regs.rdx);
+
+      puts("\nBuffer Data:\n");
+      dumpHexBytesFromOffset(tmpBuffer1, executableHandle->regs.rsi, executableHandle->regs.rdx);
+    }
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1258,9 +1274,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_bind:
     printf("bind(sock_fd=%d, addr=%p, addrLen=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                 executableHandle->regs.rdi,
+                 executableHandle->regs.rsi,
+                 executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1278,9 +1294,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     // TODO: read the address.
     printf("getsockname(sock_fd=%d, addr=%p, addrLen=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getsockname*/
@@ -1288,9 +1304,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_getpeername:
     printf("getpeername(sock_fd=%d, addr=%p, addrLen=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1299,10 +1315,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_socketpair:
     printf("socketpair(domain=%d, type=%d, protocol=%d, sv=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10);
+                       executableHandle->regs.rdi,
+                       executableHandle->regs.rsi,
+                       executableHandle->regs.rdx,
+                       executableHandle->regs.r10);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1311,11 +1327,11 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_setsockopt:
     printf("setsockopt(fd=%d, level=%d, optname=%d, optval=%p, optlen=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                       executableHandle->regs.rdi,
+                       executableHandle->regs.rsi,
+                       executableHandle->regs.rdx,
+                       executableHandle->regs.r10,
+                       executableHandle->regs.r8);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1326,11 +1342,11 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     // TODO: Get sock options
     printf("getsockopt(fd=%d, level=%d, optname=%d, optval=%p, optlen=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                       executableHandle->regs.rdi,
+                       executableHandle->regs.rsi,
+                       executableHandle->regs.rdx,
+                       executableHandle->regs.r10,
+                       executableHandle->regs.r8);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getsockopt*/
@@ -1338,11 +1354,11 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_clone:
     printf("clone(funcPtr=%p, stack=%p, flags=0x%08x, arg=%p, parent_tid=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx,
+                  executableHandle->regs.r10,
+                  executableHandle->regs.r8);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1481,8 +1497,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_exit:
-    printf("exit(errcode=%d)\n",
-           executableHandle->regs.rdi);
+    printf("exit(errcode=%d)\n", executableHandle->regs.rdi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1491,10 +1506,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_wait4:
     printf("clone(pid=%d, status=%p, options=0x%08x, rusage=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10);
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx,
+                  executableHandle->regs.r10);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1503,8 +1518,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_kill:
     printf("kill(pid=%d, signal=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                 executableHandle->regs.rdi,
+                 executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1521,9 +1536,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_semget:
     printf("semget(key=%d, nsems=%d, semflags=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1532,9 +1547,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_semop:
     printf("semop(semid=%d, semops=%p, nsops=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1543,10 +1558,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_semctl:
     printf("semctl(semid=%d, semnum=%d, cmd=0x%08x, arg=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx,
+                   executableHandle->regs.r10);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1565,8 +1580,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     // TODO: Get message returned.
     printf("msgget(key=%d, msgflags=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_msgget*/
@@ -1574,10 +1589,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_msgsnd:
     printf("msgsnd(msqid=%d, msgptr=%p, msgsize=0x%08x, msgflags=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx,
+                   executableHandle->regs.r10);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1588,11 +1603,11 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     // TODO: Get the returned message
     printf("msgrcv(msqid=%d, msgptr=%p, msgsize=0x%08x, msgtyp=%d, msgflags=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx,
+                   executableHandle->regs.r10,
+                   executableHandle->regs.r8);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_msgrcv*/
@@ -1600,9 +1615,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_msgctl:
     printf("msgctl(msqid=%d, cmd=0x%08x, msgptr=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1611,9 +1626,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_fcntl:
     printf("fcntl(fd=%d, cmd=0x%08x, buff=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1622,8 +1637,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_flock:
     printf("flock(fd=%d, cmd=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1652,8 +1667,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
                                       &tmpBuffer1);
 
     printf("truncate(path=\"%s\", size=0x%08x)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi);
+                     tmpBuffer1,
+                     executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1662,8 +1677,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_ftruncate:
     printf("ftruncate(fd=%d, size=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                      executableHandle->regs.rdi,
+                      executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1674,9 +1689,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     /* TODO: Can we read the directory entries?? */
     printf("getdents(fd=%d, dirents=%p, nentries=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                     executableHandle->regs.rdi,
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getdents*/
@@ -1745,8 +1760,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /* TODO: Print mode in human readable format.*/
     printf("mkdir(name=%d, mode=0x%08x)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi);
+                  tmpBuffer1,
+                  executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1772,8 +1787,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /* TODO: Print mode in human readable format.*/
     printf("creat(name=%d, mode=0x%08x)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi);
+                  tmpBuffer1,
+                  executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1876,8 +1891,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("chmod(path=\"%s\", mode=0x%08x)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi);
+                  tmpBuffer1,
+                  executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1887,8 +1902,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_fchmod:
 
     printf("fchmod(fd=%d, mode=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1905,9 +1920,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("chown(path=\"%s\", uid=0x%08x, gid=0x%08x)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                  tmpBuffer1,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -1919,6 +1934,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
            executableHandle->regs.rdi,
            executableHandle->regs.rsi,
            executableHandle->regs.rdx);
+    
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_fchown*/
@@ -1926,6 +1942,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_umask:
     printf("umask(mask=0x%08x)\n", executableHandle->regs.rdi);
+    
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_umask*/
@@ -1940,11 +1957,22 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_getrlimit:
+    struct rlimit resLimit = {0};
+
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // TODO: Get rlimit value
-    printf("getrlimit(resource=0x%08x, rlimit=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+    
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &resLimit,
+                                   sizeof(struct rlimit));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+    printf("getrlimit(resource=0x%08x, rlimit_cur=%d, rlimit-max=%d)\n",
+                      executableHandle->regs.rdi,
+                      resLimit.rlim_cur,
+                      resLimit.rlim_max);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getrlimit*/
@@ -1982,111 +2010,111 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     {
     case PTRACE_GETREGS:
       printf("ptrace(request=PTRACE_GETREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_SETREGS:
       printf("ptrace(request=PTRACE_SETREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_GETFPREGS:
       printf("ptrace(request=PTRACE_GETFPREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_SETFPREGS:
       printf("ptrace(request=PTRACE_SETFPREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_GETFPXREGS:
       printf("ptrace(request=PTRACE_GETFPXREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_SETFPXREGS:
       printf("ptrace(request=PTRACE_SETFPXREGS, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_OLDSETOPTIONS:
       printf("ptrace(request=PTRACE_OLDSETOPTIONS, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_GET_THREAD_AREA:
       printf("ptrace(request=PTRACE_GET_THREAD_AREA, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_SET_THREAD_AREA:
       printf("ptrace(request=PTRACE_SET_THREAD_AREA, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 #ifdef __x86_64__
     case PTRACE_ARCH_PRCTL:
       printf("ptrace(request=PTRACE_ARCH_PRCTL, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rdi,
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 #endif
 
     case PTRACE_SYSEMU:
       printf("ptrace(request=PTRACE_SYSEMU, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_SYSEMU_SINGLESTEP:
       printf("ptrace(request=PTRACE_SYSEMU_SINGLESTEP, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_SINGLEBLOCK:
       printf("ptrace(request=PTRACE_SINGLEBLOCK, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
 
     case PTRACE_TRACEME:
       printf("ptrace(request=PTRACE_TRACEME, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       puts("Anit-Debugging Detected, Exiting Now.");
       exit(1);
 
     default:
       printf("ptrace(request=0x%008x, pid=%d, addr=0x%016x, data=0x%016x)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                     executableHandle->regs.rdi,
+                     executableHandle->regs.rsi,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
       break;
     }
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2108,9 +2136,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
      * We would have to progress to the syscall exit.
      */
     printf("syslog(type=%d, buff=%p, size=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_syslog*/
 
@@ -2159,7 +2187,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_getppid:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // TOD: Get ppid
+    // TODO: Get ppid
     printf("getppid()\n");
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getppid*/
@@ -2181,8 +2209,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_setreuid:
     printf("setreuid(uid=%d, euid=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                     executableHandle->regs.rdi,
+                     executableHandle->regs.rsi);
+
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_setreuid*/
@@ -2190,8 +2219,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_setregid:
     printf("setregid(gid=%d, egid=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                     executableHandle->regs.rdi,
+                     executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2232,7 +2261,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_getresuid:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // TODO: Progress to syscall exit and receive the actual values.
+
     printf("getresuid(ruid=%p, euid=%p, suid=%p)\n",
            executableHandle->regs.rdi,
            executableHandle->regs.rsi,
@@ -2244,9 +2273,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_setresgid:
     printf("setresgid(rgid=%d, egid=%d, sgid=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                      executableHandle->regs.rdi,
+                      executableHandle->regs.rsi,
+                      executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2257,9 +2286,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     // TODO: Progress to syscall exit and receive the actual values.
     printf("getresgid(rgid=%p, egid=%p, sgid=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                      executableHandle->regs.rdi,
+                      executableHandle->regs.rsi,
+                      executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getresgid*/
@@ -2268,16 +2297,14 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_getpgid:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     // TODO: Get pgid value
-    printf("getpgid(pid=%d)\n",
-           executableHandle->regs.rdi);
+    printf("getpgid(pid=%d)\n", executableHandle->regs.rdi);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getpgid*/
 
 /***********************************************************************************/
   case SYS_setfsuid:
-    printf("setfsuid(uid=%d)\n",
-           executableHandle->regs.rdi);
+    printf("setfsuid(uid=%d)\n", executableHandle->regs.rdi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2285,8 +2312,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_setfsgid:
-    printf("setfsgid(gid=%d)\n",
-           executableHandle->regs.rdi);
+    printf("setfsgid(gid=%d)\n", executableHandle->regs.rdi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2294,8 +2320,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_getsid:
-    printf("getsid(pid=%d)\n",
-           executableHandle->regs.rdi);
+    printf("getsid(pid=%d)\n", executableHandle->regs.rdi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2319,8 +2344,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_rt_sigpending:
     printf("rt_sigpending(set=%p, sigentsize=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                          executableHandle->regs.rdi,
+                          executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2329,10 +2354,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_rt_sigtimedwait:
     printf("rt_sigtimedwait(*uthese=%p, uinfo=%p, *uts=%p, sigentsize=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10);
+                            executableHandle->regs.rdi,
+                            executableHandle->regs.rsi,
+                            executableHandle->regs.rdx,
+                            executableHandle->regs.r10);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2343,9 +2368,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
     printf("rt_sigqueueinfo(pid=%d, sig=0x%08x, *uinfo=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                            executableHandle->regs.rdi,
+                            executableHandle->regs.rsi,
+                            executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_rt_sigqueueinfo*/
@@ -2433,7 +2458,19 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_fstatfs:
-    printf("fstatfs(fd=%d)\n", executableHandle->regs.rdi); // This function is deprecated
+    struct statfs fsStat = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &fsStat,
+                                   sizeof(struct statfs));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("fstatfs(fd=%d)\n", executableHandle->regs.rdi);
+    // TODO: Print the data from statfs struct.
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2441,11 +2478,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_sysfs:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rsi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -2464,8 +2496,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
     printf("getpriority(which=%d, who=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getpriority*/
@@ -2473,9 +2505,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_setpriority:
     printf("setpriority(which=%d, who=%d, priority=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2484,8 +2516,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_sched_setparam:
     printf("sched_setparam(pid=%d, param-struct=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                           executableHandle->regs.rdi,
+                           executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2496,8 +2528,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
     printf("sched_getparam(pid=%d, param-struct=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                           executableHandle->regs.rdi,
+                           executableHandle->regs.rsi);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_sched_getparam*/
@@ -2505,9 +2537,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_sched_setscheduler:
     printf("sched_setscheduler(pid=%d, policy=%d, param-struct=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                               executableHandle->regs.rdi,
+                               executableHandle->regs.rsi,
+                               executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2517,16 +2549,14 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_sched_getscheduler:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
-    printf("sched_getscheduler(pid=%d)\n",
-           executableHandle->regs.rdi);
+    printf("sched_getscheduler(pid=%d)\n", executableHandle->regs.rdi);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_sched_getscheduler*/
 
 /***********************************************************************************/
   case SYS_sched_get_priority_max:
-    printf("sched_get_priority_max(policy=%d)\n",
-           executableHandle->regs.rdi);
+    printf("sched_get_priority_max(policy=%d)\n", executableHandle->regs.rdi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2551,18 +2581,19 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       return err;
     }
 
-    printf("sched_rr_get_interval(pid=%d, tv_sec=%d, tv_nsecs=%d)\n",
-           executableHandle->regs.rdi,
-           timeSpec.tv_sec,
-           timeSpec.tv_nsec);
+    printf("sched_rr_get_interval(pid=%d, seconds=%d.%d)\n",
+                                  executableHandle->regs.rdi,
+                                  timeSpec.tv_sec,
+                                  timeSpec.tv_nsec);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_sched_rr_get_interval*/
 
   case SYS_mlock:
     printf("mlock(start=0x%08x, length=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi);
+
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_mlock*/
@@ -2570,16 +2601,17 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_munlock:
     printf("munlock(start=0x%08x, length=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                    executableHandle->regs.rdi,
+                    executableHandle->regs.rsi);
+
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_munlock*/
 
 /***********************************************************************************/
   case SYS_mlockall:
-    printf("mlockall(flags=0x%08x)\n",
-           executableHandle->regs.rdi);
+    printf("mlockall(flags=0x%08x)\n", executableHandle->regs.rdi);
+
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_mlockall*/
@@ -2600,11 +2632,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   
 /***********************************************************************************/
   case SYS_pivot_root:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
@@ -2614,12 +2641,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       return err;
     }
 
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer2);
@@ -2627,9 +2648,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     {
       return err;
     }
+
     printf("pivot_root(start=\"%s\", length=\"%s\")\n",
-           tmpBuffer1,
-           tmpBuffer2);
+                       tmpBuffer1,
+                       tmpBuffer2);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2644,12 +2666,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_prctl:
     // TODO: Print options in human readable form.
     printf("prctl(option=0x%08x, arg2=0x%016x, arg3=0x%016x, arg3=0x%016x, arg4=0x%016x, arg5=0x%016x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8,
-           executableHandle->regs.r9);
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx,
+                  executableHandle->regs.r10,
+                  executableHandle->regs.r8,
+                  executableHandle->regs.r9);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2662,6 +2684,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
                        executableHandle->regs.rdi,
                        executableHandle->regs.rsi,
                        executableHandle->regs.rdx);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_arch_prctl*/
 
 /***********************************************************************************/
@@ -2700,13 +2725,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
 
     break; /*SYS_setrlimit*/
-           /***********************************************************************************/
+/***********************************************************************************/
   case SYS_chroot:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
@@ -2723,6 +2743,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_chroot*/
 
+/***********************************************************************************/
   case SYS_sync:
     printf("sync()\n");
 
@@ -2730,13 +2751,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_sync*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_acct:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
@@ -2752,7 +2768,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_acct*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_settimeofday:
     struct timeval tm = {0};
     err = readProcessMemoryFromPID(executableHandle->pid,
@@ -2764,19 +2780,15 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       return err;
     }
 
-    printf("settimeofday(seconds=%d, micro-seconds=%d)\n", tm.tv_sec, tm.tv_usec);
+    printf("settimeofday(seconds=%d.%d)\n", tm.tv_sec, tm.tv_usec);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_settimeofday*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_mount:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
+    char * data = NULL;
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -2784,37 +2796,37 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       return err;
     }
 
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
-    err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer2);
+    err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rsi, &tmpBuffer2);
     if (err != ERR_NONE)
     {
       return err;
     }
 
-    tmpBuffer3 = malloc(PATH_MAX);
-    if (tmpBuffer3 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
-    err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer3);
+    err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdx, &tmpBuffer3);
     if (err != ERR_NONE)
     {
       return err;
     }
 
-    printf("mount(dev-name=\"%s\", dir-name=\"%s\", type=\"%s\", flags=0x%08x)\n", tm.tv_sec, tm.tv_usec);
+    err = readStringFromProcessMemory(executableHandle->pid,
+                                      executableHandle->regs.r8,
+                                      &data);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("mount(dev-name=\"%s\", dir-name=\"%s\", type=\"%s\", flags=0x%08x, data=\"%s\")\n",
+                  tmpBuffer1,
+                  tmpBuffer2,
+                  tmpBuffer3,
+                  data);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_mount*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_umount2:
     tmpBuffer1 = malloc(PATH_MAX);
     if (tmpBuffer1 == NULL)
@@ -2834,14 +2846,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_umount2*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_swapon:
     char flags[50] = {0};
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -2865,13 +2872,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_swapon*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_swapoff:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -2885,7 +2887,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_swapoff*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_reboot: // TODO: All SYS_reboot commands are parsed into SYS_sayscall
     char cmd[40];
     switch (executableHandle->regs.rdi)
@@ -2929,13 +2931,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_reboot*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_sethostname:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -2949,13 +2946,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_sethostname*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_setdomainname:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -2969,12 +2961,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_setdomainname*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_ioperm:
     printf("ioperm(from=%d, length=%d, turn-on=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2983,9 +2975,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_init_module:
     printf("init_module(umod=%p, length=0x%08x, args-addr=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -2993,11 +2985,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_delete_module:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
@@ -3008,20 +2995,15 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("delete_module(name-user=\"%s\", flags=0x%08x)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi);
+                          tmpBuffer1,
+                          executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_delete_module*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_quotactl:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
@@ -3032,16 +3014,16 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("quotactl(cmd=0x%08x, flags=0x%08x, id=%d, addr=%p)\n",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10);
+                     executableHandle->regs.rdi,
+                     tmpBuffer1,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_quotactl*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_gettid:
     printf("gettid()\n");
 
@@ -3049,13 +3031,13 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_gettid*/
 
-    /***********************************************************************************/
+/***********************************************************************************/
   case SYS_readahead:
 
     printf("readahead(fd=%d, offset=0x%08x, count=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                      executableHandle->regs.rdi,
+                      executableHandle->regs.rsi,
+                      executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3063,13 +3045,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_setxattr:
-    // Get path argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
+    // Get path argument
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       &tmpBuffer1);
@@ -3079,12 +3056,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     // Get name argument
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer2);
@@ -3109,20 +3080,20 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     if (isAsciidata(tmpBuffer3, executableHandle->regs.rdx))
     {
       printf("setxattr(path=\"%s\", key=\"%s\", value=\"%s\", size=0x%08x, flags=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                       tmpBuffer1,
+                       tmpBuffer2,
+                       tmpBuffer3,
+                       executableHandle->regs.rdx,
+                       executableHandle->regs.r10);
     }
     else
     {
       printf("setxattr(path=\"%s\", key=\"%s\", value=0x%08x, size=0x%08x, flags=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                       tmpBuffer1,
+                       tmpBuffer2,
+                       tmpBuffer3,
+                       executableHandle->regs.rdx,
+                       executableHandle->regs.r10);
     }
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
@@ -3131,13 +3102,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_lsetxattr:
-    // Get path argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
+    // Get path argument
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       &tmpBuffer1);
@@ -3147,12 +3113,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     // Get name argument
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer2);
@@ -3177,20 +3137,20 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     if (isAsciidata(tmpBuffer3, executableHandle->regs.rdx))
     {
       printf("lsetxattr(path=\"%s\", key=\"%s\", keyValue=\"%s\", size=0x%08x, flags=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                        tmpBuffer1,
+                        tmpBuffer2,
+                        tmpBuffer3,
+                        executableHandle->regs.rdx,
+                        executableHandle->regs.r10);
     }
     else
     {
       printf("lsetxattr(path=\"%s\", key=\"%s\", value=0x%0168x, size=0x%08x, flags=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                        tmpBuffer1,
+                        tmpBuffer2,
+                        tmpBuffer3,
+                        executableHandle->regs.rdx,
+                        executableHandle->regs.r10);
     }
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
@@ -3230,20 +3190,20 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     if (isAsciidata(tmpBuffer3, executableHandle->regs.rdx))
     {
       printf("fsetxattr(fd=%d, key=\"%s\", keyValue=\"%s\", size=0x%08x, flags=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                        tmpBuffer1,
+                        tmpBuffer2,
+                        tmpBuffer3,
+                        executableHandle->regs.rdx,
+                        executableHandle->regs.r10);
     }
     else
     {
       printf("fsetxattr(fd=%d, key=\"%s\", value=0x%016x, size=0x%08x, flags=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx,
-             executableHandle->regs.r10);
+                        tmpBuffer1,
+                        tmpBuffer2,
+                        tmpBuffer3,
+                        executableHandle->regs.rdx,
+                        executableHandle->regs.r10);
     }
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
@@ -3253,13 +3213,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_getxattr:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // Get path argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
+    // Get path argument
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       &tmpBuffer1);
@@ -3269,12 +3224,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     // Get name argument
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer2);
@@ -3299,18 +3248,18 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     if (isAsciidata(tmpBuffer3, executableHandle->regs.rdx))
     {
       printf("getxattr(path=\"%s\", key=\"%s\", keyValue=\"%s\", size=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx);
+                       tmpBuffer1,
+                       tmpBuffer2,
+                       tmpBuffer3,
+                       executableHandle->regs.rdx);
     }
     else
     {
       printf("getxattr(path=\"%s\", key=\"%s\", value=0x%016x, size=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx);
+                       tmpBuffer1,
+                       tmpBuffer2,
+                       tmpBuffer3,
+                       executableHandle->regs.rdx);
     }
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3319,13 +3268,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_lgetxattr:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // Get path argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
+    // Get path argument
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       &tmpBuffer1);
@@ -3335,12 +3279,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     // Get name argument
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer2);
@@ -3365,18 +3303,18 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     if (isAsciidata(tmpBuffer3, executableHandle->regs.rdx))
     {
       printf("lgetxattr(path=\"%s\", key=\"%s\", keyValue=\"%s\", size=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx);
+                        tmpBuffer1,
+                        tmpBuffer2,
+                        tmpBuffer3,
+                        executableHandle->regs.rdx);
     }
     else
     {
       printf("lgetxattr(path=\"%s\", key=\"%s\", value=0x%016x, size=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx);
+                        tmpBuffer1,
+                        tmpBuffer2,
+                        tmpBuffer3,
+                        executableHandle->regs.rdx);
     }
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3385,13 +3323,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_fgetxattr:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // Get name argument
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
+    // Get name argument
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer2);
@@ -3424,10 +3357,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     else
     {
       printf("fgetxattr(path=%d, key=\"%s\", value=0x%016x, size=0x%08x)\n",
-             executableHandle->regs.rdi,
-             tmpBuffer2,
-             tmpBuffer3,
-             executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        tmpBuffer2,
+                        tmpBuffer3,
+                        executableHandle->regs.rdx);
     }
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3436,13 +3369,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_listxattr:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // Get name argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
+    // Get name argument
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       &tmpBuffer1);
@@ -3452,9 +3380,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("listxattr(path=\"%s\", list-addr=%p, list-size=%d)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                      tmpBuffer1,
+                      executableHandle->regs.rsi,
+                      executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_listxattr*/
@@ -3462,13 +3390,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_llistxattr:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // Get name argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
+    // Get name argument
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       &tmpBuffer1);
@@ -3478,9 +3401,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("llistxattr(path=\"%s\", list-addr=%p, list-size=%d)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                       tmpBuffer1,
+                       executableHandle->regs.rsi,
+                       executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_llistxattr*/
@@ -3490,9 +3413,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
     printf("flistxattr(fd=%d, list-addr=%p, list-size=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                       executableHandle->regs.rdi,
+                       executableHandle->regs.rsi,
+                       executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_flistxattr*/
@@ -3501,26 +3424,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_removexattr:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
-    // Get path argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       &tmpBuffer1);
     if (err != ERR_NONE)
     {
       return err;
-    }
-
-    // Get name argument
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
     }
 
     err = readStringFromProcessMemory(executableHandle->pid,
@@ -3532,8 +3441,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("removexattr(path=\"%s\", name=\"%s\")\n",
-           tmpBuffer1,
-           tmpBuffer2);
+                        tmpBuffer1,
+                        tmpBuffer2);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_removexattr*/
@@ -3542,26 +3451,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_lremovexattr:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
-    // Get path argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       &tmpBuffer1);
     if (err != ERR_NONE)
     {
       return err;
-    }
-
-    // Get name argument
-    tmpBuffer2 = malloc(PATH_MAX);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
     }
 
     err = readStringFromProcessMemory(executableHandle->pid,
@@ -3583,13 +3478,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_fremovexattr:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
-    // Get name argument
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer1);
@@ -3599,8 +3487,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("fremovexattr(fd=%d, name=\"%s\")\n",
-           executableHandle->regs.rdi,
-           tmpBuffer2);
+                         executableHandle->regs.rdi,
+                         tmpBuffer2);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_fremovexattr*/
@@ -3704,13 +3592,13 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("futex(uAddr1=%p, options=\"%s\", value=0x%08x, time-seconds=%d, time-nano-seconds=%d, uAddr2=%p, value3=%d)\n",
-           uAddr1,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           timeSpec.tv_sec,
-           timeSpec.tv_nsec,
-           uAddr2,
-           executableHandle->regs.rdx);
+                  uAddr1,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx,
+                  timeSpec.tv_sec,
+                  timeSpec.tv_nsec,
+                  uAddr2,
+                  executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3720,9 +3608,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_sched_setaffinity:
 
     printf("sched_setaffinity(pid=%d, length=0x%08x, cpu-set-addr=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                              executableHandle->regs.rdi,
+                              executableHandle->regs.rsi,
+                              executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3732,9 +3620,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_sched_getaffinity:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("sched_getaffinity(pid=%d, length=0x%08x, cpu-set-addr=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                              executableHandle->regs.rdi,
+                              executableHandle->regs.rsi,
+                              executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_sched_getaffinity*/
@@ -3742,8 +3630,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_io_setup:
     printf("io_setup(nr_events=0x%08x, ctx-addr=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                     executableHandle->regs.rdi,
+                     executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3790,16 +3678,16 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("io_getevents(ctx=0x%016x, min_nr=%ld, nr=%ld, ioEvent-data=%ld, ioEvent-obj-%ld"
-           "ioEvent-res=%lu, ioEvent-res2=%lu, timeout-seconds=%lu, timeout-nanoseconds=%lu\n",
-           ctx,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rax,
-           ioEvent.data,
-           ioEvent.obj,
-           ioEvent.res,
-           ioEvent.res2,
-           timeSpec.tv_sec,
-           timeSpec.tv_nsec);
+                         "ioEvent-res=%lu, ioEvent-res2=%lu, timeout-seconds=%lu, timeout-nanoseconds=%lu\n",
+                         ctx,
+                         executableHandle->regs.rsi,
+                         executableHandle->regs.rax,
+                         ioEvent.data,
+                         ioEvent.obj,
+                         ioEvent.res,
+                         ioEvent.res2,
+                         timeSpec.tv_sec,
+                         timeSpec.tv_nsec);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_io_getevents*/
@@ -3815,9 +3703,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("io_submit(context=0x%016x, nr=%ld, iocb-addr=%p\n)",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           address);
+                      executableHandle->regs.rdi,
+                      executableHandle->regs.rsi,
+                      address);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3826,9 +3714,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_io_cancel:
     printf("io_cancel(context-ID=0x%016x, iocb-struct-addr=%p, result-addr=%p\n)",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                      executableHandle->regs.rdi,
+                      executableHandle->regs.rsi,
+                      executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3838,21 +3726,15 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_lookup_dcookie:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readProcessMemoryFromPID(executableHandle->pid, executableHandle->regs.rsi, tmpBuffer1, sizeof(uint64_t));
     if (err != ERR_NONE)
     {
       return err;
     }
     printf("lookup_dcookie(cookie=0x%016x, buffer=\"%s\", length=%d\n)",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx);
+                           executableHandle->regs.rdi,
+                           tmpBuffer1,
+                           executableHandle->regs.rdx);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_lookup_dcookie*/
@@ -3869,12 +3751,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     /***********************************************************************************/
   case SYS_remap_file_pages:
     printf("remap_file_pages(virtual-addr=%p, size=0x%08x, protections=size=0x%016x"
-           "page-offset=size=0x%016x, flags=size=0x%08x\n)",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                             "page-offset=size=0x%016x, flags=size=0x%08x\n)",
+                             executableHandle->regs.rdi,
+                             executableHandle->regs.rsi,
+                             executableHandle->regs.rdx,
+                             executableHandle->regs.r10,
+                             executableHandle->regs.r8);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -3882,22 +3764,22 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_getdents64:
-    struct linux_dirent d = {0};
+    struct linux_dirent dEnt = {0};
 
     err = readProcessMemoryFromPID(executableHandle->pid,
                                    executableHandle->regs.rsi,
-                                   &d,
+                                   &dEnt,
                                    sizeof(struct linux_dirent));
     if (err != ERR_NONE)
     {
       return err;
     }
     printf("getdents64(fd=%u, dir_Inode=%u, dir_offset=0x%08x, dirent-length=%lu, dir-name=\"%s\", count=%lu)\n",
-           executableHandle->regs.rdi,
-           d.d_ino,
-           d.d_off,
-           d.d_reclen,
-           d.d_name);
+                       executableHandle->regs.rdi,
+                       dEnt.d_ino,
+                       dEnt.d_off,
+                       dEnt.d_reclen,
+                       dEnt.d_name);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
@@ -3976,44 +3858,44 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     {
     case POSIX_FADV_NORMAL:
       printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_NORMAL)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
       break;
 
     case POSIX_FADV_SEQUENTIAL:
       printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_SEQUENTIAL)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
       break;
 
     case POSIX_FADV_RANDOM:
       printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_RANDOM)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
       break;
 
     case POSIX_FADV_NOREUSE:
       printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_NOREUSE)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
       break;
 
     case POSIX_FADV_WILLNEED:
       printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_WILLNEED)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
       break;
 
     case POSIX_FADV_DONTNEED:
       printf("fadvise64(fd=%d, offset=0x%08x, length=0x%08x, advice= POSIX_FADV_DONTNEED)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             executableHandle->regs.rdx);
+                        executableHandle->regs.rdi,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx);
       break;
     }
 
@@ -4091,13 +3973,13 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("timer_settime(timerID=%d, flags=0x%08x, newtime-interval=%d, newtime-value=%d",
-           "oldtime-interval=%d, oldtime-value=%d\n)",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           newTime.it_interval,
-           newTime.it_value,
-           oldTime.it_interval,
-           oldTime.it_value);
+                          "oldtime-interval=%d, oldtime-value=%d\n)",
+                          executableHandle->regs.rdi,
+                          executableHandle->regs.rsi,
+                          newTime.it_interval,
+                          newTime.it_value,
+                          oldTime.it_interval,
+                          oldTime.it_value);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4148,10 +4030,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       return err;
     }
 
-    printf("clock_settime(timerID=%d, seconds=%d, nano-seconds=%d)\n",
-           executableHandle->regs.rdi,
-           timeSpec.tv_sec,
-           timeSpec.tv_nsec);
+    printf("clock_settime(timerID=%d, seconds=%d.%d)\n",
+                          executableHandle->regs.rdi,
+                          timeSpec.tv_sec,
+                          timeSpec.tv_nsec);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4171,10 +4053,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       return err;
     }
 
-    printf("clock_gettime(timerID=%d, seconds=%d, nano-seconds=%d)\n",
-           executableHandle->regs.rdi,
-           timeSpec.tv_sec,
-           timeSpec.tv_nsec);
+    printf("clock_gettime(timerID=%d, seconds=%d.%d)\n",
+                          executableHandle->regs.rdi,
+                          timeSpec.tv_sec,
+                          timeSpec.tv_nsec);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_clock_gettime*/
 
@@ -4193,9 +4075,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("clock_getres(timerID=%d, seconds=%d, nano-seconds=%d)\n",
-           executableHandle->regs.rdi,
-           timeSpec.tv_sec,
-           timeSpec.tv_nsec);
+                         executableHandle->regs.rdi,
+                         timeSpec.tv_sec,
+                         timeSpec.tv_nsec);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_clock_getres*/
 
@@ -4221,12 +4103,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       return err;
     }
 
-    printf("clock_nanosleep(timerID=%d, seconds=%d, nano-seconds=%d)\n",
-           executableHandle->regs.rdi,
-           timeSpec.tv_sec,
-           timeSpec.tv_nsec,
-           remain1.tv_sec, // TODO: This may be NULL (will this matter?)
-           remain1.tv_nsec);
+    printf("clock_nanosleep(timerID=%d, seconds=%d.%d)\n",
+                            executableHandle->regs.rdi,
+                            timeSpec.tv_sec,
+                            timeSpec.tv_nsec,
+                            remain1.tv_sec, // TODO: This may be NULL (will this matter?)
+                            remain1.tv_nsec);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4252,10 +4134,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("epoll_wait(epfd=%d, epoll-event=0x%08x, max-events=%d, timeout=%d)\n",
-           executableHandle->regs.rdi,
-           epollEvents.events,
-           executableHandle->regs.rsi,
-           executableHandle->regs.r10);
+                       executableHandle->regs.rdi,
+                       epollEvents.events,
+                       executableHandle->regs.rsi,
+                       executableHandle->regs.r10);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_epoll_wait*/
 
@@ -4272,19 +4154,19 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("epoll_ctl(epfd=%d, op=0x%08x, fd=%d, epoll-event=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           epollEvents.events);
+                      executableHandle->regs.rdi,
+                      executableHandle->regs.rsi,
+                      executableHandle->regs.rdx,
+                      epollEvents.events);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_epoll_ctl*/
 
     /***********************************************************************************/
   case SYS_tgkill:
     printf("tgkill(tgid=%d, pid=%d, signal=0x%08x, timeout=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx);
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx);
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_tgkill*/
@@ -4294,12 +4176,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     struct utimbuf utimeBuff = {0};
 
     // Read in filename
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rdi,
                                       tmpBuffer1);
@@ -4340,12 +4216,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
     /* TODO: Could we print the mode flags as there macro names?*/
     printf("mbind(start=%ld, length=%ld, mode=0x%08x, nmask=0x%016x, max-node=%ld, flags=0x%08x)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           nmask1,
-           executableHandle->regs.r8,
-           executableHandle->regs.r9);
+                  executableHandle->regs.rdi,
+                  executableHandle->regs.rsi,
+                  executableHandle->regs.rdx,
+                  nmask1,
+                  executableHandle->regs.r8,
+                  executableHandle->regs.r9);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4365,9 +4241,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
     /* TODO: Could we print the mode flags as there macro names?*/
     printf("set_mempolicy(mode=0x%08x, nmask=0x%016x, max-node=%ld)\n",
-           executableHandle->regs.rdi,
-           nmask2,
-           executableHandle->regs.r10);
+                          executableHandle->regs.rdi,
+                          nmask2,
+                          executableHandle->regs.r10);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4381,20 +4257,15 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /* TODO: Could we print the mode flags as there macro names?*/
     printf("get_mempolicy(mode=0x%08x, nmask=0x%016x, max-node=%ld)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           executableHandle->regs.r10);
+                          executableHandle->regs.rdi,
+                          executableHandle->regs.rsi,
+                          executableHandle->regs.r10);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_get_mempolicy*/
 
     /***********************************************************************************/
   case SYS_mq_open:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -4403,8 +4274,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("mq_open(filename=\"tmpBuffer1\", oflags=0x%08x)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi);
+                    tmpBuffer1,
+                    executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4412,11 +4283,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_mq_unlink:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid, executableHandle->regs.rdi, &tmpBuffer1);
     if (err != ERR_NONE)
@@ -4515,13 +4381,13 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("mq_timedreceive(mqdes=%d, message=\"THE MESSAGE IS UNAVAILABLE\", msg-length=0x%08x,"
-           " msg-priority=%d, seconds=%d, nano-seconds=%d)\n",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           timeSpec.tv_sec,
-           timeSpec.tv_nsec);
+                            " msg-priority=%d, seconds=%d, nano-seconds=%d)\n",
+                            executableHandle->regs.rdi,
+                            tmpBuffer1,
+                            executableHandle->regs.rdx,
+                            executableHandle->regs.r10,
+                            timeSpec.tv_sec,
+                            timeSpec.tv_nsec);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4572,15 +4438,15 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
       }
 
       printf("kexec_load(entry=0x%016x, nrSegments=0x%016x, kexec_segment->buf=%p, "
-             "kexec_segment->bufsz=0x%016x, kexec_segment->physicalAddr=%p, "
-             "kexec_segment->memsz=0x%016x, flags=0x%08x)\n",
-             executableHandle->regs.rdi,
-             executableHandle->regs.rsi,
-             execLoadSegments.buf,
-             execLoadSegments.bufsz,
-             execLoadSegments.mem,
-             execLoadSegments.memsz,
-             executableHandle->regs.r10);
+                         "kexec_segment->bufsz=0x%016x, kexec_segment->physicalAddr=%p, "
+                         "kexec_segment->memsz=0x%016x, flags=0x%08x)\n",
+                         executableHandle->regs.rdi,
+                         executableHandle->regs.rsi,
+                         execLoadSegments.buf,
+                         execLoadSegments.bufsz,
+                         execLoadSegments.mem,
+                         execLoadSegments.memsz,
+                         executableHandle->regs.r10);
     }
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
@@ -4611,36 +4477,22 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
      */
 
     printf("waitid(which=%d, pid=%d, siginfo->si_signo=%d, "
-           "siginfo->si_errno=%d, siginfo->si_code=%d, siginfo->si_value=%d, "
-           "options=0x%08x, rusage-addr=%p)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           sigInfo.si_signo,
-           sigInfo.si_errno,
-           sigInfo.si_code,
-           sigInfo.si_value,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                   "siginfo->si_errno=%d, siginfo->si_code=%d, siginfo->si_value=%d, "
+                   "options=0x%08x, rusage-addr=%p)\n",
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   sigInfo.si_signo,
+                   sigInfo.si_errno,
+                   sigInfo.si_code,
+                   sigInfo.si_value,
+                   executableHandle->regs.r10,
+                   executableHandle->regs.r8);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_waitid*/
 
     /***********************************************************************************/
   case SYS_add_key:
-    // Allocate buffer for type parameter
-    tmpBuffer1 = malloc(512); // Arbitrary length (512 should be more than enough).
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
-    // Allocate buffer for description. The documentation does not mention a limit
-    // to the size of description.
-    tmpBuffer2 = malloc(4096);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     // Allocate buffer for 'payload' parameter, only if psize > 0
     if (executableHandle->regs.r10 > 0)
@@ -4681,12 +4533,12 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("add_key(type=\"%s\", description=\"%s\", payload=\"%s\", "
-           "plen=%d, destringid=0x%08x)\n",
-           tmpBuffer1,
-           tmpBuffer2,
-           tmpBuffer3,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                    "plen=%d, destringid=0x%08x)\n",
+                    tmpBuffer1,
+                    tmpBuffer2,
+                    tmpBuffer3,
+                    executableHandle->regs.r10,
+                    executableHandle->regs.r8);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4699,21 +4551,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
      * it is NULL. Given this, I have chosen to only print NULL/NOT-NULL
      */
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-
-    // Allocate buffer for type parameter
-    tmpBuffer1 = malloc(512); // Arbitrary length (512 should be more than enough).
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
-    // Allocate buffer for description. The documentation does not mention a limit
-    // to the size of description.
-    tmpBuffer2 = malloc(4096);
-    if (tmpBuffer2 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     // Read 'description' parameter.
     err = readStringFromProcessMemory(executableHandle->pid,
@@ -4736,16 +4573,16 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     if (executableHandle->regs.rdx == NULL)
     {
       printf("request_key(type=\"%s\", description=\"%s\", callout_info=NULL, dest_keyring=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             executableHandle->regs.r10);
+                          tmpBuffer1,
+                          tmpBuffer2,
+                          executableHandle->regs.r10);
     }
     else
     {
       printf("request_key(type=\"%s\", description=\"%s\", callout_info=NOT-NULL, dest_keyring=0x%08x)\n",
-             tmpBuffer1,
-             tmpBuffer2,
-             executableHandle->regs.r10);
+                          tmpBuffer1,
+                          tmpBuffer2,
+                          executableHandle->regs.r10);
     }
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4768,11 +4605,11 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("keyctl(cmd=%s, arg1=0x%08x, arg2=0x%08x, arg3=0x%08x, arg4=0x%08x)\n",
-           tmpBuffer1,
-           executableHandle->regs.rsi,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                   tmpBuffer1,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx,
+                   executableHandle->regs.r10,
+                   executableHandle->regs.r8);
 
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_keyctl*/
@@ -4786,20 +4623,20 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     {
     case IOPRIO_WHO_PROCESS:
       printf("ioprio_set(which=IOPRIO_WHO_PROCESS, who=%d, prio=%d)\n",
-             executableHandle->regs.rsi,
-             prio);
+                         executableHandle->regs.rsi,
+                         prio);
       break;
 
     case IOPRIO_WHO_PGRP:
       printf("ioprio_set(which=IOPRIO_WHO_PGRP, who=%d, prio=%d)\n",
-             executableHandle->regs.rsi,
-             prio);
+                         executableHandle->regs.rsi,
+                         prio);
       break;
 
     case IOPRIO_WHO_USER:
       printf("ioprio_set(which=IOPRIO_WHO_USER, who=%d, prio=%d)\n",
-             executableHandle->regs.rsi,
-             prio);
+                         executableHandle->regs.rsi,
+                         prio);
       break;
     }
 
@@ -4843,11 +4680,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_inotify_add_watch:
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
@@ -4858,9 +4690,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("inotify_add_watch(fd=%d, path=\"%s\", mask=0x%08x)\n",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx);
+                              executableHandle->regs.rdi,
+                              tmpBuffer1,
+                              executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4870,8 +4702,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   case SYS_inotify_rm_watch:
 
     printf("inotify_rm_watch(fd=%d, wd=%d)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi);
+                             executableHandle->regs.rdi,
+                             executableHandle->regs.rsi);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4902,10 +4734,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("migrate_pages(pid=%d, max-nodes=%ld, old-nodes=%ld, new-nodes=%ld)\n",
-           executableHandle->regs.rdi,
-           executableHandle->regs.rsi,
-           oldNodes,
-           newNodes);
+                          executableHandle->regs.rdi,
+                          executableHandle->regs.rsi,
+                          oldNodes,
+                          newNodes);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4935,12 +4767,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
   /***********************************************************************************/
   case SYS_mkdirat:
 
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
-
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
                                       &tmpBuffer1);
@@ -4950,9 +4776,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("mkdirat(dir-fd=%d, path=\"%s\", mode=0x%08x)\n",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx);
+                    executableHandle->regs.rdi,
+                    tmpBuffer1,
+                    executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4960,12 +4786,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_mknodat:
-
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
@@ -4976,10 +4796,10 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("mknodat(dir-fd=%d, filename=\"%s\", mode=0x%08x, dev=0x%08x)\n",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10);
+                    executableHandle->regs.rdi,
+                    tmpBuffer1,
+                    executableHandle->regs.rdx,
+                    executableHandle->regs.r10);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -4987,12 +4807,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_fchownat:
-
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
@@ -5003,11 +4817,11 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     printf("fchownat(dir-fd=%d, filename=\"%s\", uid=%d, gid=%d, flag=0x%08x)\n",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx,
-           executableHandle->regs.r10,
-           executableHandle->regs.r8);
+                     executableHandle->regs.rdi,
+                     tmpBuffer1,
+                     executableHandle->regs.rdx,
+                     executableHandle->regs.r10,
+                     executableHandle->regs.r8);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -5015,12 +4829,6 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
     /***********************************************************************************/
   case SYS_futimesat:
-
-    tmpBuffer1 = malloc(PATH_MAX);
-    if (tmpBuffer1 == NULL)
-    {
-      return ERR_MEMORY_ALLOCATION_FAILED;
-    }
 
     err = readStringFromProcessMemory(executableHandle->pid,
                                       executableHandle->regs.rsi,
@@ -5035,9 +4843,9 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
      * not that much to gleen from the structures fields.
      */
     printf("futimesat(dir-fd=%d, filename=\"%s\", utimes-addr=%p)\n",
-           executableHandle->regs.rdi,
-           tmpBuffer1,
-           executableHandle->regs.rdx);
+                      executableHandle->regs.rdi,
+                      tmpBuffer1,
+                      executableHandle->regs.rdx);
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
@@ -5826,46 +5634,80 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_preadv:
+    int iovCnt = executableHandle->regs.rdx;
 
-    if (executableHandle->regs.rdx > 0)
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+    printf("preadv(fd=%d, iov-base-addr=%p, iovcnt=%d, offset=%p)\n",
+                   executableHandle->regs.rdi,
+                   executableHandle->regs.rsi,
+                   executableHandle->regs.rdx,
+                   executableHandle->regs.r10);
+
+    if (iovCnt > 0)
     {
-      tmpBuffer1 = malloc(sizeof(struct iovec) * executableHandle->regs.rdx);
+      tmpBuffer1 = malloc(sizeof(struct iovec) * iovCnt);
       if (tmpBuffer1 == NULL)
       {
         return ERR_MEMORY_ALLOCATION_FAILED;
       }
 
-      for (uint16_t i = 0; i < executableHandle->regs.rdx; i++)
+      err = readProcessMemoryFromPID(executableHandle->pid,
+                                      executableHandle->regs.rsi,
+                                      tmpBuffer1,
+                                      sizeof(struct iovec) * iovCnt);
+      if (err != ERR_NONE)
       {
-        err = readProcessMemoryFromPID(executableHandle->pid,
-                                       executableHandle->regs.rsi + (i * sizeof(struct iovec)),
-                                       &vec[i],
-                                       sizeof(struct iovec));
-        if (err != ERR_NONE)
+        free(tmpBuffer1);
+        return err;
+      }
+
+      for (int i = 0; i < iovCnt; i++)
+      {
+        vec = (struct iovec *) (tmpBuffer1 + sizeof(struct iovec) * i);
+
+        tmpBuffer2 = malloc(vec->iov_len);
+        if(tmpBuffer2 == NULL)
         {
+          return ERR_MEMORY_ALLOCATION_FAILED;
+        }
+
+        err = readProcessMemoryFromPID(executableHandle->pid,
+                                       vec->iov_base,
+                                       tmpBuffer2,
+                                       vec->iov_len);
+        if(err != ERR_NONE)
+        {
+          free(tmpBuffer2);
           return err;
         }
+        printf("\niovec[%d]\n", i);
+
+        puts("Data:\n\n");
+        err = dumpHexBytesFromOffset(tmpBuffer2, tmpBuffer2, vec->iov_len);
+
+        free(tmpBuffer2);
       }
+      free(tmpBuffer1);
     }
 
-    printf("preadv(fd=%d, ",
-           executableHandle->regs.rdi);
-    for (uint16_t i = 0; i < executableHandle->regs.rdx; i++)
+
+    for (int i = 0; i < iovCnt; i++)
     {
-      printf("\niovec[%d] Data=", i);
+      // TODO: Change this so it prints all the iovec after prints the syscall
       for (int j = 0; j < vec[i].iov_len; i++)
       {
-        struct iovec *tmpVec = (vec + sizeof(struct iovec) * i);
-        printf("%02x, ", tmpVec[j]);
-        if (j == vec[0].iov_len)
-        {
-          puts("\n\n"); // Terminate each line of printed data.
-        }
+        vec = (struct iovec *) (tmpBuffer1 + sizeof(struct iovec) * i);
+        // This code is incorrect, we could use dumpHexBytesFromOffset function.
+        // printf("%02x, ", vec[j]);
+        // if (j == vec[0].iov_len)
+        // {
+        //   puts("\n\n"); // Terminate each line of printed data.
+        // }
       }
     }
     printf("iovcnt=%d)\n", executableHandle->regs.rdx);
 
-    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_preadv*/
 
@@ -7697,6 +7539,107 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_memfd_secret*/
+
+/***********************************************************************************/
+  case SYS_process_mrelease:
+    printf("process_mrelease(pidfd=%d, flags=0x%08x)\n",
+                             executableHandle->regs.rdi,
+                             executableHandle->regs.rsi);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_process_mrelease*/
+
+/***********************************************************************************/
+  case SYS_futex_waitv:
+    struct futex_waitv futexWaitv = {0};
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdi,
+                                   &futexWaitv,
+                                   sizeof(struct futex_waitv));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.r10,
+                                   &timeSpec,
+                                   sizeof(struct timespec));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("futex_waitv(futex_waitv-val=%d, futex_waitv-uaddr=0x%016x, " \
+                       "futex_waitv-flags=0x%08x, nr_futexes=%d, flags=0x%08x, " \
+                       "timeout=%d.%d, clockID=%d)\n",
+                        futexWaitv.val,
+                        futexWaitv.uaddr,
+                        futexWaitv.flags,
+                        executableHandle->regs.rsi,
+                        executableHandle->regs.rdx,
+                        timeSpec.tv_sec,
+                        timeSpec.tv_nsec,
+                        executableHandle->regs.r8);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_futex_waitv*/
+
+/***********************************************************************************/
+  case SYS_set_mempolicy_home_node:
+    printf("SYS_set_mempolicy_home_node(start=0x%016x, len=0x%08x, home-node=0x%016x, flags=0x%016x)\n",
+                                        executableHandle->regs.rdi,
+                                        executableHandle->regs.rsi,
+                                        executableHandle->regs.rdx,
+                                        executableHandle->regs.r10);
+
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS_set_mempolicy_home_node*/
+
+/***********************************************************************************/
+  case __NR_cachestat:
+    struct cachestat_range cacheRange = {0};
+    struct cachestat cacheStat = {0};
+    
+    PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &cacheRange,
+                                   sizeof(struct cachestat_range));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdx,
+                                   &cacheStat,
+                                   sizeof(struct cachestat));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("SYS___NR_cachestat(fd=%d, cstat_range-off=0x%016x, cstat_range-len=0x%016x, cstat-cache=0x%016x, " \
+                              "cstat-dirty=0x%016x, cstat-writeback=0x%016x, cstat-evicted=0x%016x, " \
+                              "cstat-recently_evicted=0x%016x, flags=0x%08x)\n",
+                               executableHandle->regs.rdi,
+                               cacheRange.off,
+                               cacheRange.len,
+                               cacheStat.nr_cache,
+                               cacheStat.nr_dirty,
+                               cacheStat.nr_writeback,
+                               cacheStat.nr_evicted,
+                               cacheStat.nr_recently_evicted,
+                               executableHandle->regs.r10);
+
+    printf("Returned With: %d\n\n", executableHandle->regs.rax);
+    break; /*SYS___NR_cachestat*/
 
 
 
