@@ -368,6 +368,7 @@ int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_
 
     printf("|\n");
 
+    offsetIntoMemory += 16;
     offset += 16;
   }
   return err;

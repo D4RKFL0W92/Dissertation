@@ -163,7 +163,7 @@ BOOL isAsciidata(const char * data, uint64_t uCount)
   }
   for(int i = 0; i < uCount-1; i++)
   {
-    if((data[i] != '\t' || data[i] != '\n') && (data[i] < 0x20 && data[i] >= 0x7E))
+    if((data[i] != '\t' || data[i] != '\n') && (data[i] < 0x20 && data[i] <= 0x7E))
     {
       return FALSE;
     }
