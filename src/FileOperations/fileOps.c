@@ -213,6 +213,79 @@ uint8_t* sha1File(const char* filepath)
   }
 }
 
+uint8_t* sha256File(const char* filepath)
+{
+  int readAmount;
+  struct stat st;
+  uint8_t* hashDigest = NULL;
+  char* data;
+  int fd;
+  uint64_t bytesRead = 0;
+
+  if( (fd = open(filepath, O_RDONLY)) == ERR_UNKNOWN)
+  {
+    #ifdef DEBUG
+    perror("ERROR opening file in sha1File()");
+    #endif
+    return NULL;
+  }
+
+  if( (fstat(fd, &st)) == ERR_UNKNOWN)
+  {
+    #ifdef DEBUG
+    perror("ERROR caling fstat in sah1File()");
+    #endif
+    goto cleanup;
+  }
+
+  if( (data = malloc(st.st_size)) == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR allocating memory for file read in sha1File()");
+    #endif
+    goto cleanup;
+  }
+
+  if( (hashDigest = malloc(SHA256_DIGEST_LENGTH)) == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR allocating memory for hash digest in sha1File()");
+    #endif
+    goto cleanup;
+  }
+
+  if( (readAmount = (int)read(fd, data, st.st_size-bytesRead)) < 0)
+  {
+    #ifdef DEBUG
+    perror("ERROR reading from file in sha1File()");
+    #endif
+    goto cleanup;
+  }
+
+  SHA256(data, st.st_size, hashDigest);
+
+  if(hashDigest == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR calculating sha1 hash of file in sha1File()");
+    #endif
+    goto cleanup;
+  }
+
+  free(data);
+  close(fd);
+
+  return hashDigest;
+
+  cleanup:
+  {
+    free(hashDigest);
+    free(data);
+    close(fd);
+    return NULL;
+  }
+}
+
 int8_t printSHA1OfFile(const char* filepath)
 {
   uint8_t* messageDigest = NULL;
@@ -226,6 +299,31 @@ int8_t printSHA1OfFile(const char* filepath)
   }
   printf("SHA1: ");
   for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
+  {
+    printf("%02x", messageDigest[i]);
+  }
+  printf("\n");
+
+  if(messageDigest)
+  {
+    free(messageDigest);
+  }
+  return ERR_NONE;
+}
+
+int8_t printSHA256OfFile(const char* filepath)
+{
+  uint8_t* messageDigest = NULL;
+
+  if( (messageDigest = sha256File(filepath)) == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR calculating sha1 of file in printSHA1OfFile()");
+    #endif
+    return ERR_UNKNOWN;
+  }
+  printf("SHA256: ");
+  for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
   {
     printf("%02x", messageDigest[i]);
   }
@@ -315,8 +413,7 @@ int8_t scanFileForStrings(char* filepath, uint16_t toFindLen)
 
 int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_t uCount)
 {
-  uint64_t counter = 0;
-  uint64_t currOffset = 0;
+  size_t counter = 0;
   int8_t err = ERR_NONE;
 
   if(pMem == NULL)
@@ -345,7 +442,7 @@ int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_
     printf("0x%016X ", offsetIntoMemory);
 
     // Print hexadecimal bytes
-    for (int i = 0; i <= 0x0F; ++i)
+    for (size_t i = 0; i <= 0x0F; ++i)
     {
       if (offset + i < uCount)
       {
@@ -359,11 +456,17 @@ int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_
 
     // Print ASCII representation
     printf("|");
-    
-    int counter = 0;
-    for (counter; counter <= 16; counter++)
+
+    for (counter = 0; counter <= 0x0F && offset + counter < uCount; ++counter)
     {
-      printf("%c", (pMem[offset + counter] >= 32 && pMem[offset + counter] <= 126) ? pMem[offset + counter] : '.');
+      printf("%c", (pMem[offset + counter] >= 0x20 && pMem[offset + counter] <= 0x7E) ? pMem[offset + counter] : '.');
+    }
+    if(counter <= 16)
+    {
+      for(counter; counter <= 0x0F; ++counter)
+      {
+        printf(".");
+      }
     }
 
     printf("|\n");

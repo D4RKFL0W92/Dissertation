@@ -23,6 +23,7 @@ const char helpMenu[] = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%-Turtle-Scan-%%%%%%%%%%%%
                         "Data Dumping Related Options:\n" \
                         "-------------------------------------------------------------------------\n\n\n" \
                         "\t-sha1\n\t"         "Usage: -sha1 <File> Prints the sha1 hash of the file given as a first argument not starting with '-'.\n\n" \
+                        "\t-sha256\n\t"       "Usage: -sha1 <File> Prints the sha1 hash of the file given as a first argument not starting with '-'.\n\n" \
                         "\t-s\n\t"            "Usage: -s <File> Scans the given binary for ASCII strings," \
                                                         "will work on all files, not just binaries.\n\n" \
                         "\t-hd\n\t"           "Usage: -hd <offset> <byte count>. Hex dump a specified number of bytes from given offset.\n\n" \

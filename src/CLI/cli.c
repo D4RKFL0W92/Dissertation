@@ -50,13 +50,23 @@ int main(int argc, char *argv[], char *envp[])
   else
   {
     /*
-     * Check for options that specific ordering to their arguments.
+     * Check for options with specific ordering to their arguments.
     */
 
     /* Option: Print SHA1 of given file. */
     if(strcmp(argv[1], "-sha1") == 0)
     {
       if(printSHA1OfFile(argv[argc-1]) == ERR_UNKNOWN)
+      {
+        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
+        exit(-1);
+      }
+      exit(0);
+    }
+
+    else if(strcmp(argv[1], "-sha256") == 0)
+    {
+      if(printSHA256OfFile(argv[argc-1]) == ERR_UNKNOWN)
       {
         printf("Unable to calculate hash for %s.\n", argv[argc-1]);
         exit(-1);
