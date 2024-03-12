@@ -586,19 +586,20 @@ static int8_t uring_registerProcessBasedOnOpcode(ELF64_EXECUTABLE_HANDLE_T * exe
 static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 {
   struct epoll_event epollEvents = {0};
-  struct timespec timeSpec = {0};
-  struct stat stat = {0};
-  struct iovec *vec = NULL;
-  sigset_t sigset = {0};
-  siginfo_t sigInfo = {0};
-  uint64_t argvStartAddr = 0;
-  uint64_t envpStartAddr = 0;
-  BOOL nullTerminatorFound = FALSE;
-  char * tmpBuffer1 = NULL;
-  char * tmpBuffer2 = NULL;
-  char * tmpBuffer3 = NULL;
-  uint64_t addr = 0;
-  int8_t err = ERR_NONE;
+  struct timespec    timeSpec = {0};
+  struct rlimit      resLimit = {0};
+  struct stat        stat = {0};
+  siginfo_t          sigInfo = {0};
+  sigset_t           sigset = {0};
+  struct iovec *     vec = NULL;
+  uint64_t           argvStartAddr = 0;
+  uint64_t           envpStartAddr = 0;
+  BOOL               nullTerminatorFound = FALSE;
+  char *             tmpBuffer1 = NULL;
+  char *             tmpBuffer2 = NULL;
+  char *             tmpBuffer3 = NULL;
+  uint64_t           addr = 0;
+  int8_t             err = ERR_NONE;
 
   switch (executableHandle->regs.orig_rax)
   {
@@ -2014,7 +2015,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 
 /***********************************************************************************/
   case SYS_getrlimit:
-    struct rlimit resLimit = {0};
+    
 
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     
