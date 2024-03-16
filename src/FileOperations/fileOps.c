@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
+
 #include "./fileOps.h"
 
 char* basicFileMap(const char* filepath, uint64_t* fileSz)
@@ -201,6 +213,79 @@ uint8_t* sha1File(const char* filepath)
   }
 }
 
+uint8_t* sha256File(const char* filepath)
+{
+  int readAmount;
+  struct stat st;
+  uint8_t* hashDigest = NULL;
+  char* data;
+  int fd;
+  uint64_t bytesRead = 0;
+
+  if( (fd = open(filepath, O_RDONLY)) == ERR_UNKNOWN)
+  {
+    #ifdef DEBUG
+    perror("ERROR opening file in sha1File()");
+    #endif
+    return NULL;
+  }
+
+  if( (fstat(fd, &st)) == ERR_UNKNOWN)
+  {
+    #ifdef DEBUG
+    perror("ERROR caling fstat in sah1File()");
+    #endif
+    goto cleanup;
+  }
+
+  if( (data = malloc(st.st_size)) == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR allocating memory for file read in sha1File()");
+    #endif
+    goto cleanup;
+  }
+
+  if( (hashDigest = malloc(SHA256_DIGEST_LENGTH)) == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR allocating memory for hash digest in sha1File()");
+    #endif
+    goto cleanup;
+  }
+
+  if( (readAmount = (int)read(fd, data, st.st_size-bytesRead)) < 0)
+  {
+    #ifdef DEBUG
+    perror("ERROR reading from file in sha1File()");
+    #endif
+    goto cleanup;
+  }
+
+  SHA256(data, st.st_size, hashDigest);
+
+  if(hashDigest == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR calculating sha1 hash of file in sha1File()");
+    #endif
+    goto cleanup;
+  }
+
+  free(data);
+  close(fd);
+
+  return hashDigest;
+
+  cleanup:
+  {
+    free(hashDigest);
+    free(data);
+    close(fd);
+    return NULL;
+  }
+}
+
 int8_t printSHA1OfFile(const char* filepath)
 {
   uint8_t* messageDigest = NULL;
@@ -214,6 +299,31 @@ int8_t printSHA1OfFile(const char* filepath)
   }
   printf("SHA1: ");
   for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
+  {
+    printf("%02x", messageDigest[i]);
+  }
+  printf("\n");
+
+  if(messageDigest)
+  {
+    free(messageDigest);
+  }
+  return ERR_NONE;
+}
+
+int8_t printSHA256OfFile(const char* filepath)
+{
+  uint8_t* messageDigest = NULL;
+
+  if( (messageDigest = sha256File(filepath)) == NULL)
+  {
+    #ifdef DEBUG
+    perror("ERROR calculating sha1 of file in printSHA1OfFile()");
+    #endif
+    return ERR_UNKNOWN;
+  }
+  printf("SHA256: ");
+  for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
   {
     printf("%02x", messageDigest[i]);
   }
@@ -301,10 +411,9 @@ int8_t scanFileForStrings(char* filepath, uint16_t toFindLen)
   return err;
 }
 
-int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t offsetIntoMemory, uint64_t uCount)
+int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t offsetIntoMemory, uint64_t uCount)
 {
-  uint64_t counter = 0;
-  uint64_t currOffset = 0;
+  size_t counter = 0;
   int8_t err = ERR_NONE;
 
   if(pMem == NULL)
@@ -322,65 +431,48 @@ int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t offsetIntoMemory, uint64_t
     return ERR_INVALID_ARGUMENT;
   }
 
-  printf("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
-  printf("--------------------------------------------------------\n");
-  
-  char buff[16];
-  while(counter < (uCount))
+  printf("                   00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
+  printf("-------------------------------------------------------------------------------------\n");
+
+  // Print content
+  size_t offset = 0;
+  while (offset < uCount)
   {
-    memset(buff, 0, sizeof(buff));
-    uint8_t i = 0;
+    // Print offset
+    printf("0x%016X ", offsetIntoMemory);
 
-    while(i < 0x10) // Write upto 16 bytes into the buffer at both end.
+    // Print hexadecimal bytes
+    for (size_t i = 0; i <= 0x0F; ++i)
     {
-      buff[i] = pMem[counter];
-      counter++;
-      i++;
-    }
-
-    for(int a = 0; a < 2; a++)
-    {
-      for(int b = 0; b < 0x10; b++)
+      if (offset + i < uCount)
       {
-        if(a == 0)
-        {
-          uint8_t byte = buff[b];
-          if(b == 0)
-          {
-            printf("%08x ", offsetIntoMemory + currOffset);
-          }
-          printf("%02x ", byte);
-          if(b == 0xF)
-          {
-            printf(" ");
-          }
-        }
-        else
-        {
-          if(b == 0)
-          {
-            printf("|");
-          }
-
-          if(buff[b] >= 33 && buff[b] <= 126)
-          {
-            // Check if it's a printable character.
-            printf("%c", buff[b]);
-
-          }
-          else
-          {
-            printf(".");
-          }
-
-          if(b == 0xF)
-          {
-            printf("|\n");
-          }
-        }
+          printf("%02X ", pMem[offset + i]);
+      }
+      else
+      {
+        printf("   ");  // Padding for the last line
       }
     }
-    currOffset += 0x10;
+
+    // Print ASCII representation
+    printf("|");
+
+    for (counter = 0; counter <= 0x0F && offset + counter < uCount; ++counter)
+    {
+      printf("%c", (pMem[offset + counter] >= 0x20 && pMem[offset + counter] <= 0x7E) ? pMem[offset + counter] : '.');
+    }
+    if(counter <= 16)
+    {
+      for(counter; counter <= 0x0F; ++counter)
+      {
+        printf(".");
+      }
+    }
+
+    printf("|\n");
+
+    offsetIntoMemory += 16;
+    offset += 16;
   }
   return err;
 }
@@ -408,7 +500,7 @@ int8_t dumpHexBytesFromFile(char* filepath, uint64_t startAddress, uint64_t uCou
     return ERR_UNKNOWN;
   }
 
-  err = dumpHexBytesFromOffset(&p_mem[startAddress], startAddress, uCount);
+  err = dumpHexBytesFromOffset(p_mem, startAddress, uCount);
   if(err != ERR_NONE)
   {
     return err;

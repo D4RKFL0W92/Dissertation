@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
 #ifndef _ELF_INFO_
 #define _ELF_INFO_
 
@@ -8,6 +19,8 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <elf.h>
+#include <sys/user.h>
+#include <sys/reg.h>
 #include <unistd.h>
 #include <assert.h>
 #include <sys/stat.h>
@@ -16,6 +29,9 @@
 #include "../../Types/turtle_types.h"
 #include "../../Logging/logging.h"
 #include "../../FileOperations/fileOps.h"
+#include "../IO/io.h"
+#include "../Dynamic/elfdynamic.h"
+#include "../Headers/elftypes.h"
 #include "../../Memory/tvector.h"
 
 
@@ -41,33 +57,6 @@
 
 #define MIN_ELF32_ENTRY     0x8048000 // Is this correct??
 
-enum BITS {T_NO_ELF, T_32, T_64};
-enum ENDIANESS {T_NONE, T_LITTLE, T_BIG};
-
-typedef struct ELF32_EXECUTABLE
-{
-    FILE_HANDLE_T fileHandle;
-    Elf32_Ehdr* ehdr;
-    Elf32_Phdr* phdr;
-    Elf32_Shdr* shdr;
-    int         pid;
-}ELF32_EXECUTABLE_HANDLE_T;
-
-typedef struct ELF64_EXECUTABLE
-{
-    FILE_HANDLE_T fileHandle;
-    Elf64_Ehdr* ehdr;
-    Elf64_Phdr* phdr;
-    Elf64_Shdr* shdr;
-    int         pid;
-}ELF64_EXECUTABLE_HANDLE_T;
-
-typedef union ELF_EXECUTABLE
-{
-    ELF32_EXECUTABLE_HANDLE_T elfHandle32;
-    ELF64_EXECUTABLE_HANDLE_T elfHandle64;
-} ELF_EXECUTABLE_T;
-
 /*
  * Checks the first five bytes of the file to see if they are in accourdance with
  * an ELF file.
@@ -78,6 +67,7 @@ typedef union ELF_EXECUTABLE
  *          T_32, T64, or T_NO_ELF
 */
 enum BITS isELF(char* MAG);
+enum BITS getArch(ELF_EXECUTABLE_T * elfHandle);
 
 
 /*
@@ -95,6 +85,14 @@ char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz);
 
 int8_t mapELF32ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF32_EXECUTABLE_HANDLE_T** elfHandle);
 int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABLE_HANDLE_T** elfHandle);
+
+int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle);
+
+/*
+ * Checks for active PID with same value as given, if one is found it will be mapped
+ * to the union type ELF_EXECUTABLE_T that can be later checked for architecture.
+ * */
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle, enum BITS * pArch);
 
 
 uint64_t getELFEntryFromFile(char* filepath);

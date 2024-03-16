@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
+
 #include "elfinfo.h"
 
 static Elf32_Addr getELF32Entry(uint8_t* p_mem)
@@ -1254,6 +1266,28 @@ enum BITS isELF(char* arch)
   }
 }
 
+enum BITS getArch(ELF_EXECUTABLE_T * elfHandle)
+{
+  ELF64_EXECUTABLE_HANDLE_T * tmpHandle = NULL;
+  enum BITS arch = T_NO_ELF;
+
+  tmpHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+
+
+  if(tmpHandle->ehdr->e_ident[EI_CLASS] == ELFCLASS32)
+  {
+    return T_32;
+  }
+  else if(tmpHandle->ehdr->e_ident[EI_CLASS] == ELFCLASS64)
+  {
+    return T_64;
+  }
+  else
+  {
+    return T_NO_ELF;
+  }
+}
+
 char* mapELFToMemory(const char* filepath, enum BITS* arch, uint64_t* map_sz)
 {
   #ifdef DEBUG
@@ -1357,11 +1391,267 @@ int8_t mapELF64ToHandleFromFileHandle(FILE_HANDLE_T* fileHandle, ELF64_EXECUTABL
   }
 
   (*elfHandle)->fileHandle = *fileHandle;
-  (*elfHandle)->ehdr     = (Elf64_Ehdr *) &fileHandle->p_data[0];
+  (*elfHandle)->ehdr     = (Elf64_Ehdr *) &fileHandle->p_data[ 0 ];
   (*elfHandle)->phdr     = (Elf64_Phdr *) &fileHandle->p_data[ (*elfHandle)->ehdr->e_phoff ];
   (*elfHandle)->shdr     = (Elf64_Shdr *) &fileHandle->p_data[ (*elfHandle)->ehdr->e_shoff ];
 
   return ERR_NONE;
+}
+
+int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle)
+{
+  FILE_HANDLE_T fileHandle = {0};
+  enum BITS arch = T_NO_ELF;
+  int8_t err = ERR_NONE;
+
+  if((err = mapFileToStruct(filepath, &fileHandle)) == ERR_UNKNOWN)
+  {
+    printf("Unable map %s into memory\n", filepath);
+    return err;
+  }
+
+  arch = isELF(fileHandle.p_data); // Not a failure if not an ELF, we may be scanning strings etc.
+  if(arch == T_64)
+  {
+    ELF64_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
+    mapELF64ToHandleFromFileHandle(&fileHandle, (ELF64_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
+    (*elfHandle) = tmp_elfHandle;
+    return ERR_NONE;
+  }
+  else if(arch == T_32)
+  {
+    ELF32_EXECUTABLE_HANDLE_T * tmp_elfHandle = NULL;
+    mapELF32ToHandleFromFileHandle(&fileHandle, (ELF32_EXECUTABLE_HANDLE_T **) &tmp_elfHandle);
+    (*elfHandle) = tmp_elfHandle;
+    return ERR_NONE;
+  }
+}
+
+/*
+ * A simple helper function to extract the address range read from a line of /proc/<pid>/maps
+*/
+static int8_t extractAddressRange(const char* buff, uint64_t * startAddr, uint64_t * endAddr)
+{
+  // Example data line:
+  // 562f6f938000-562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang
+  char* pData = NULL;
+  char startAddrStr[15] = {0};
+  char endAddrStr[15]   = {0};
+  int i = 2;
+  int8_t err = ERR_NONE;
+
+  if(buff == NULL || startAddr == NULL || endAddr == NULL)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+
+  strcat(startAddrStr, "0x");
+  strcat(endAddrStr, "0x");
+
+  pData = buff;
+  while(isalnum(*pData)) // TODO Change this check to check for hexidecimal characters using isHexadecimalCharacter().
+  {
+    if(!isHexadecimalCharacter(*pData) && *pData != '-')
+    {
+      return ERR_FORMAT_NOT_SUPPORTED;
+    }
+    startAddrStr[i++] = *pData;
+    ++pData;
+  }
+
+  while(!isalnum(*pData)) ++pData;
+
+  i = 2;
+  while(isalnum(*pData))
+  {
+    if(!isHexadecimalCharacter(*pData) && *pData != '-')
+    {
+      return ERR_FORMAT_NOT_SUPPORTED;
+    }
+    endAddrStr[i++] = *pData;
+    ++pData;
+  }
+
+  err = stringToInteger(startAddrStr, startAddr);
+  if(err != ERR_NONE)
+  {
+    return err;
+  }
+
+  err = stringToInteger(endAddrStr, endAddr);
+  if(err != ERR_NONE)
+  {
+    return err;
+  }
+
+  return err;
+}
+
+/*
+ * Helper function to read /proc/<pid>/maps to calculate and allocate
+ * the necessary memory to map the section indicated by 'searchStr'
+ * to the pointer pointed to by 'pData'.
+ * If NULL is passed as the 'searchStr' argument the function will return
+ * the file path of the running process in the pointer 'pData'.
+ * 
+ * This function allocates memory into the 'pData' pointer so MUST be free'd
+ * accordingly after use.
+*/
+static int8_t readProcessPIDMap(const char*     pidStr,
+                                void **          pData,
+                                pid_t              pid,
+                                const char * searchStr,
+                                uint64_t * mappingSize)
+{
+  // Used when reading file path instead of calculating mapping area.
+  char filePathStart[] = "/";
+
+  char path[20]  = "/proc/";
+  char pathEnd[] = "/maps";
+  char mappingFileLine[PATH_MAX + 100] = {0}; // Typically upto 73+PATH_MAX 
+  void * memoryMapping = NULL;
+  FILE * pFile = NULL;
+  BOOL readingFilePath = FALSE;
+  int err = ERR_NONE;
+  
+  strncat(path, pidStr, sizeof(pidStr));
+  strncat(path, pathEnd, 5);
+
+  if( (pFile = fopen(path, "r")) == NULL)
+  {
+    #ifdef DEBUG
+  /* TODO: Refactor this function. */
+    perror("Unable to open /proc/pid/maps in readProcessPIDMap()\n");
+    #endif
+    return ERR_FILE_OPERATION_FAILED;
+  }
+
+  if(searchStr == NULL)
+  {
+    readingFilePath = TRUE;
+    searchStr = filePathStart;
+  }
+
+  while( fgets(mappingFileLine, sizeof(mappingFileLine), pFile) != EOF)
+  {
+    // Process each line of /proc/<pid>/maps to find text segment mapping.
+    char* pSearchStr = NULL;
+
+    if( (pSearchStr = strstr(mappingFileLine, searchStr)) != NULL)
+    {
+      /* Only handles the case of reading the pathname from file. */
+      if(readingFilePath)
+      {
+        char * tmpPathPtr = NULL;
+        *pData = malloc(PATH_MAX);
+        if( *pData == NULL )
+        {
+          #ifdef DEBUG
+          perror("Unable to allocate memory in readProcessPIDMap()\n");
+          #endif
+          return ERR_MEMORY_ALLOCATION_FAILED;
+        }
+        strncpy((*pData), pSearchStr, PATH_MAX);
+
+        // Null's the last byte to prevent 'open' failure
+        tmpPathPtr = (char *)*pData;
+        if(tmpPathPtr[strlen(tmpPathPtr) - 1] == '\n')
+        {
+          tmpPathPtr[strlen(tmpPathPtr) - 1] = '\0';
+        }
+        return ERR_NONE;
+      }
+
+      /* We are extracting/mapping a specified memory area of the given process. */
+      else
+      {
+        uint64_t startAddr   = 0;
+        uint64_t endAddr     = 0;
+        uint64_t addrRange   = 0;
+
+        // We've found the line giving the memory mapping range.
+        err = extractAddressRange(mappingFileLine, &startAddr, &endAddr);
+        addrRange = endAddr - startAddr;
+        *mappingSize = addrRange;
+
+        if((addrRange % PAGE_SIZE) != 0)
+        {
+          err = ERR_ILLEGAL_MAPPING_SIZE;
+          goto cleanup; // We still need to close the file
+        }
+
+        memoryMapping = malloc(addrRange);
+        if(memoryMapping == NULL)
+        {
+          err = ERR_MEMORY_ALLOCATION_FAILED;
+          goto cleanup;
+        }
+
+        
+        err = readProcessMemoryFromPID(pid, startAddr, memoryMapping, addrRange);
+        break;
+
+      }
+    }
+    else
+    {
+      // Clear line data if text segment mapping not found.
+      memset(mappingFileLine, 0, sizeof(mappingFileLine));
+    }
+  }
+
+  if(memoryMapping != NULL)
+  {
+    (*pData) = memoryMapping;
+    err =  ERR_NONE;
+  }
+  else
+  {
+    (*pData) = NULL;
+    err = ERR_FORMAT_NOT_SUPPORTED;
+  }
+
+cleanup:
+
+  fclose(pFile);
+  free(memoryMapping);
+  return err;
+}
+
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle, enum BITS * pArch)
+{
+  uint8_t * pMem = NULL;
+  pid_t     pid = 0;
+  uint64_t  mappingSize = 0;
+  int8_t    err = ERR_NONE;
+
+  *pArch = T_NO_ELF;
+
+  err = stringToInteger(pidStr, &pid);
+  if(err != ERR_NONE || pid == 0)
+  {
+    return ERR_INVALID_ARGUMENT;
+  }
+
+  if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
+  {
+    return ERR_PROCESS_ATTACH_FAILED;
+  }
+
+  err = readProcessPIDMap(pidStr, &pMem, pid, NULL, &mappingSize);
+  if(err != ERR_NONE)
+  {
+    goto cleanup;
+  }
+
+  err = mapFile_ElfHandle(pMem, elfHandle);
+
+cleanup:
+  if(ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0)
+  {
+    err = ERR_PROCESS_ATTACH_FAILED;
+  }
+  return err;
 }
 
 uint64_t getELFEntryFromFile(char* filepath)
@@ -1841,26 +2131,27 @@ uint64_t lookupSymbolAddress(ELF_EXECUTABLE_T * elfHandle, char* symbolName)
 int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
 {
   // Abritrary which architecture for this check.
-  ELF64_EXECUTABLE_HANDLE_T* p_elfHandle;
+  ELF64_EXECUTABLE_HANDLE_T* p_elfHandle = NULL;
   int8_t err = ERR_NONE;
+  enum BITS arch = T_NO_ELF;
 
   if(elfHandle == NULL)
   {
     return ERR_NULL_ARGUMENT;
   }
 
-  p_elfHandle = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+  arch = getArch(elfHandle);
 
-  switch(p_elfHandle->ehdr->e_ident[EI_CLASS])
+  switch(arch)
   {
-    case ELFCLASS64:
+    case T_64:
       if(printImports)
         err = printSymbolTableDataElf64((ELF64_EXECUTABLE_HANDLE_T *) elfHandle, TRUE);
       else
         err = printSymbolTableDataElf64((ELF64_EXECUTABLE_HANDLE_T *) elfHandle, FALSE);
       break;
     
-    case ELFCLASS32:
+    case T_32:
       if(printImports)
         err = printSymbolTableDataElf32((ELF32_EXECUTABLE_HANDLE_T *) elfHandle, TRUE);
       else
@@ -1868,16 +2159,69 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
       break;
 
     default:
-    case ELFCLASSNONE:
+    case T_NO_ELF:
       break;
   }
   return err;
 }
 
- #ifdef UNITTEST
+#ifdef UNITTEST
 
- static void test_isELF()
- {
+static void unittest_extractAddressRange_legalUsage()
+{
+  char orig[] = "562f6f938000-562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang";
+  char buff[] = "562f6f938000-562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang";
+  uint64_t start = 0, end = 0;
+  int8_t err = ERR_NONE;
+
+  err = extractAddressRange(buff, &start, &end);
+  assert(err == ERR_NONE);
+  assert(start == 94761735389184);
+  assert(end == 94761735393280);
+  assert(strcmp(buff, orig) == 0);
+
+  strncpy(orig, "562f6f938fab", 12);
+  strncpy(&orig[13], "AAAAAAAABBBB", 12);
+  strncpy(buff, orig, sizeof(orig));
+  err = extractAddressRange(buff, &start, &end);
+  assert(err == ERR_NONE);
+  assert(start == 94761735393195);
+  assert(end == 187649984478139);
+  assert(strcmp(buff, orig) == 0);
+}
+
+static void unittest_extractAddressRange_legalUsage_extraDelimeter()
+{
+  char buff[] = "562f6f938000---562f6f939000 r-xp 00001000 08:01 2665926                    /home/calum/test-bins/hang";
+  uint64_t start = 0, end = 0;
+  int8_t err = ERR_NONE;
+
+  err = extractAddressRange(buff, &start, &end);
+  assert(err == ERR_NONE);
+  assert(start == 94761735389184);
+  assert(end == 94761735393280);
+}
+
+static void unittest_extractAddressRange_nullArguments()
+{
+  char buff[] = "";
+  uint64_t start = 0, end = 0;
+  int8_t err = ERR_NONE;
+
+  err = extractAddressRange(NULL, &start, &end);
+  assert(err == ERR_NULL_ARGUMENT);
+
+  err = ERR_NONE;
+  err = extractAddressRange(buff, NULL, &end);
+  assert(err == ERR_NULL_ARGUMENT);
+
+  err = ERR_NONE;
+  err = extractAddressRange(buff, &start, NULL);
+  assert(err == ERR_NULL_ARGUMENT);
+}
+
+static void unittest_isELF()
+{
   /* isElf() is only concerned with the first six bytes of the ELF header. */
   assert(isELF("\x7f\x45\x4c\x46\x01\x01") == T_32); // Test a real 32-bit ELF header Little Endian.
   assert(isELF("\x7f\x45\x4c\x46\x02\x01") == T_64); // Test a real 64-bit ELF header Little Endian.
@@ -1890,11 +2234,15 @@ int8_t printSymbolTableData(ELF_EXECUTABLE_T* elfHandle, uint8_t printImports)
   assert(isELF("\x7f\x45\x4c\x40\x01\x01") == T_NO_ELF);
   assert(isELF("\x7f\x41\x4c\x46\x01\x01") == T_NO_ELF);
   assert(isELF("\x00\x00\x00\x00\x00\x02") == T_NO_ELF);
- }
+}
 
- void elfInfoTestSuite()
- {
-  test_isELF();
- }
+void elfInfoTestSuite()
+{
+  unittest_extractAddressRange_legalUsage();
+  unittest_extractAddressRange_legalUsage_extraDelimeter();
+  unittest_extractAddressRange_nullArguments();
+  
+  unittest_isELF();
+}
 
- #endif
+#endif

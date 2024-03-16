@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
+
 #ifndef _FILE_OPS_
 #define _FILE_OPS_
 
@@ -75,6 +87,16 @@ int8_t unmapFileFromStruct(FILE_HANDLE_T* handle);
 */
 uint8_t* sha1File(const char* filepath);
 
+/*
+ * A function to hash a file using the SHA1 hashing algorithm.
+ *
+ * Param_1: A path to a file.
+ *
+ * Return:  Returns a pointer to the hash digest of the given file, NULL
+ *          on failure.
+*/
+uint8_t* sha256File(const char* filepath);
+
 /* A simple function that prints the SHA1 hash of a given file.
  *
  * Param_1: Path to the file to be hashed.
@@ -83,6 +105,15 @@ uint8_t* sha1File(const char* filepath);
  *          failure of the function.
 */
 int8_t printSHA1OfFile(const char* filepath);
+
+/* A simple function that prints the SHA256 hash of a given file.
+ *
+ * Param_1: Path to the file to be hashed.
+ *
+ * Return:  Returns an error code indicating the success or
+ *          failure of the function.
+*/
+int8_t printSHA256OfFile(const char* filepath);
 
 int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen);
 
@@ -107,7 +138,7 @@ int8_t scanFileForStrings(char* filepath, uint16_t toFindLen);
  * Return:  Returns an error code indicating the success or
  *          failure of the function.
 */
-int8_t dumpHexBytesFromOffset(uint8_t* pMem, uint64_t startAddress, uint64_t uCount);
+int8_t dumpHexBytesFromOffset(uint8_t * pMem, uint64_t startAddress, uint64_t uCount);
 
 /* Dumps a given amount of bytes in hex from a given offset into a file.
  * Prints the bytes and the ASCII representation if there is one.

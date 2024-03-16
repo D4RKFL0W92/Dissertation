@@ -1,11 +1,41 @@
+/*
+ * Copyright (c) [2023], Calum Dawson
+ * All rights reserved.
+ * This code is the exclusive property of Calum Dawson.
+ * Any unauthorized use or reproduction without the explicit
+ * permission of Calum Dawson is strictly prohibited.
+ * Unauthorized copying of this file, via any medium, is
+ * strictly prohibited.
+ * Proprietary and confidential.
+ * Written by Calum Dawson calumjamesdawson@gmail.com, [2023].
+*/
+
 #include "./io.h"
 
-uint8_t hexToDecimal(const char* hexString, uint64_t * value)
+/* TODO: Write unit tests for this function. */
+BOOL isHexadecimalCharacter(char digit)
+{
+  if(isdigit(digit))
+  {
+    return TRUE;
+  }
+  else if(digit >= 0x41 && digit <= 0x46)
+  {
+    return TRUE;
+  }
+  else if(digit >= 0x61 && digit <= 0x66)
+  {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+BOOL hexToDecimal(const char* hexString, uint64_t * value)
 {
   uint8_t  offsetExponent  = 0;
   int16_t  hexStrLen     = 0;
 
-  uint64_t lValue       = 0;
+  uint64_t tmpValue       = 0;
 
   if(hexString == NULL)
   {
@@ -25,98 +55,254 @@ uint8_t hexToDecimal(const char* hexString, uint64_t * value)
     switch (hexString[digitOffset])
     {
       case '0':
-        lValue += 0 * pow(16, offsetExponent);
+        tmpValue += 0 * pow(16, offsetExponent);
         break;
       case '1':
-        lValue += 1 * pow(16, offsetExponent);
+        tmpValue += 1 * pow(16, offsetExponent);
         break;
       case '2':
-        lValue += 2 * pow(16, offsetExponent);
+        tmpValue += 2 * pow(16, offsetExponent);
         break;
       case '3':
-        lValue += 3 * pow(16, offsetExponent);
+        tmpValue += 3 * pow(16, offsetExponent);
         break;
       case '4':
-        lValue += 4 * pow(16, offsetExponent);
+        tmpValue += 4 * pow(16, offsetExponent);
         break;
       case '5':
-        lValue += 5 * pow(16, offsetExponent);
+        tmpValue += 5 * pow(16, offsetExponent);
         break;
       case '6':
-        lValue += 6 * pow(16, offsetExponent);
+        tmpValue += 6 * pow(16, offsetExponent);
         break;
       case '7':
-        lValue += 7 * pow(16, offsetExponent);
+        tmpValue += 7 * pow(16, offsetExponent);
         break;
       case '8':
-        lValue += 8 * pow(16, offsetExponent);
+        tmpValue += 8 * pow(16, offsetExponent);
         break;
       case '9':
-        lValue += 9 * pow(16, offsetExponent);
+        tmpValue += 9 * pow(16, offsetExponent);
         break;
       case 'a':
       case 'A':
-        lValue += 10 * pow(16, offsetExponent);
+        tmpValue += 10 * pow(16, offsetExponent);
         break;
       case 'b':
       case 'B':
-        lValue += 11 * pow(16, offsetExponent);
+        tmpValue += 11 * pow(16, offsetExponent);
         break;
       case 'c':
       case 'C':
-        lValue += 12 * pow(16, offsetExponent);
+        tmpValue += 12 * pow(16, offsetExponent);
         break;
       case 'd':
       case 'D':
-        lValue += 13 * pow(16, offsetExponent);
+        tmpValue += 13 * pow(16, offsetExponent);
         break;
       case 'e':
       case 'E':
-        lValue += 14 * pow(16, offsetExponent);
+        tmpValue += 14 * pow(16, offsetExponent);
         break;
       case 'f':
       case 'F':
-        lValue += 15 * pow(16, offsetExponent);
+        tmpValue += 15 * pow(16, offsetExponent);
         break;
     }
+  }
+  *value = tmpValue;
+  return ERR_NONE;
+}
+
+BOOL stringToInteger(const char* numString, uint64_t* value)
+{
+  uint8_t err = 0;
+  uint64_t lValue = 0;
+
+  if(numString == NULL || value == NULL)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+
+  if(numString[0] == '0' && numString[1] == 'x' || numString[1] == 'X')
+  {
+    err = hexToDecimal(numString, &lValue);
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+  }
+  // TODO: Add logic to handle binary numbers
+  else
+  {
+    int len = strlen(numString);
+    uint8_t i = 0;
+
+    if(numString[0] == '-' || numString[0] == '+') // Account for negative/positive sign.
+    {
+      i++;
+    }
+    for(i; i < len-1; i++)
+    {
+      if(!isdigit(numString[i]))
+      {
+        return ERR_FORMAT_NOT_SUPPORTED;
+      }
+    }
+    lValue = atol(numString);
   }
   *value = lValue;
   return ERR_NONE;
 }
 
-uint8_t stringToInteger(const char* numString, uint64_t* value)
+BOOL isAsciidata(const char * data, uint64_t uCount)
 {
-  uint8_t err = 0;
-  uint64_t lValue = 0;
+  if(data[0] == '\0' || data[uCount-1] != '\0' && data[uCount-1] != '\n')
+  {
+    return FALSE;
+  }
+  for(int i = 0; i < uCount-1; i++)
+  {
+    if((data[i] != '\t' || data[i] != '\n') && (data[i] < 0x20 && data[i] <= 0x7E))
+    {
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
 
-  if(numString[0] == '0' && numString[1] == 'x' || numString[1] == 'X')
-      {
-        err = hexToDecimal(numString, &lValue);
-        if(err == ERR_UNKNOWN)
-        {
-          printf("Zero Offset Was Given.");
-          exit(-1);
-        }
-      }
-      else
-      {
-        int len = strlen(numString);
-        for(uint8_t i = 0; i < len-1; i++)
-        {
-          if(!isdigit(numString[i]))
-          {
-            return ERR_FORMAT_NOT_SUPPORTED;
-          }
-        }
-        lValue = atol(numString);
-      }
-      *value = lValue;
-      return ERR_NONE;
+BOOL isAsciiString(const char * data, uint64_t uCount)
+{
+  if(data[0] == '\0' || data[uCount-1] != '\0')
+  {
+    return FALSE;
+  }
+  for(int i = 0; i < uCount-1; i++)
+  {
+    if(data[i] < 0x20 || data[i] >= 0x7E)
+    {
+      return FALSE;
+    }
+  }
+  return TRUE;
 }
 
 #ifdef UNITTEST
 
-void test_hexToDecimal_valid()
+static void unittest_isHexadecimalCharacter_legalChars()
+{
+  assert( isHexadecimalCharacter('0') == TRUE );
+  assert( isHexadecimalCharacter('1') == TRUE );
+  assert( isHexadecimalCharacter('2') == TRUE );
+  assert( isHexadecimalCharacter('3') == TRUE );
+  assert( isHexadecimalCharacter('4') == TRUE );
+  assert( isHexadecimalCharacter('5') == TRUE );
+  assert( isHexadecimalCharacter('6') == TRUE );
+  assert( isHexadecimalCharacter('7') == TRUE );
+  assert( isHexadecimalCharacter('8') == TRUE );
+  assert( isHexadecimalCharacter('9') == TRUE );
+  assert( isHexadecimalCharacter('a') == TRUE );
+  assert( isHexadecimalCharacter('b') == TRUE );
+  assert( isHexadecimalCharacter('c') == TRUE );
+  assert( isHexadecimalCharacter('d') == TRUE );
+  assert( isHexadecimalCharacter('e') == TRUE );
+  assert( isHexadecimalCharacter('f') == TRUE );
+  assert( isHexadecimalCharacter('A') == TRUE );
+  assert( isHexadecimalCharacter('B') == TRUE );
+  assert( isHexadecimalCharacter('C') == TRUE );
+  assert( isHexadecimalCharacter('D') == TRUE );
+  assert( isHexadecimalCharacter('E') == TRUE );
+  assert( isHexadecimalCharacter('F') == TRUE );
+}
+
+static void unittest_isHexadecimalCharacter_illegalChars()
+{
+  assert( isHexadecimalCharacter('z') == FALSE );
+  assert( isHexadecimalCharacter('y') == FALSE );
+  assert( isHexadecimalCharacter('x') == FALSE );
+  assert( isHexadecimalCharacter('&') == FALSE );
+  assert( isHexadecimalCharacter('^') == FALSE );
+  assert( isHexadecimalCharacter('@') == FALSE );
+  assert( isHexadecimalCharacter(';') == FALSE );
+  assert( isHexadecimalCharacter('k') == FALSE );
+  assert( isHexadecimalCharacter('Q') == FALSE );
+  assert( isHexadecimalCharacter('I') == FALSE );
+  assert( isHexadecimalCharacter('P') == FALSE );
+  assert( isHexadecimalCharacter('W') == FALSE );
+  assert( isHexadecimalCharacter('X') == FALSE );
+  assert( isHexadecimalCharacter('`') == FALSE );
+  assert( isHexadecimalCharacter('~') == FALSE );
+  assert( isHexadecimalCharacter(']') == FALSE );
+  assert( isHexadecimalCharacter('H') == FALSE );
+  assert( isHexadecimalCharacter('{') == FALSE );
+  assert( isHexadecimalCharacter('\t') == FALSE );
+  assert( isHexadecimalCharacter('\n') == FALSE );
+  assert( isHexadecimalCharacter('\\') == FALSE );
+  assert( isHexadecimalCharacter('\"') == FALSE );
+}
+
+static void unittest_stringToInteger_legalUsage()
+{
+  uint64_t value = 0;
+  uint8_t err = ERR_NONE;
+
+  err = stringToInteger("1", &value);
+  assert(err == ERR_NONE);
+  assert(value == 1);
+
+  err = stringToInteger("0", &value);
+  assert(err == ERR_NONE);
+  assert(value == 0);
+
+  err = stringToInteger("0X555555", &value);
+  assert(err == ERR_NONE);
+  assert(value == 0X555555);
+
+  err = stringToInteger("1347", &value);
+  assert(err == ERR_NONE);
+  assert(value == 1347);
+
+  err = stringToInteger("0x9965", &value);
+  assert(err == ERR_NONE);
+  assert(value == 0x9965);
+
+  err = stringToInteger("-1", &value);
+  assert(err == ERR_NONE);
+  assert((int)value == -1);
+
+  err = stringToInteger("-54321", &value);
+  assert(err == ERR_NONE);
+  assert((int)value == -54321);
+
+  err = stringToInteger("-20", &value);
+  assert(err == ERR_NONE);
+  assert((int)value == -20);
+
+  err = stringToInteger("+15", &value);
+  assert(err == ERR_NONE);
+  assert(value == 15);
+
+  err = stringToInteger("+9000", &value);
+  assert(err == ERR_NONE);
+  assert(value == 9000);
+}
+
+static void unittest_stringToInteger_illegalUsage()
+{
+  uint64_t value = 0;
+  uint8_t err = ERR_NONE;
+
+  err = stringToInteger("aa", &value);
+  assert(err == ERR_FORMAT_NOT_SUPPORTED);
+
+  err = stringToInteger("aa", NULL);
+  assert(err == ERR_NULL_ARGUMENT);
+
+  err = stringToInteger(NULL, &value);
+  assert(err == ERR_NULL_ARGUMENT);
+}
+
+static void unittest_hexToDecimal_valid()
 {
   uint8_t err = 0;
   uint64_t value = 0;
@@ -275,9 +461,35 @@ void test_hexToDecimal_valid()
 
 }
 
+static void unittest_isAsciidata_validASCII()
+{
+  char buff[] = "Random Text";
+  assert(isAsciiString(buff, sizeof(buff)) == TRUE);
+
+  char buff2[] = "/\\<<-_';/*[]&^$#@%!*()";
+  assert(isAsciiString(buff2, sizeof(buff2)) == TRUE);
+}
+
+static void unittest_isAsciidata_invalidASCII()
+{
+  char buff[] = "Random Text";
+  assert(isAsciiString(buff, sizeof(buff)) == TRUE);
+
+  char buff2[] = "/\\<<-_';/*[]&^$#@%!*()";
+  assert(isAsciiString(buff2, sizeof(buff2)) == TRUE);
+}
+
 void ioTestSuite()
 {
-  test_hexToDecimal_valid();
+  unittest_isHexadecimalCharacter_legalChars();
+  unittest_isHexadecimalCharacter_illegalChars();
+
+  unittest_stringToInteger_legalUsage();
+  unittest_stringToInteger_illegalUsage();
+
+  unittest_hexToDecimal_valid();
+
+  unittest_isAsciidata_validASCII();
 }
 
 #endif

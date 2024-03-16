@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "turtle_types.h": "c",
+        "io.h": "c",
+        "tvector.h": "c",
+        "elfdynamic.h": "c",
+        "reg.h": "c",
+        "unistd.h": "c",
+        "syscall.h": "c",
+        "stdio.h": "c",
+        "elfinfo.h": "c",
+        "compare": "c"
+    }
+}

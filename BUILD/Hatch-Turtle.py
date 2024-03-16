@@ -74,6 +74,8 @@ class Hatch:
                 f.write(line + '\n') 
 
     def hatchTurtle(self, runFunctionalTests):
+        os.system("rm ./Turtle-Scan")
+        
         self.buildParameters.insert(0, "gcc")
         self.buildParameters.append("-o")
         self.buildParameters.append("Turtle-Scan")
