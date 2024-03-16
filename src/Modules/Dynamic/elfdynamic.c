@@ -586,8 +586,10 @@ static int8_t uring_registerProcessBasedOnOpcode(ELF64_EXECUTABLE_HANDLE_T * exe
 static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 {
   struct epoll_event epollEvents = {0};
+  struct sysinfo     sysInfo = {0};
   struct timespec    timeSpec = {0};
   struct rlimit      resLimit = {0};
+  struct rusage      resUsage = {0};
   struct stat        stat = {0};
   siginfo_t          sigInfo = {0};
   sigset_t           sigset = {0};
@@ -2008,15 +2010,25 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_gettimeofday:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // TODO: Get the data returned
-    printf("gettimeofday()\n");
+    
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdi,
+                                   &timeSpec,
+                                   sizeof(struct timespec));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("gettimeofday(%d.%02d)\n",
+                         timeSpec.tv_sec,
+                         timeSpec.tv_nsec);
+
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_gettimeofday*/
 
 /***********************************************************************************/
   case SYS_getrlimit:
-    
-
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
     
     err = readProcessMemoryFromPID(executableHandle->pid,
@@ -2038,16 +2050,58 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
 /***********************************************************************************/
   case SYS_getrusage:
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
-    // TODO: Can we get returned data?
-    printf("getrusage(who=%d)\n", executableHandle->regs.rdi);
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rsi,
+                                   &resUsage,
+                                   sizeof(struct rusage));
+    if(err !=  ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("getrusage(who=%d, USER-CPU-time-used=%d.%02d, CPU-time-used=%d.%02d)\n",
+                      executableHandle->regs.rdi,
+                      resUsage.ru_utime.tv_sec,
+                      resUsage.ru_utime.tv_usec,
+                      resUsage.ru_stime.tv_sec,
+                      resUsage.ru_stime.tv_usec);
+
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_getrusage*/
 
 /***********************************************************************************/
   case SYS_sysinfo:
-    // TODO: Does this retrieve sysdata?
-    printf("sysinfo()\n");
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
+
+    err = readProcessMemoryFromPID(executableHandle->pid,
+                                   executableHandle->regs.rdi,
+                                   &sysInfo,
+                                   sizeof(struct sysinfo));
+    if(err != ERR_NONE)
+    {
+      return err;
+    }
+
+    printf("sysinfo()\n\n");
+
+    printf("uptime=%ld\n"         \
+           "total-RAM=0x%016x\n"  \
+           "free-RAM=0x%016x\n"   \
+           "shared-RAM=0x%016x\n" \
+           "buffer-RAM=0x%016x\n" \
+           "totalswap=0x%016x\n"  \
+           "freeswap=0x%016x\n"   \
+           "processes=%u\n\n",    \
+           sysInfo.uptime,
+           sysInfo.totalram,
+           sysInfo.freeram,
+           sysInfo.sharedram,
+           sysInfo.bufferram,
+           sysInfo.totalswap,
+           sysInfo.freeswap,
+           sysInfo.procs);
+
     printf("Returned With: %d\n\n", executableHandle->regs.rax);
     break; /*SYS_sysinfo*/
 
@@ -4937,7 +4991,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
     }
 
     // We could print more of the stat fields but I think size is enough for now.
-    printf("newfstatat(dir-fd=%d, filename=\"%s\", stat-addr=0x%016x, flag=0x%08x)\n",
+    printf("newfstatat(dir-fd=%d, filename=\"%s\", stat-addr=0x%016x, flag=0x%08x)\n\n",
            executableHandle->regs.rdi,
            tmpBuffer1,
            executableHandle->regs.rdx,
@@ -4953,7 +5007,7 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
            "device number=%d\n" \
            "file size=0x%08x\n" \
            "optimal block size=0x%08x\n" \
-           "number of blocks=0x%08x\n",
+           "number of blocks=0x%08x\n\n",
            stat.st_dev,
            stat.st_ino,
            stat.st_mode,

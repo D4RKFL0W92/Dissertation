@@ -41,6 +41,7 @@
 #include <sys/select.h>
 #include <sys/ptrace.h>
 #include <sys/reboot.h>
+#include <sys/sysinfo.h>
 #include <sys/syscall.h>
 #include <sys/resource.h>
 #include <linux/bpf.h>
@@ -303,5 +304,8 @@ void elfDynamicTestSuite();
   __u64 nr_recently_evicted;
   };
 #endif
+
+////////////////////////////////////////////////////////////////
+
 
 #endif /* _ELF_DYNAMIC_INFO_ */

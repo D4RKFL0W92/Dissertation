@@ -18,7 +18,7 @@ class HexdumpTest:
 
 
     def turtleDumpBytes(self):
-        command = ["../../BUILD/Turtle-Scan", "-hd", "0", "100", self.testBin]
+        command = ["../../BUILD/Turtle-Scan", "-hd", "0", "106", self.testBin]
         print("Dumping 100 bytes from start of file: " + self.testBin)
 
         process = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
@@ -28,12 +28,11 @@ class HexdumpTest:
             print(out + err)
             return 1
         
-        tmpTurtleReadBytes = re.findall("\\b[0-9a-f]{2}\\b", str(out))
+        tmpTurtleReadBytes = re.findall("\\b[0-9a-fA-F]{2}\\b", str(out))
 
-        # Strip off the offset bytes from Turtle-Scan output, we only
-        # need to remove the first 00-09 bytes as the other 0A-0F
-        # are not picked up by the regex due to capitalisation.
-        for i in range(10, len(tmpTurtleReadBytes)):
+        # Strip off the offset bytes from Turtle-Scan output, we also
+        # need to remove the bytes at the top of the output
+        for i in range(16, len(tmpTurtleReadBytes)):
             self.turtleReadBytes.append(tmpTurtleReadBytes[i])
         print("Turtle Read Bytes:")
         print(self.turtleReadBytes)
@@ -43,6 +42,7 @@ class HexdumpTest:
             for i in range(0, 100):
                 b = f.read(1)
                 self.pythonReadBytes.append(b.hex())
+
         print("Python Read Bytes:")
         print((self.pythonReadBytes))
 
@@ -52,9 +52,11 @@ class HexdumpTest:
         self.turtleDumpBytes()
         self.pythonReadBytesFromFile()
 
+
+        print("\n\n")
         # Perform the comparison of bytes
-        for i in range(0, 100):
-            if self.turtleReadBytes[i] != self.pythonReadBytes[i]:
+        for i in range(0, len(self.pythonReadBytes)):
+            if str.lower(self.turtleReadBytes[i]) != str.lower(self.pythonReadBytes[i]):
                 print("Test Failed.")
                 exit(1)
         print("Test Passed.")
