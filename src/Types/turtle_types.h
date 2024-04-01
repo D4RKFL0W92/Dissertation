@@ -16,7 +16,6 @@
 #include <assert.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <stdbool.h>
 
 #define TRUE             1
@@ -35,6 +34,7 @@
 #define ERR_MEMORY_ALLOCATION_FAILED     11
 
 #define ERR_FILE_OPERATION_FAILED        20
+#define ERR_DIRECTORY_OPERATION_FAILED   21
 
 // Used for when a checked value does not match any
 // of it's expected values included in its definition.

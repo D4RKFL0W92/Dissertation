@@ -27,11 +27,16 @@ int8_t TVector_initVector(TVector * vec, size_t elementSize, uint32_t initialEle
         initialElementCount = 4; // Arbitrary number.
     }
 
+    vec->pData = malloc(elementSize * initialElementCount);
+    if(vec->pData == NULL)
+    {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+    }
+
     vec->currElement = 0;
     vec->numElements = 0;
     vec->elementSize = elementSize;
     vec->totalFreeElements = initialElementCount;
-    vec->pData = malloc(elementSize * initialElementCount);
     memset(vec->pData, 0, elementSize * initialElementCount);
     if(vec->pData == NULL)
     {
@@ -50,6 +55,7 @@ int8_t TVector_addElement(TVector * vec, void * element)
     {
         void * pTmp = NULL;
 
+        // Reallocate enough memory to hold an extra 10 elements.
         pTmp = realloc(vec->pData, (vec->totalFreeElements + 10) * vec->elementSize);
         if(pTmp == NULL)
         {

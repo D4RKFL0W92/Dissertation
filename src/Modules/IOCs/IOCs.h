@@ -68,7 +68,7 @@ typedef struct RunningProcess
   uint16_t numberOfSignalsQueued;           // number of signals queued.
   uint16_t signalQueueMax;                  // Max. number for queue.
   uint32_t threadSignalsPendingMask;        // bitmap of pending signals for the thread.
-  uint32_t processSharedSignalsPendingMask; // bitmap of shared pending signals for the process.
+  uint32_t processSignalsPendingMask;       // bitmap of shared pending signals for the process.
   uint32_t blockedSignalsMask;              // bitmap of blocked signals.
   uint32_t ignoredSignalsMask;              // bitmap of ignored signals.
   uint32_t caughtSignalsMask;               // bitmap of caught signals.

@@ -899,25 +899,21 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
      */
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
-    err = readStringFromProcessMemory(executableHandle->pid,
-                                      executableHandle->regs.rdi,
-                                      &tmpBuffer1);
-
-    tmpBuffer2 = malloc(executableHandle->regs.rdx);
-    if (tmpBuffer2 == NULL)
+    tmpBuffer1 = malloc(executableHandle->regs.rdx);
+    if (tmpBuffer1 == NULL)
     {
       return ERR_MEMORY_ALLOCATION_FAILED;
     }
     err = readProcessMemoryFromPID(executableHandle->pid,
                                    executableHandle->regs.rsi,
-                                   tmpBuffer2,
+                                   tmpBuffer1,
                                    executableHandle->regs.rdx);
     if (err != ERR_NONE)
     {
       return err;
     }
 
-    if (isAsciidata(tmpBuffer2, executableHandle->regs.rdx))
+    if (isAsciidata(tmpBuffer1, executableHandle->regs.rdx))
     {
       printf("pread64(fd=%d, buff=\"%s\", count=0x%08x, offset=%p)\n",
                       executableHandle->regs.rdi,
@@ -933,8 +929,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
                       executableHandle->regs.rdx,
                       executableHandle->regs.r10);
 
-      dumpHexBytesFromOffset(tmpBuffer2,
-                             executableHandle->regs.r10,
+      dumpHexBytesFromOffset(tmpBuffer1,
+                             executableHandle->regs.rsi,
                              executableHandle->regs.rdx);
     }
 

@@ -32,8 +32,6 @@
 #include "../IO/io.h"
 #include "../Dynamic/elfdynamic.h"
 #include "../Headers/elftypes.h"
-#include "../../Memory/tvector.h"
-
 
 #define CLASS32           "32"
 #define CLASS64           "64"

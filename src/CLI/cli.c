@@ -15,6 +15,7 @@
 #include "../Modules/ELFinfo/elfinfo.h"
 #include "../Modules/Dynamic/elfdynamic.h"
 #include "../Modules/IO/io.h"
+#include "../Modules/IOCs/IOCs.h"
 #include "../FileOperations/fileOps.h"
 #include "../Memory/turtle_memory.h"
 #include "../Memory/tvector.h"
@@ -30,21 +31,34 @@
 
 int main(int argc, char *argv[], char *envp[])
 {
-  FILE_HANDLE_T fileHandle = {0};
+  FILE_HANDLE_T fileHandle     = {0};
   ELF_EXECUTABLE_T * elfHandle = NULL;
-  enum BITS arch = T_NO_ELF;
-  MODE executionMode = UNKNOWN_MODE;
-  char pidStr[5] = {0};
-  BOOL usingPid = FALSE;
-  uint16_t targetFileIndex = 0;
-  uint16_t i = 1;
-  uint16_t endOfProgArgs = argc;
-  uint8_t err = ERR_NONE;
+  TVector dataVector           = {0};
+  enum BITS arch               = T_NO_ELF;
+  MODE executionMode           = UNKNOWN_MODE;
+  char pidStr[5]               = {0};
+  BOOL usingPid                = FALSE;
+  uint16_t targetFileIndex     = 0;
+  uint16_t i                   = 1;
+  uint16_t endOfProgArgs       = argc;
+  uint8_t err                  = ERR_NONE;
 
   if(argc < 2 || strcmp(argv[1], "-h") == 0)
   {
     printf(helpMenu);
     exit(-1);
+  }
+  else if(argc <= 2)
+  {
+    /* Option: Print info about running processes on the system. */
+    if(strcmp(argv[1], "-processes") == 0)
+    {
+      err = retrieveRunningProcessesData(&dataVector);
+    }
+
+  }
+  else if(argc < 4) // Takes only an option + 1 additional argument
+  {
   }
 
   else

@@ -52,8 +52,8 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
       pChar = progressPointerToData(pChar);
 
       strcpy(process->name, pChar);
-      printf("Process Name: %s\n", process->name);
-      printf("Process PID: %u\n", process->PID);
+      printf("Process Name:                        %s\n", process->name);
+      printf("Process PID:                         %10u\n", process->PID);
     }
 
     else if(strncmp(line, "Umask", 5) == 0)
@@ -61,7 +61,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
       char uMaskBuffer[5];
       uint16_t uMask = 0;
 
-      pChar = &line[6];
+      pChar = &line[5];
       pChar = progressPointerToData(pChar);
 
       
@@ -69,36 +69,33 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
       hexToDecimal(uMaskBuffer,&uMask);
       process->uMask = (uint16_t) uMask;
 
-      printf("Process Umask: 0x%04x\n", process->uMask);
+      printf("Process Umask:                           0x%04x\n", process->uMask);
     }
 
     else if(strncmp(line, "State", 5) == 0)
     {
-      char state = '\0';
-
       pChar = &line[5];
       pChar = progressPointerToData(pChar);
       
       process->state = *pChar;
 
-      printf("State: %c\n", process->state);
+      printf("State:                               %10c\n", process->state);
     }
 
     else if(strncmp(line, "Tgid", 4) == 0)
     {
-      pChar = &line[6];
+      pChar = &line[4];
+      pChar = progressPointerToData(pChar);
 
-      strcpy(tmpBuff, pChar);
+      process->tgid = atoi(pChar);
 
-      tgid = atoi(pChar);
-      process->tgid = tgid;
-
-      printf("Tgid: %u\n", tgid);
+      printf("Tgid:                                %10u\n", process->tgid);
     }
 
     else if(strncmp(line, "Ngid", 4) == 0)
     {
-      pChar = &line[6];
+      pChar = &line[4];
+      pChar = progressPointerToData(pChar);
 
       if(isdigit(*pChar))
       {
@@ -109,7 +106,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->ngid = 0;
       }
 
-      printf("Ngid: %u\n", process->ngid);
+      printf("Ngid:                                %10u\n", process->ngid);
     }
 
     else if(strncmp(line, "PPid", 4) == 0)
@@ -122,7 +119,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->PPID = atoi(pChar);
       }
 
-      printf("PPid: %u\n", process->PPID);
+      printf("PPid:                                %10u\n", process->PPID);
     }
 
     else if(strncmp(line, "TracerPid", 9) == 0)
@@ -135,7 +132,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->tracerPID = atoi(pChar);
       }
 
-      printf("Tracer PID: %u\n", process->tracerPID);
+      printf("Tracer PID:                          %10u\n", process->tracerPID);
     }
 
     else if(strncmp(line, "Uid", 4) == 0)
@@ -148,7 +145,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->uid = atoi(pChar);
       }
 
-      printf("Process UID: %u\n", process->uid);
+      printf("Process UID:                         %10u\n", process->uid);
     }
 
     else if(strncmp(line, "Gid", 4) == 0)
@@ -161,7 +158,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->gid = atoi(pChar);
       }
 
-      printf("Process GID: %u\n", process->gid);
+      printf("Process GID:                         %10u\n", process->gid);
     }
 
     else if(strncmp(line, "FDSize", 6) == 0)
@@ -178,7 +175,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->fileDescriptorSize = 0;
       }
 
-      printf("FD Size: %u\n", process->fileDescriptorSize);
+      printf("FD Size:                             %10u\n", process->fileDescriptorSize);
     }
 
 /*
@@ -212,17 +209,17 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->kThread = atoi(pChar);
         if(process->kThread == 1)
         {
-          printf("Kernel Thread: YES\n");
+          printf("Kernel Thread:                              YES\n");
         }
         else
         {
-          printf("Kernel Thread: NO\n");
+          printf("Kernel Thread:                               NO\n");
         }
       }
       else
       {
         process->kThread = 0;
-        printf("Kernel Thread: NO\n");
+        printf("Kernel Thread:                               NO\n");
       }
 
     }
@@ -241,7 +238,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmPeak = 0;
       }
 
-      printf("Virtual Memory Peak: %u kB\n", process->vmPeak);
+      printf("Virtual Memory Peak:                 %10u kB\n", process->vmPeak);
     }
 
     else if(strncmp(line, "VmSize", 6) == 0)
@@ -258,7 +255,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmSize = 0;
       }
 
-      printf("Virtual Memory Size: %u kB\n", process->vmSize);
+      printf("Virtual Memory Size:                 %10u kB\n", process->vmSize);
     }
 
     else if(strncmp(line, "VmLck", 5) == 0)
@@ -275,7 +272,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmLock = 0;
       }
 
-      printf("Virtual Locked Memory Size: %u kB\n", process->vmLock);
+      printf("Virtual Locked Memory Size:          %10u kB\n", process->vmLock);
     }
 
     else if(strncmp(line, "VmPin", 5) == 0)
@@ -292,7 +289,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmPin = 0;
       }
 
-      printf("Virtual Pinned Memory Size: %u kB\n", process->vmPin);
+      printf("Virtual Pinned Memory Size:          %10u kB\n", process->vmPin);
     }
 
   //peak resident set size ("high water mark").
@@ -310,7 +307,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmHWM = 0;
       }
 
-      printf("Virtual Memory High Water Mark: %u kB\n", process->vmHWM);
+      printf("Virtual Memory High Water Mark:      %10u kB\n", process->vmHWM);
     }
 
     else if(strncmp(line, "VmRSS", 5) == 0)
@@ -327,12 +324,12 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmRSS = 0;
       }
 
-      printf("Total Size Of Memory Portions: %u kB\n", process->vmRSS);
+      printf("Total Size Of Memory Portions:       %10u kB\n", process->vmRSS);
     }
 
-    else if(strncmp(line, "RssAnon", 5) == 0)
+    else if(strncmp(line, "RssAnon", 7) == 0)
     {
-      pChar = &line[5];
+      pChar = &line[7];
       pChar = progressPointerToData(pChar);
 
       if(isdigit(*pChar))
@@ -344,8 +341,312 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->rssAnon = 0;
       }
 
-      printf("Size Of Resident Anonymous Memory: %u kB\n", process->rssAnon);
+      printf("Size Of Resident Anonymous Memory:   %10u kB\n", process->rssAnon);
     }
+
+    else if(strncmp(line, "RssFile", 7) == 0)
+    {
+      pChar = &line[7];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->rssFile = atoi(pChar);
+      }
+      else
+      {
+        process->rssFile = 0;
+      }
+
+      printf("Size Of Resident File Mappings:      %10u kB\n", process->rssFile);
+    }
+
+    else if(strncmp(line, "RssShmem", 8) == 0)
+    {
+      pChar = &line[8];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->rssShmem = atoi(pChar);
+      }
+      else
+      {
+        process->rssShmem = 0;
+      }
+
+      printf("Size Of Resident Shmem Memory:       %10u kB\n", process->rssShmem);
+    }
+
+    else if(strncmp(line, "VmData", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->vmData = atoi(pChar);
+      }
+      else
+      {
+        process->vmData = 0;
+      }
+
+      printf("Size Of Private Data Segments:       %10u kB\n", process->vmData);
+    }
+
+    else if(strncmp(line, "VmStk", 5) == 0)
+    {
+      pChar = &line[5];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->vmStack = atoi(pChar);
+      }
+      else
+      {
+        process->vmStack = 0;
+      }
+
+      printf("Size Of Stack Segments:              %10u kB\n", process->vmStack);
+    }
+
+    else if(strncmp(line, "VmExe", 5) == 0)
+    {
+      pChar = &line[5];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->vmExe = atoi(pChar);
+      }
+      else
+      {
+        process->vmExe = 0;
+      }
+
+      printf("Size Of Text Segments:              %10u kB\n", process->vmExe);
+    }
+    
+    else if(strncmp(line, "VmLib", 5) == 0)
+    {
+      pChar = &line[5];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->vmLib = atoi(pChar);
+      }
+      else
+      {
+        process->vmLib = 0;
+      }
+
+      printf("Size Of Shared Library Code:              %10u kB\n", process->vmLib);
+    }
+
+
+
+    else if(strncmp(line, "VmPTE", 5) == 0)
+    {
+      pChar = &line[5];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->vmPTE = atoi(pChar);
+      }
+      else
+      {
+        process->vmPTE = 0;
+      }
+
+      printf("Size Of Page Table Entries:              %10u kB\n", process->vmPTE);
+    }
+
+    else if(strncmp(line, "VmSwap", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->vmSwap = atoi(pChar);
+      }
+      else
+      {
+        process->vmSwap = 0;
+      }
+
+      printf("Size Of Swap Memory Used By Anon Private Date:              %10u kB\n", process->vmSwap);
+    }
+
+    else if(strncmp(line, "CoreDumping", 11) == 0)
+    {
+      pChar = &line[11];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->coreDumping = atoi(pChar);
+      }
+      else
+      {
+        process->coreDumping = 0;
+      }
+
+      printf("Core Dumping:                        %10u kB\n", process->coreDumping);
+    }
+
+    else if(strncmp(line, "THP_enabled", 11) == 0)
+    {
+      pChar = &line[11];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->thpEnabled = atoi(pChar);
+      }
+      else
+      {
+        process->thpEnabled = 0;
+      }
+
+      printf("THP_enabled:                         %10u kB\n", process->thpEnabled);
+    }
+
+    else if(strncmp(line, "Threads", 7) == 0)
+    {
+      pChar = &line[7];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->threads = atoi(pChar);
+      }
+      else
+      {
+        process->threads = 0;
+      }
+
+      printf("Threads:                             %10u kB\n", process->threads);
+    }
+
+
+    /*
+     * This may be better handled as a string.
+    */
+    // else if(strncmp(line, "Threads", 7) == 0)
+    // {
+    //   pChar = &line[7];
+    //   pChar = progressPointerToData(pChar);
+
+    //   if(isdigit(*pChar))
+    //   {
+    //     process->threads = atoi(pChar);
+    //   }
+    //   else
+    //   {
+    //     process->threads = 0;
+    //   }
+
+    //   printf("Threads:                             %10u kB\n", process->threads);
+    // }
+
+    else if(strncmp(line, "SigPnd", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->threadSignalsPendingMask = atoi(pChar);
+      }
+      else
+      {
+        process->threadSignalsPendingMask = 0;
+      }
+
+      printf("Bitmap Of Thread Signals Pending:    %10u\n", process->threadSignalsPendingMask);
+    }
+
+    else if(strncmp(line, "ShdPnd", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->processSignalsPendingMask = atoi(pChar);
+      }
+      else
+      {
+        process->processSignalsPendingMask = 0;
+      }
+
+      printf("Bitmap Of Process Signals Pending:   %10u\n", process->processSignalsPendingMask);
+    }
+
+    else if(strncmp(line, "SigBlk", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->blockedSignalsMask = atoi(pChar);
+      }
+      else
+      {
+        process->blockedSignalsMask = 0;
+      }
+
+      printf("Bitmap Of Blocked Signals:           %10u\n", process->blockedSignalsMask);
+    }
+
+    else if(strncmp(line, "SigIgn", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->ignoredSignalsMask = atoi(pChar);
+      }
+      else
+      {
+        process->ignoredSignalsMask = 0;
+      }
+
+      printf("Bitmap Of Ignored Signals:           %10u\n", process->ignoredSignalsMask);
+    }
+
+    else if(strncmp(line, "SigCgt", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->caughtSignalsMask = atoi(pChar);
+      }
+      else
+      {
+        process->caughtSignalsMask = 0;
+      }
+
+      printf("Bitmap Of Caught Signals:           %10u\n", process->caughtSignalsMask);
+    }
+
+
+
+
+
+
+
+
+
 
 
 
