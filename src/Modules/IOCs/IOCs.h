@@ -21,6 +21,7 @@ typedef struct RunningProcess
 
   char     speculationStoreBypass    [40]; // Speculative store bypass mitigation status.
   char     speculationIndirectBranch [40]; // Indirect branch speculation mode.
+  char     signalQueue[20];                // Max. number for queue.
 
   char     state;               // state (R is running, S is sleeping, D is sleeping in an
                                 // uninterruptible wait, Z is zombie, T is traced or stopped).
@@ -65,15 +66,13 @@ typedef struct RunningProcess
   uint8_t  thpEnabled;                      // process is allowed to use THP (returns 0 when
                                             // PR_SET_THP_DISABLE is set on the process.
   uint16_t threads;                         // Number of threads owned by process.
-  uint16_t numberOfSignalsQueued;           // number of signals queued.
-  uint16_t signalQueueMax;                  // Max. number for queue.
   uint32_t threadSignalsPendingMask;        // bitmap of pending signals for the thread.
   uint32_t processSignalsPendingMask;       // bitmap of shared pending signals for the process.
   uint32_t blockedSignalsMask;              // bitmap of blocked signals.
   uint32_t ignoredSignalsMask;              // bitmap of ignored signals.
   uint32_t caughtSignalsMask;               // bitmap of caught signals.
 
-  uint32_t capabilitiesInheritedMask;       // bitmap of inheritable capabilities.
+  uint32_t InheritablecapabilitiesMask;     // bitmap of inheritable capabilities.
   uint32_t permittedCapabilitiesMask;       // bitmap of permitted capabilities.
   uint32_t effectiveCapabilitiesMask;       // bitmap of effective capabilities.
   uint32_t boundingCapabilitiesMask;        // bitmap of capabilities bounding set.

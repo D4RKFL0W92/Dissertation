@@ -43,6 +43,8 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
   printf("---------------------------------------------------------------------------------\n");
   while(fgets(line, 400, fileHandle))
   {
+    uint64_t tmpValue = 0;
+    char tmpBuffer[16];
     char * pChar = NULL;
 
     
@@ -189,9 +191,6 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
 
     //   if(isdigit(*pChar))
     //   {
-    //     process->groups[0] = atoi(pChar);
-    //   }
-    //   else
     //   {
     //     process->groups[0] = 0;
     //   }
@@ -209,17 +208,17 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->kThread = atoi(pChar);
         if(process->kThread == 1)
         {
-          printf("Kernel Thread:                              YES\n");
+          printf("Kernel Thread:                              YES\n\n");
         }
         else
         {
-          printf("Kernel Thread:                               NO\n");
+          printf("Kernel Thread:                               NO\n\n");
         }
       }
       else
       {
         process->kThread = 0;
-        printf("Kernel Thread:                               NO\n");
+        printf("Kernel Thread:                               NO\n\n");
       }
 
     }
@@ -238,7 +237,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmPeak = 0;
       }
 
-      printf("Virtual Memory Peak:                 %10u kB\n", process->vmPeak);
+      printf("Virtual Memory Peak:                     %10u kB\n", process->vmPeak);
     }
 
     else if(strncmp(line, "VmSize", 6) == 0)
@@ -255,7 +254,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmSize = 0;
       }
 
-      printf("Virtual Memory Size:                 %10u kB\n", process->vmSize);
+      printf("Virtual Memory Size:                     %10u kB\n", process->vmSize);
     }
 
     else if(strncmp(line, "VmLck", 5) == 0)
@@ -272,7 +271,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmLock = 0;
       }
 
-      printf("Virtual Locked Memory Size:          %10u kB\n", process->vmLock);
+      printf("Virtual Locked Memory Size:              %10u kB\n", process->vmLock);
     }
 
     else if(strncmp(line, "VmPin", 5) == 0)
@@ -289,7 +288,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmPin = 0;
       }
 
-      printf("Virtual Pinned Memory Size:          %10u kB\n", process->vmPin);
+      printf("Virtual Pinned Memory Size:              %10u kB\n", process->vmPin);
     }
 
   //peak resident set size ("high water mark").
@@ -307,7 +306,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmHWM = 0;
       }
 
-      printf("Virtual Memory High Water Mark:      %10u kB\n", process->vmHWM);
+      printf("Virtual Memory High Water Mark:          %10u kB\n", process->vmHWM);
     }
 
     else if(strncmp(line, "VmRSS", 5) == 0)
@@ -324,7 +323,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmRSS = 0;
       }
 
-      printf("Total Size Of Memory Portions:       %10u kB\n", process->vmRSS);
+      printf("Total Size Of Memory Portions:           %10u kB\n", process->vmRSS);
     }
 
     else if(strncmp(line, "RssAnon", 7) == 0)
@@ -341,7 +340,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->rssAnon = 0;
       }
 
-      printf("Size Of Resident Anonymous Memory:   %10u kB\n", process->rssAnon);
+      printf("Size Of Resident Anonymous Memory:       %10u kB\n", process->rssAnon);
     }
 
     else if(strncmp(line, "RssFile", 7) == 0)
@@ -358,7 +357,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->rssFile = 0;
       }
 
-      printf("Size Of Resident File Mappings:      %10u kB\n", process->rssFile);
+      printf("Size Of Resident File Mappings:          %10u kB\n", process->rssFile);
     }
 
     else if(strncmp(line, "RssShmem", 8) == 0)
@@ -375,7 +374,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->rssShmem = 0;
       }
 
-      printf("Size Of Resident Shmem Memory:       %10u kB\n", process->rssShmem);
+      printf("Size Of Resident Shmem Memory:           %10u kB\n", process->rssShmem);
     }
 
     else if(strncmp(line, "VmData", 6) == 0)
@@ -392,7 +391,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmData = 0;
       }
 
-      printf("Size Of Private Data Segments:       %10u kB\n", process->vmData);
+      printf("Size Of Private Data Segments:           %10u kB\n", process->vmData);
     }
 
     else if(strncmp(line, "VmStk", 5) == 0)
@@ -409,7 +408,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmStack = 0;
       }
 
-      printf("Size Of Stack Segments:              %10u kB\n", process->vmStack);
+      printf("Size Of Stack Segments:                  %10u kB\n", process->vmStack);
     }
 
     else if(strncmp(line, "VmExe", 5) == 0)
@@ -426,7 +425,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmExe = 0;
       }
 
-      printf("Size Of Text Segments:              %10u kB\n", process->vmExe);
+      printf("Size Of Text Segments:                   %10u kB\n", process->vmExe);
     }
     
     else if(strncmp(line, "VmLib", 5) == 0)
@@ -443,10 +442,8 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmLib = 0;
       }
 
-      printf("Size Of Shared Library Code:              %10u kB\n", process->vmLib);
+      printf("Size Of Shared Library Code:             %10u kB\n", process->vmLib);
     }
-
-
 
     else if(strncmp(line, "VmPTE", 5) == 0)
     {
@@ -479,7 +476,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->vmSwap = 0;
       }
 
-      printf("Size Of Swap Memory Used By Anon Private Date:              %10u kB\n", process->vmSwap);
+      printf("Size Of Swap Memory Used By Anon Private Date:         %10u kB\n\n", process->vmSwap);
     }
 
     else if(strncmp(line, "CoreDumping", 11) == 0)
@@ -496,7 +493,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->coreDumping = 0;
       }
 
-      printf("Core Dumping:                        %10u kB\n", process->coreDumping);
+      printf("Core Dumping:                        %10u\n", process->coreDumping);
     }
 
     else if(strncmp(line, "THP_enabled", 11) == 0)
@@ -513,7 +510,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->thpEnabled = 0;
       }
 
-      printf("THP_enabled:                         %10u kB\n", process->thpEnabled);
+      printf("THP_enabled:                         %10u\n", process->thpEnabled);
     }
 
     else if(strncmp(line, "Threads", 7) == 0)
@@ -530,29 +527,18 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->threads = 0;
       }
 
-      printf("Threads:                             %10u kB\n", process->threads);
+      printf("Threads:                             %10u\n", process->threads);
     }
 
+    else if(strncmp(line, "SigQ", 4) == 0)
+    {
+      pChar = &line[4];
+      pChar = progressPointerToData(pChar);
 
-    /*
-     * This may be better handled as a string.
-    */
-    // else if(strncmp(line, "Threads", 7) == 0)
-    // {
-    //   pChar = &line[7];
-    //   pChar = progressPointerToData(pChar);
+      strcpy(process->signalQueue, pChar);
 
-    //   if(isdigit(*pChar))
-    //   {
-    //     process->threads = atoi(pChar);
-    //   }
-    //   else
-    //   {
-    //     process->threads = 0;
-    //   }
-
-    //   printf("Threads:                             %10u kB\n", process->threads);
-    // }
+      printf("Signal Queue:                           %s\n", process->signalQueue);
+    }
 
     else if(strncmp(line, "SigPnd", 6) == 0)
     {
@@ -561,14 +547,14 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
 
       if(isdigit(*pChar))
       {
-        process->threadSignalsPendingMask = atoi(pChar);
+        hexToDecimal(pChar, &process->threadSignalsPendingMask);
       }
       else
       {
         process->threadSignalsPendingMask = 0;
       }
 
-      printf("Bitmap Of Thread Signals Pending:    %10u\n", process->threadSignalsPendingMask);
+      printf("Bitmap Of Thread Signals Pending:    0x%08x\n", process->threadSignalsPendingMask);
     }
 
     else if(strncmp(line, "ShdPnd", 6) == 0)
@@ -578,14 +564,14 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
 
       if(isdigit(*pChar))
       {
-        process->processSignalsPendingMask = atoi(pChar);
+        hexToDecimal(pChar, &process->processSignalsPendingMask);
       }
       else
       {
         process->processSignalsPendingMask = 0;
       }
 
-      printf("Bitmap Of Process Signals Pending:   %10u\n", process->processSignalsPendingMask);
+      printf("Bitmap Of Process Signals Pending:   0x%08x\n", process->processSignalsPendingMask);
     }
 
     else if(strncmp(line, "SigBlk", 6) == 0)
@@ -595,14 +581,14 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
 
       if(isdigit(*pChar))
       {
-        process->blockedSignalsMask = atoi(pChar);
+        hexToDecimal(pChar, &process->blockedSignalsMask);
       }
       else
       {
         process->blockedSignalsMask = 0;
       }
 
-      printf("Bitmap Of Blocked Signals:           %10u\n", process->blockedSignalsMask);
+      printf("Bitmap Of Blocked Signals:           0x%08x\n", process->blockedSignalsMask);
     }
 
     else if(strncmp(line, "SigIgn", 6) == 0)
@@ -612,14 +598,14 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
 
       if(isdigit(*pChar))
       {
-        process->ignoredSignalsMask = atoi(pChar);
+        hexToDecimal(pChar, &process->ignoredSignalsMask);
       }
       else
       {
         process->ignoredSignalsMask = 0;
       }
 
-      printf("Bitmap Of Ignored Signals:           %10u\n", process->ignoredSignalsMask);
+      printf("Bitmap Of Ignored Signals:           0x%08x\n", process->ignoredSignalsMask);
     }
 
     else if(strncmp(line, "SigCgt", 6) == 0)
@@ -629,14 +615,153 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
 
       if(isdigit(*pChar))
       {
-        process->caughtSignalsMask = atoi(pChar);
+        hexToDecimal(pChar, &process->caughtSignalsMask);
       }
       else
       {
         process->caughtSignalsMask = 0;
       }
 
-      printf("Bitmap Of Caught Signals:           %10u\n", process->caughtSignalsMask);
+      printf("Bitmap Of Caught Signals:            0x%08x\n", process->caughtSignalsMask);
+    }
+
+    else if(strncmp(line, "CapInh", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        hexToDecimal(pChar, &process->InheritablecapabilitiesMask);
+      }
+      else
+      {
+        process->InheritablecapabilitiesMask = 0;
+      }
+
+      printf("Bitmap Inheritable Capabilities:     0x%08x\n", process->InheritablecapabilitiesMask);
+    }
+
+    else if(strncmp(line, "CapPrm", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        hexToDecimal(pChar, &process->permittedCapabilitiesMask);
+      }
+      else
+      {
+        process->permittedCapabilitiesMask = 0;
+      }
+
+      printf("Bitmap Permitted:                    0x%08x\n", process->permittedCapabilitiesMask);
+    }
+
+    else if(strncmp(line, "CapEff", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        hexToDecimal(pChar, &process->processSignalsPendingMask);
+      }
+      else
+      {
+        process->permittedCapabilitiesMask = 0;
+      }
+
+      printf("Bitmap Effective Capabilities:       0x%08x\n", process->permittedCapabilitiesMask);
+    }
+
+    else if(strncmp(line, "CapBnd", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        hexToDecimal(pChar, &process->boundingCapabilitiesMask);
+      }
+      else
+      {
+        process->boundingCapabilitiesMask = 0;
+      }
+
+      printf("Bitmap Of Bounding Capabilities:     0x%08x\n", process->boundingCapabilitiesMask);
+    }
+
+    else if(strncmp(line, "CapAmb", 6) == 0)
+    {
+      pChar = &line[6];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        hexToDecimal(pChar, &process->permittedCapabilitiesMask);
+      }
+      else
+      {
+        process->permittedCapabilitiesMask = 0;
+      }
+
+      printf("Bitmap Effective Capabilities:       0x%08x\n\n", process->permittedCapabilitiesMask);
+    }
+
+    else if(strncmp(line, "NoNewPrivs", 10) == 0)
+    {
+      pChar = &line[10];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->noNewPrivs = atoi(pChar);
+      }
+      else
+      {
+        process->noNewPrivs = 0;
+      }
+
+      printf("No New Priviledges:                   %10u\n", process->noNewPrivs);
+    }
+
+    else if(strncmp(line, "Seccomp", 7) == 0)
+    {
+      pChar = &line[7];
+      pChar = progressPointerToData(pChar);
+
+      if(isdigit(*pChar))
+      {
+        process->secComp = atoi(pChar);
+      }
+      else
+      {
+        process->secComp = 0;
+      }
+
+      printf("Seccomp Mode:                         %10u\n", process->secComp);
+    }
+
+    else if(strncmp(line, "Speculation_Store_Bypass", 24) == 0)
+    {
+      pChar = &line[24];
+      pChar = progressPointerToData(pChar);
+
+      strcpy(process->speculationStoreBypass, pChar);
+
+      printf("Speculation Store Bypass:                         %s\n", process->speculationStoreBypass);
+    }
+
+    else if(strncmp(line, "SpeculationIndirectBranch", 25) == 0)
+    {
+      pChar = &line[25];
+      pChar = progressPointerToData(pChar);
+
+      strcpy(process->speculationIndirectBranch, pChar);
+
+      printf("Speculation Indirect Branch:                         %s\n", process->speculationIndirectBranch);
     }
 
 
