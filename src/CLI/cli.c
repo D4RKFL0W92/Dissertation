@@ -33,7 +33,7 @@ int main(int argc, char *argv[], char *envp[])
 {
   FILE_HANDLE_T fileHandle     = {0};
   ELF_EXECUTABLE_T * elfHandle = NULL;
-  TVector dataVector           = {0};
+  TVector * dataVector         = NULL;
   enum BITS arch               = T_NO_ELF;
   MODE executionMode           = UNKNOWN_MODE;
   char pidStr[5]               = {0};
@@ -53,7 +53,8 @@ int main(int argc, char *argv[], char *envp[])
     /* Option: Print info about running processes on the system. */
     if(strcmp(argv[1], "-processes") == 0)
     {
-      err = retrieveRunningProcessesData(&dataVector);
+      err = retrieveRunningProcessesData();
+      exit(0);
     }
 
   }

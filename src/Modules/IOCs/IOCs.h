@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <sys/queue.h>
 
 #include "../../FileOperations/fileOps.h"
 #include "../../Types/turtle_types.h"
@@ -88,8 +89,8 @@ typedef struct RunningProcess
   uint64_t stackLen;
   uint64_t heapStartAddr;
   uint64_t heapLen;
-
 } TRunningProcess;
+
 
 /*
  * A function to read all the running processes on a
@@ -100,5 +101,5 @@ typedef struct RunningProcess
  * RETURN: Returns an ERROR/WARNING code indicating the
  *         successfulness of reading the running processes.
 */
-int16_t retrieveRunningProcessesData(TVector * vec);
+int16_t retrieveRunningProcessesData();
 #endif

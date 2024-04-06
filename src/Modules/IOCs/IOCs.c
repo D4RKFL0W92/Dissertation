@@ -22,7 +22,7 @@ static char * progressPointerToData(char * pChar)
  * Retrieve all information that will be usefull in determining any
  * IOC's of a process possibly indicated in the /proc/[PID]/status file.
 */
-static uint8_t retrieveRunningProcessData(TRunningProcess * process)
+static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningProcess * process)
 {
   FILE * fileHandle = NULL;
   char line[400]    = {0};
@@ -37,7 +37,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
   if(fileHandle == NULL)
   {
     printf("Try Running With sudo As Certain Processes Require Root Priviledges.\n");
-    return ERR_FILE_OPERATION_FAILED;
+    return;
   }
 
   printf("---------------------------------------------------------------------------------\n");
@@ -47,7 +47,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
     char tmpBuffer[16];
     char * pChar = NULL;
 
-    
+
     if(strncmp(line, "Name", 4) == 0)
     {
       pChar = &line[4];
@@ -554,7 +554,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->threadSignalsPendingMask = 0;
       }
 
-      printf("Bitmap Of Thread Signals Pending:    0x%08x\n", process->threadSignalsPendingMask);
+      printf("Bitmap Of Thread Signals Pending:            0x%08x\n", process->threadSignalsPendingMask);
     }
 
     else if(strncmp(line, "ShdPnd", 6) == 0)
@@ -571,7 +571,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->processSignalsPendingMask = 0;
       }
 
-      printf("Bitmap Of Process Signals Pending:   0x%08x\n", process->processSignalsPendingMask);
+      printf("Bitmap Of Process Signals Pending:           0x%08x\n", process->processSignalsPendingMask);
     }
 
     else if(strncmp(line, "SigBlk", 6) == 0)
@@ -588,7 +588,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->blockedSignalsMask = 0;
       }
 
-      printf("Bitmap Of Blocked Signals:           0x%08x\n", process->blockedSignalsMask);
+      printf("Bitmap Of Blocked Signals:                   0x%08x\n", process->blockedSignalsMask);
     }
 
     else if(strncmp(line, "SigIgn", 6) == 0)
@@ -605,7 +605,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->ignoredSignalsMask = 0;
       }
 
-      printf("Bitmap Of Ignored Signals:           0x%08x\n", process->ignoredSignalsMask);
+      printf("Bitmap Of Ignored Signals:                   0x%08x\n", process->ignoredSignalsMask);
     }
 
     else if(strncmp(line, "SigCgt", 6) == 0)
@@ -622,7 +622,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->caughtSignalsMask = 0;
       }
 
-      printf("Bitmap Of Caught Signals:            0x%08x\n", process->caughtSignalsMask);
+      printf("Bitmap Of Caught Signals:                    0x%08x\n", process->caughtSignalsMask);
     }
 
     else if(strncmp(line, "CapInh", 6) == 0)
@@ -639,7 +639,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->InheritablecapabilitiesMask = 0;
       }
 
-      printf("Bitmap Inheritable Capabilities:     0x%08x\n", process->InheritablecapabilitiesMask);
+      printf("Bitmap Inheritable Capabilities:             0x%08x\n", process->InheritablecapabilitiesMask);
     }
 
     else if(strncmp(line, "CapPrm", 6) == 0)
@@ -656,7 +656,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->permittedCapabilitiesMask = 0;
       }
 
-      printf("Bitmap Permitted:                    0x%08x\n", process->permittedCapabilitiesMask);
+      printf("Bitmap Permitted:                            0x%08x\n", process->permittedCapabilitiesMask);
     }
 
     else if(strncmp(line, "CapEff", 6) == 0)
@@ -673,7 +673,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->permittedCapabilitiesMask = 0;
       }
 
-      printf("Bitmap Effective Capabilities:       0x%08x\n", process->permittedCapabilitiesMask);
+      printf("Bitmap Effective Capabilities:               0x%08x\n", process->permittedCapabilitiesMask);
     }
 
     else if(strncmp(line, "CapBnd", 6) == 0)
@@ -690,7 +690,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->boundingCapabilitiesMask = 0;
       }
 
-      printf("Bitmap Of Bounding Capabilities:     0x%08x\n", process->boundingCapabilitiesMask);
+      printf("Bitmap Of Bounding Capabilities:             0x%08x\n", process->boundingCapabilitiesMask);
     }
 
     else if(strncmp(line, "CapAmb", 6) == 0)
@@ -707,7 +707,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->permittedCapabilitiesMask = 0;
       }
 
-      printf("Bitmap Effective Capabilities:       0x%08x\n\n", process->permittedCapabilitiesMask);
+      printf("Bitmap Effective Capabilities:               0x%08x\n\n", process->permittedCapabilitiesMask);
     }
 
     else if(strncmp(line, "NoNewPrivs", 10) == 0)
@@ -724,7 +724,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->noNewPrivs = 0;
       }
 
-      printf("No New Priviledges:                   %10u\n", process->noNewPrivs);
+      printf("No New Priviledges:                            %10u\n", process->noNewPrivs);
     }
 
     else if(strncmp(line, "Seccomp", 7) == 0)
@@ -741,7 +741,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
         process->secComp = 0;
       }
 
-      printf("Seccomp Mode:                         %10u\n", process->secComp);
+      printf("Seccomp Mode:                                  %10u\n", process->secComp);
     }
 
     else if(strncmp(line, "Speculation_Store_Bypass", 24) == 0)
@@ -751,7 +751,7 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
 
       strcpy(process->speculationStoreBypass, pChar);
 
-      printf("Speculation Store Bypass:                         %s\n", process->speculationStoreBypass);
+      printf("Speculation Store Bypass:                   %s\n", process->speculationStoreBypass);
     }
 
     else if(strncmp(line, "SpeculationIndirectBranch", 25) == 0)
@@ -761,37 +761,24 @@ static uint8_t retrieveRunningProcessData(TRunningProcess * process)
 
       strcpy(process->speculationIndirectBranch, pChar);
 
-      printf("Speculation Indirect Branch:                         %s\n", process->speculationIndirectBranch);
+      printf("Speculation Indirect Branch:                 %s\n", process->speculationIndirectBranch);
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     memset(line, 0, sizeof(line));
     // printf("\n");
   }
 
-  printf("\n\n\n");
 
   fclose(fileHandle);
-  return ERR_NONE;
+  return process;
 }
 
-int16_t retrieveRunningProcessesData(TVector * vec)
+int16_t retrieveRunningProcessesData()
 {
   DIR * procDir = opendir("/proc");
-  TRunningProcess process = {0};
   struct dirent * ent;
+  TVector vector = {0};
+  TRunningProcess * process = NULL;
   uint16_t numProcesses = 0;
   long pid;
   uint8_t err = ERR_NONE;
@@ -802,22 +789,39 @@ int16_t retrieveRunningProcessesData(TVector * vec)
       return ERR_DIRECTORY_OPERATION_FAILED;
   }
 
+  err = TVector_initVector(&vector, sizeof(TRunningProcess *), 300);
+  if(err != ERR_NONE)
+  {
+    return err;
+  }
+
+
   while(ent = readdir(procDir))
   {
-      if(isdigit(*ent->d_name))
+
+    if(isdigit(*ent->d_name))
+    {
+
+
+
+      pid = strtol(ent->d_name, NULL, 10);
+      if(pid != 1)
       {
-        pid = strtol(ent->d_name, NULL, 10);
-        process.PID = pid;
-        if(pid != 1)
+        process = malloc(sizeof(TRunningProcess));
+        if(process == NULL)
         {
-          err = retrieveRunningProcessData(&process);
+          return ERR_MEMORY_ALLOCATION_FAILED;
         }
-        
-        // printf("PID = %lu\n", pid);
-        
-        numProcesses += 1;
-        memset(&process, 0, sizeof(TRunningProcess));
+        process->PID = pid;
+
+        process = retrieveRunningProcessData(&vector, process);
+        err = TVector_addElement(&vector, process);
       }
+      
+      // printf("PID = %lu\n", pid);
+      
+      numProcesses += 1;
+    }
 
   }
   printf("\nNumber Of Processes: %lu", numProcesses);

@@ -68,7 +68,8 @@ int8_t TVector_addElement(TVector * vec, void * element)
     }
 
     memcpy(&vec->pData[vec->numElements * vec->elementSize], element, vec->elementSize);
-    vec->numElements++;
+    --vec->totalFreeElements;
+    ++vec->numElements;
     return ERR_NONE;
 }
 
