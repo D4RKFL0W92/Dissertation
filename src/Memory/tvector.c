@@ -47,30 +47,30 @@ int8_t TVector_initVector(TVector * vec, size_t elementSize, uint32_t initialEle
 
 int8_t TVector_addElement(TVector * vec, void * element)
 {
-    if(vec == NULL || element == NULL)
-    {
-        return ERR_NULL_ARGUMENT;
-    }
-    if(vec->numElements != 0 && vec->numElements >= vec->totalFreeElements - 1)
-    {
-        void * pTmp = NULL;
+  if(vec == NULL || element == NULL)
+  {
+      return ERR_NULL_ARGUMENT;
+  }
+  if(vec->numElements != 0 && vec->numElements >= vec->totalFreeElements - 1)
+  {
+    void * pTmp = NULL;
 
-        // Reallocate enough memory to hold an extra 10 elements.
-        pTmp = realloc(vec->pData, (vec->totalFreeElements + 10) * vec->elementSize);
-        if(pTmp == NULL)
-        {
-            return ERR_NO_MEMORY;
-        }
-
-        vec->totalFreeElements += 10;
-        memset(&pTmp[vec->numElements * vec->elementSize], 0, (vec->totalFreeElements - vec->numElements) * vec->elementSize);
-        vec->pData = pTmp;
+    // Reallocate enough memory to hold an extra 10 elements.
+    pTmp = realloc(vec->pData, (vec->totalFreeElements + 10) * vec->elementSize);
+    if(pTmp == NULL)
+    {
+        return ERR_NO_MEMORY;
     }
 
-    memcpy(&vec->pData[vec->numElements * vec->elementSize], element, vec->elementSize);
-    --vec->totalFreeElements;
-    ++vec->numElements;
-    return ERR_NONE;
+    vec->totalFreeElements += 10;
+    memset(&pTmp[vec->numElements * vec->elementSize], 0, (vec->totalFreeElements - vec->numElements) * vec->elementSize);
+    vec->pData = pTmp;
+  }
+
+  memcpy(vec->pData + (vec->numElements * vec->elementSize), element, vec->elementSize);
+  --vec->totalFreeElements;
+  ++vec->numElements;
+  return ERR_NONE;
 }
 
 int8_t TVector_getElement(const TVector * vec, void * element, uint32_t index)
@@ -83,7 +83,7 @@ int8_t TVector_getElement(const TVector * vec, void * element, uint32_t index)
     {
         return ERR_INVALID_ARGUMENT;
     }
-    memcpy(element, &vec->pData[index * vec->elementSize], vec->elementSize);
+    memcpy(element, vec->pData + (index * vec->elementSize), vec->elementSize);
     return ERR_NONE;
 }
 

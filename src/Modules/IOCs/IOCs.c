@@ -18,11 +18,110 @@ static char * progressPointerToData(char * pChar)
   return pChar;
 }
 
+static void printAllProcessStatus(TVector * vector)
+{
+  TRunningProcess process = {0};
+
+  for(uint16_t i = 0; i < vector->numElements; i++)
+  {
+    TVector_getElement(vector, &process, i);
+
+    printf("---------------------------------------------------------------------------------\n");
+
+    printf("Process Name:                        %s\n", process.name);
+    printf("Process PID:                         %10u\n", process.PID);
+
+
+    printf("Process Umask:                           0x%04x\n", process.uMask);
+
+    printf("State:                               %10c\n", process.state);
+
+    printf("Tgid:                                %10u\n", process.tgid);
+
+    printf("Ngid:                                %10u\n", process.ngid);
+
+    printf("PPid:                                %10u\n", process.PPID);
+
+    printf("Tracer PID:                          %10u\n", process.tracerPID);
+
+    printf("Process UID:                         %10u\n", process.uid);
+
+    printf("Process GID:                         %10u\n", process.gid);
+
+    printf("FD Size:                             %10u\n", process.fileDescriptorSize);
+
+/*
+ * TODO: Fix this to read the list of 
+ * supplementary groups the process belongs to.
+*/
+    // else if(strncmp(line, "Groups", 6) == 0)
+    // {
+    //   pChar = &line[6];
+    //   pChar = progressPointerToData(pChar);
+
+    //   if(isdigit(*pChar))
+    //   {
+    //   {
+    //     process->groups[0] = 0;
+    //   }
+
+    //   printf("Groups: %u\n", process->groups);
+    // }
+
+    if(process.kThread == 1)
+    {
+      printf("Kernel Thread:                              YES\n\n");
+    }
+    else
+    {
+      printf("Kernel Thread:                               NO\n\n");
+    }
+
+    printf("Virtual Memory Peak:                       %10u kB\n", process.vmPeak);
+    printf("Virtual Memory Size:                       %10u kB\n", process.vmSize);
+    printf("Virtual Locked Memory Size:                %10u kB\n", process.vmLock);
+    printf("Virtual Pinned Memory Size:                %10u kB\n", process.vmPin);
+    printf("Virtual Memory High Water Mark:            %10u kB\n", process.vmHWM);
+    printf("Total Size Of Memory Portions:             %10u kB\n", process.vmRSS);
+    printf("Size Of Resident Anonymous Memory:         %10u kB\n", process.rssAnon);
+    printf("Size Of Resident File Mappings:            %10u kB\n", process.rssFile);
+    printf("Size Of Resident Shmem Memory:             %10u kB\n", process.rssShmem);
+    printf("Size Of Private Data Segments:             %10u kB\n", process.vmData);
+    printf("Size Of Stack Segments:                    %10u kB\n", process.vmStack);
+    printf("Size Of Text Segments:                     %10u kB\n", process.vmExe);
+    printf("Size Of Shared Library Code:               %10u kB\n", process.vmLib);
+    printf("Size Of Page Table Entries:                %10u kB\n", process.vmPTE);
+
+    printf("Size Of Swap Memory Used By Anon Private Date:  %5u kB\n\n", process.vmSwap);
+    printf("Core Dumping:                        %10u\n", process.coreDumping);
+    printf("THP_enabled:                         %10u\n", process.thpEnabled);
+    printf("Threads:                             %10u\n", process.threads);
+    printf("Signal Queue:                           %s\n", process.signalQueue);
+
+    printf("Bitmap Of Thread Signals Pending:          0x%08x\n", process.threadSignalsPendingMask);
+    printf("Bitmap Of Process Signals Pending:         0x%08x\n", process.processSignalsPendingMask);
+    printf("Bitmap Of Blocked Signals:                 0x%08x\n", process.blockedSignalsMask);
+    printf("Bitmap Of Ignored Signals:                 0x%08x\n", process.ignoredSignalsMask);
+    printf("Bitmap Of Caught Signals:                  0x%08x\n", process.caughtSignalsMask);
+    printf("Bitmap Inheritable Capabilities:           0x%08x\n", process.InheritablecapabilitiesMask);
+    printf("Bitmap Permitted Capabilities:             0x%08x\n", process.permittedCapabilitiesMask);
+    printf("Bitmap Effective Capabilities:             0x%08x\n", process.permittedCapabilitiesMask);
+    printf("Bitmap Of Bounding Capabilities:           0x%08x\n", process.boundingCapabilitiesMask);
+    printf("Bitmap Effective Capabilities:             0x%08x\n\n", process.permittedCapabilitiesMask);
+
+    printf("No New Priviledges:                            %10u\n", process.noNewPrivs);
+    printf("Seccomp Mode:                                  %10u\n", process.secComp);
+    printf("Speculation Store Bypass:                   %s\n", process.speculationStoreBypass);
+    printf("Speculation Indirect Branch:                 %s\n", process.speculationIndirectBranch);
+
+  }
+}
+
 /*
  * Retrieve all information that will be usefull in determining any
  * IOC's of a process possibly indicated in the /proc/[PID]/status file.
 */
-static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningProcess * process)
+static void readProcessStatusFile(TRunningProcess * process)
 {
   FILE * fileHandle = NULL;
   char line[400]    = {0};
@@ -40,7 +139,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
     return;
   }
 
-  printf("---------------------------------------------------------------------------------\n");
   while(fgets(line, 400, fileHandle))
   {
     uint64_t tmpValue = 0;
@@ -54,8 +152,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       pChar = progressPointerToData(pChar);
 
       strcpy(process->name, pChar);
-      printf("Process Name:                        %s\n", process->name);
-      printf("Process PID:                         %10u\n", process->PID);
     }
 
     else if(strncmp(line, "Umask", 5) == 0)
@@ -70,8 +166,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       strncpy(uMaskBuffer, pChar, 4);
       hexToDecimal(uMaskBuffer,&uMask);
       process->uMask = (uint16_t) uMask;
-
-      printf("Process Umask:                           0x%04x\n", process->uMask);
     }
 
     else if(strncmp(line, "State", 5) == 0)
@@ -80,8 +174,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       pChar = progressPointerToData(pChar);
       
       process->state = *pChar;
-
-      printf("State:                               %10c\n", process->state);
     }
 
     else if(strncmp(line, "Tgid", 4) == 0)
@@ -90,8 +182,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       pChar = progressPointerToData(pChar);
 
       process->tgid = atoi(pChar);
-
-      printf("Tgid:                                %10u\n", process->tgid);
     }
 
     else if(strncmp(line, "Ngid", 4) == 0)
@@ -107,8 +197,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->ngid = 0;
       }
-
-      printf("Ngid:                                %10u\n", process->ngid);
     }
 
     else if(strncmp(line, "PPid", 4) == 0)
@@ -120,8 +208,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->PPID = atoi(pChar);
       }
-
-      printf("PPid:                                %10u\n", process->PPID);
     }
 
     else if(strncmp(line, "TracerPid", 9) == 0)
@@ -133,8 +219,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->tracerPID = atoi(pChar);
       }
-
-      printf("Tracer PID:                          %10u\n", process->tracerPID);
     }
 
     else if(strncmp(line, "Uid", 4) == 0)
@@ -146,8 +230,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->uid = atoi(pChar);
       }
-
-      printf("Process UID:                         %10u\n", process->uid);
     }
 
     else if(strncmp(line, "Gid", 4) == 0)
@@ -159,8 +241,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->gid = atoi(pChar);
       }
-
-      printf("Process GID:                         %10u\n", process->gid);
     }
 
     else if(strncmp(line, "FDSize", 6) == 0)
@@ -176,8 +256,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->fileDescriptorSize = 0;
       }
-
-      printf("FD Size:                             %10u\n", process->fileDescriptorSize);
     }
 
 /*
@@ -206,19 +284,10 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       if(isdigit(*pChar))
       {
         process->kThread = atoi(pChar);
-        if(process->kThread == 1)
-        {
-          printf("Kernel Thread:                              YES\n\n");
-        }
-        else
-        {
-          printf("Kernel Thread:                               NO\n\n");
-        }
       }
       else
       {
         process->kThread = 0;
-        printf("Kernel Thread:                               NO\n\n");
       }
 
     }
@@ -236,8 +305,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmPeak = 0;
       }
-
-      printf("Virtual Memory Peak:                     %10u kB\n", process->vmPeak);
     }
 
     else if(strncmp(line, "VmSize", 6) == 0)
@@ -253,8 +320,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmSize = 0;
       }
-
-      printf("Virtual Memory Size:                     %10u kB\n", process->vmSize);
     }
 
     else if(strncmp(line, "VmLck", 5) == 0)
@@ -270,8 +335,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmLock = 0;
       }
-
-      printf("Virtual Locked Memory Size:              %10u kB\n", process->vmLock);
     }
 
     else if(strncmp(line, "VmPin", 5) == 0)
@@ -287,8 +350,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmPin = 0;
       }
-
-      printf("Virtual Pinned Memory Size:              %10u kB\n", process->vmPin);
     }
 
   //peak resident set size ("high water mark").
@@ -305,8 +366,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmHWM = 0;
       }
-
-      printf("Virtual Memory High Water Mark:          %10u kB\n", process->vmHWM);
     }
 
     else if(strncmp(line, "VmRSS", 5) == 0)
@@ -322,8 +381,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmRSS = 0;
       }
-
-      printf("Total Size Of Memory Portions:           %10u kB\n", process->vmRSS);
     }
 
     else if(strncmp(line, "RssAnon", 7) == 0)
@@ -339,8 +396,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->rssAnon = 0;
       }
-
-      printf("Size Of Resident Anonymous Memory:       %10u kB\n", process->rssAnon);
     }
 
     else if(strncmp(line, "RssFile", 7) == 0)
@@ -356,8 +411,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->rssFile = 0;
       }
-
-      printf("Size Of Resident File Mappings:          %10u kB\n", process->rssFile);
     }
 
     else if(strncmp(line, "RssShmem", 8) == 0)
@@ -373,8 +426,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->rssShmem = 0;
       }
-
-      printf("Size Of Resident Shmem Memory:           %10u kB\n", process->rssShmem);
     }
 
     else if(strncmp(line, "VmData", 6) == 0)
@@ -390,8 +441,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmData = 0;
       }
-
-      printf("Size Of Private Data Segments:           %10u kB\n", process->vmData);
     }
 
     else if(strncmp(line, "VmStk", 5) == 0)
@@ -407,8 +456,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmStack = 0;
       }
-
-      printf("Size Of Stack Segments:                  %10u kB\n", process->vmStack);
     }
 
     else if(strncmp(line, "VmExe", 5) == 0)
@@ -424,8 +471,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmExe = 0;
       }
-
-      printf("Size Of Text Segments:                   %10u kB\n", process->vmExe);
     }
     
     else if(strncmp(line, "VmLib", 5) == 0)
@@ -441,8 +486,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmLib = 0;
       }
-
-      printf("Size Of Shared Library Code:             %10u kB\n", process->vmLib);
     }
 
     else if(strncmp(line, "VmPTE", 5) == 0)
@@ -458,8 +501,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmPTE = 0;
       }
-
-      printf("Size Of Page Table Entries:              %10u kB\n", process->vmPTE);
     }
 
     else if(strncmp(line, "VmSwap", 6) == 0)
@@ -475,8 +516,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->vmSwap = 0;
       }
-
-      printf("Size Of Swap Memory Used By Anon Private Date:         %10u kB\n\n", process->vmSwap);
     }
 
     else if(strncmp(line, "CoreDumping", 11) == 0)
@@ -492,8 +531,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->coreDumping = 0;
       }
-
-      printf("Core Dumping:                        %10u\n", process->coreDumping);
     }
 
     else if(strncmp(line, "THP_enabled", 11) == 0)
@@ -509,8 +546,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->thpEnabled = 0;
       }
-
-      printf("THP_enabled:                         %10u\n", process->thpEnabled);
     }
 
     else if(strncmp(line, "Threads", 7) == 0)
@@ -526,8 +561,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->threads = 0;
       }
-
-      printf("Threads:                             %10u\n", process->threads);
     }
 
     else if(strncmp(line, "SigQ", 4) == 0)
@@ -536,8 +569,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       pChar = progressPointerToData(pChar);
 
       strcpy(process->signalQueue, pChar);
-
-      printf("Signal Queue:                           %s\n", process->signalQueue);
     }
 
     else if(strncmp(line, "SigPnd", 6) == 0)
@@ -553,8 +584,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->threadSignalsPendingMask = 0;
       }
-
-      printf("Bitmap Of Thread Signals Pending:            0x%08x\n", process->threadSignalsPendingMask);
     }
 
     else if(strncmp(line, "ShdPnd", 6) == 0)
@@ -570,8 +599,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->processSignalsPendingMask = 0;
       }
-
-      printf("Bitmap Of Process Signals Pending:           0x%08x\n", process->processSignalsPendingMask);
     }
 
     else if(strncmp(line, "SigBlk", 6) == 0)
@@ -587,8 +614,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->blockedSignalsMask = 0;
       }
-
-      printf("Bitmap Of Blocked Signals:                   0x%08x\n", process->blockedSignalsMask);
     }
 
     else if(strncmp(line, "SigIgn", 6) == 0)
@@ -604,8 +629,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->ignoredSignalsMask = 0;
       }
-
-      printf("Bitmap Of Ignored Signals:                   0x%08x\n", process->ignoredSignalsMask);
     }
 
     else if(strncmp(line, "SigCgt", 6) == 0)
@@ -621,8 +644,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->caughtSignalsMask = 0;
       }
-
-      printf("Bitmap Of Caught Signals:                    0x%08x\n", process->caughtSignalsMask);
     }
 
     else if(strncmp(line, "CapInh", 6) == 0)
@@ -638,8 +659,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->InheritablecapabilitiesMask = 0;
       }
-
-      printf("Bitmap Inheritable Capabilities:             0x%08x\n", process->InheritablecapabilitiesMask);
     }
 
     else if(strncmp(line, "CapPrm", 6) == 0)
@@ -655,8 +674,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->permittedCapabilitiesMask = 0;
       }
-
-      printf("Bitmap Permitted:                            0x%08x\n", process->permittedCapabilitiesMask);
     }
 
     else if(strncmp(line, "CapEff", 6) == 0)
@@ -672,8 +689,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->permittedCapabilitiesMask = 0;
       }
-
-      printf("Bitmap Effective Capabilities:               0x%08x\n", process->permittedCapabilitiesMask);
     }
 
     else if(strncmp(line, "CapBnd", 6) == 0)
@@ -689,8 +704,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->boundingCapabilitiesMask = 0;
       }
-
-      printf("Bitmap Of Bounding Capabilities:             0x%08x\n", process->boundingCapabilitiesMask);
     }
 
     else if(strncmp(line, "CapAmb", 6) == 0)
@@ -706,8 +719,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->permittedCapabilitiesMask = 0;
       }
-
-      printf("Bitmap Effective Capabilities:               0x%08x\n\n", process->permittedCapabilitiesMask);
     }
 
     else if(strncmp(line, "NoNewPrivs", 10) == 0)
@@ -723,8 +734,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->noNewPrivs = 0;
       }
-
-      printf("No New Priviledges:                            %10u\n", process->noNewPrivs);
     }
 
     else if(strncmp(line, "Seccomp", 7) == 0)
@@ -740,8 +749,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       {
         process->secComp = 0;
       }
-
-      printf("Seccomp Mode:                                  %10u\n", process->secComp);
     }
 
     else if(strncmp(line, "Speculation_Store_Bypass", 24) == 0)
@@ -750,8 +757,6 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       pChar = progressPointerToData(pChar);
 
       strcpy(process->speculationStoreBypass, pChar);
-
-      printf("Speculation Store Bypass:                   %s\n", process->speculationStoreBypass);
     }
 
     else if(strncmp(line, "SpeculationIndirectBranch", 25) == 0)
@@ -760,24 +765,20 @@ static TRunningProcess * retrieveRunningProcessData(TVector * vector, TRunningPr
       pChar = progressPointerToData(pChar);
 
       strcpy(process->speculationIndirectBranch, pChar);
-
-      printf("Speculation Indirect Branch:                 %s\n", process->speculationIndirectBranch);
     }
 
     memset(line, 0, sizeof(line));
     // printf("\n");
   }
 
-
   fclose(fileHandle);
-  return process;
 }
 
 int16_t retrieveRunningProcessesData()
 {
   DIR * procDir = opendir("/proc");
   struct dirent * ent;
-  TVector vector = {0};
+  TVector * vector = NULL;
   TRunningProcess * process = NULL;
   uint16_t numProcesses = 0;
   long pid;
@@ -789,7 +790,13 @@ int16_t retrieveRunningProcessesData()
       return ERR_DIRECTORY_OPERATION_FAILED;
   }
 
-  err = TVector_initVector(&vector, sizeof(TRunningProcess *), 300);
+  vector = malloc(sizeof(TVector));
+  if(vector == NULL)
+  {
+    return ERR_MEMORY_ALLOCATION_FAILED;
+  }
+
+  err = TVector_initVector(vector, sizeof(TRunningProcess), 300);
   if(err != ERR_NONE)
   {
     return err;
@@ -798,12 +805,8 @@ int16_t retrieveRunningProcessesData()
 
   while(ent = readdir(procDir))
   {
-
     if(isdigit(*ent->d_name))
     {
-
-
-
       pid = strtol(ent->d_name, NULL, 10);
       if(pid != 1)
       {
@@ -814,16 +817,17 @@ int16_t retrieveRunningProcessesData()
         }
         process->PID = pid;
 
-        process = retrieveRunningProcessData(&vector, process);
-        err = TVector_addElement(&vector, process);
+        readProcessStatusFile(process);
+        err = TVector_addElement(vector, process);
+
       }
-      
-      // printf("PID = %lu\n", pid);
       
       numProcesses += 1;
     }
-
   }
+  
+  printf("Printing Vector:\n");
+  printAllProcessStatus(vector);
   printf("\nNumber Of Processes: %lu", numProcesses);
 
   closedir(procDir);

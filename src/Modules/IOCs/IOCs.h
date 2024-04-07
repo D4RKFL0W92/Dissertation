@@ -14,10 +14,9 @@
 
 typedef struct RunningProcess
 {
-  char     processPath [PATH_MAX];
-
-  uint16_t groups [20];                    // Supplementary group list
   char     name   [256];                   // Filename of the executable.
+
+  // uint16_t groups [20];                    // Supplementary group list
   uint16_t uMask;                          // File mode creation mask.
 
   char     speculationStoreBypass    [40]; // Speculative store bypass mitigation status.
