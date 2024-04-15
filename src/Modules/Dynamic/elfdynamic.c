@@ -211,7 +211,7 @@ int8_t ProcessMemoryFromPID(pid_t pid, const void * offset, void * data, uint64_
     sleep(0.05); // This is an arbitrary value but it seems reasonable in its tracing speed.
 
     *writeWord = (long *) (data + i * sizeof(long));
-    *writeWord = ptrace(PTRACE_PEEKDATA, pid, (long *)writeWord, NULL);
+    *writeWord = ptrace(PTRACE_POKEDATA, pid, (long *)writeWord, NULL);
   }
 
   return ERR_NONE;
