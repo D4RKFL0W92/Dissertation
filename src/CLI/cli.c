@@ -33,7 +33,7 @@ int main(int argc, char *argv[], char *envp[])
 {
   FILE_HANDLE_T fileHandle     = {0};
   ELF_EXECUTABLE_T * elfHandle = NULL;
-  TVector * dataVector         = NULL;
+  TVector * processesVector    = NULL;
   enum BITS arch               = T_NO_ELF;
   MODE executionMode           = UNKNOWN_MODE;
   char pidStr[5]               = {0};
@@ -53,10 +53,42 @@ int main(int argc, char *argv[], char *envp[])
     /* Option: Print info about running processes on the system. */
     if(strcmp(argv[1], "-processes") == 0)
     {
-      err = retrieveRunningProcessesData();
-      exit(0);
+      processesVector = malloc(sizeof(TVector));
+      if(processesVector == NULL)
+      {
+        exit(ERR_MEMORY_ALLOCATION_FAILED);
+      }
+
+      err = TVector_initVector(processesVector, sizeof(TRunningProcess), 300);
+      if(err != ERR_NONE)
+      {
+        exit(err);
+      }
+      err = retrieveRunningProcessesData(processesVector);
+
+      printf("Printing Vector:\n");
+      printAllProcessStatus(processesVector);
+
+      TVector_deinitVector(processesVector);
+      free(processesVector);
     }
 
+  /* Debug_Option: Unit tests. */
+  #ifdef UNITTEST
+    else if(strcmp(argv[i], "-u") == 0 ||
+            strcmp(argv[i], "-unittest") == 0)
+    {
+      printf("Running Unit Tests...\n");
+      fileOpsTestSuite();
+      elfInfoTestSuite();
+      elfDynamicTestSuite();
+      ioTestSuite();
+      TVectorTestSuite();
+      printf("\nUnit Tests Successful.\n");
+    }
+  #endif
+
+    exit(err);
   }
   else if(argc < 4) // Takes only an option + 1 additional argument
   {
@@ -303,21 +335,6 @@ int main(int argc, char *argv[], char *envp[])
       }
 
       /* TODO: Find a way to print out any unknown commands the user provides. */
-
-    /* Debug_Option: Unit tests. */
-    #ifdef UNITTEST
-      if(strcmp(argv[i], "-u") == 0 ||
-        strcmp(argv[i], "-unittest") == 0)
-      {
-        printf("Running Unit Tests...\n");
-        fileOpsTestSuite();
-        elfInfoTestSuite();
-        elfDynamicTestSuite();
-        ioTestSuite();
-        TVectorTestSuite();
-        printf("\nUnit Tests Successful.\n");
-      }
-    #endif
 
     i++; // Increment the argv pointer.
     }

@@ -21,11 +21,11 @@
 
 typedef struct VECTOR
 {
-    uint32_t currElement;        /* Index to current selected element. */
     uint32_t numElements;        /* Number of currently initialised elements. */
     size_t   elementSize;        /* Size in bytes of a single entry. */
     uint32_t totalFreeElements;  /* Total size of allocated memory (measured in how many elements it can store). */
-    void *   pData;
+    void *   pData;              /* Pointer to vector data, if this stores dynamically allocated memory
+                                    pointer then they must be free'd seperately. */
 } TVector;
 
 int8_t TVector_initVector(TVector * vec, size_t elementSize, uint32_t initialElementCount);

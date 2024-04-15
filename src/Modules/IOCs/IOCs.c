@@ -1,7 +1,9 @@
 #include "./IOCs.h"
 
+const char ** PUA = {"bash", "sh"};
+
 /*
- * A simmple helper function to help progress the character pointer on a given line
+ * A simple helper function to help progress the character pointer on a given line
  * provided from the processes /proc/[PID]/status file.
 */
 static char * progressPointerToData(char * pChar)
@@ -18,7 +20,7 @@ static char * progressPointerToData(char * pChar)
   return pChar;
 }
 
-static void printAllProcessStatus(TVector * vector)
+void printAllProcessStatus(TVector * vector)
 {
   TRunningProcess process = {0};
 
@@ -114,6 +116,7 @@ static void printAllProcessStatus(TVector * vector)
     printf("Speculation Store Bypass:                   %s\n", process.speculationStoreBypass);
     printf("Speculation Indirect Branch:                 %s\n", process.speculationIndirectBranch);
 
+    memset(&process, 0, sizeof(TRunningProcess));
   }
 }
 
@@ -121,7 +124,7 @@ static void printAllProcessStatus(TVector * vector)
  * Retrieve all information that will be usefull in determining any
  * IOC's of a process possibly indicated in the /proc/[PID]/status file.
 */
-static void readProcessStatusFile(TRunningProcess * process)
+static int16_t readProcessStatusFile(TRunningProcess * process)
 {
   FILE * fileHandle = NULL;
   char line[400]    = {0};
@@ -130,21 +133,23 @@ static void readProcessStatusFile(TRunningProcess * process)
   uint16_t tgid     =  0;
   uint8_t err       = ERR_NONE;
 
+  if(process == NULL)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+
   snprintf(path, 40, "/proc/%ld/status", process->PID);
 
   fileHandle = fopen(path, "r");
   if(fileHandle == NULL)
   {
     printf("Try Running With sudo As Certain Processes Require Root Priviledges.\n");
-    return;
+    return ERR_FILE_OPERATION_FAILED;
   }
 
   while(fgets(line, 400, fileHandle))
   {
-    uint64_t tmpValue = 0;
-    char tmpBuffer[16];
     char * pChar = NULL;
-
 
     if(strncmp(line, "Name", 4) == 0)
     {
@@ -156,7 +161,7 @@ static void readProcessStatusFile(TRunningProcess * process)
 
     else if(strncmp(line, "Umask", 5) == 0)
     {
-      char uMaskBuffer[5];
+      char uMaskBuffer[5] = {0};
       uint16_t uMask = 0;
 
       pChar = &line[5];
@@ -768,18 +773,17 @@ static void readProcessStatusFile(TRunningProcess * process)
     }
 
     memset(line, 0, sizeof(line));
-    // printf("\n");
   }
 
   fclose(fileHandle);
+  return ERR_NONE;
 }
 
-int16_t retrieveRunningProcessesData()
+int16_t retrieveRunningProcessesData(TVector * vector)
 {
   DIR * procDir = opendir("/proc");
   struct dirent * ent;
-  TVector * vector = NULL;
-  TRunningProcess * process = NULL;
+  TRunningProcess  process = {0};
   uint16_t numProcesses = 0;
   long pid;
   uint8_t err = ERR_NONE;
@@ -790,19 +794,6 @@ int16_t retrieveRunningProcessesData()
       return ERR_DIRECTORY_OPERATION_FAILED;
   }
 
-  vector = malloc(sizeof(TVector));
-  if(vector == NULL)
-  {
-    return ERR_MEMORY_ALLOCATION_FAILED;
-  }
-
-  err = TVector_initVector(vector, sizeof(TRunningProcess), 300);
-  if(err != ERR_NONE)
-  {
-    return err;
-  }
-
-
   while(ent = readdir(procDir))
   {
     if(isdigit(*ent->d_name))
@@ -810,25 +801,23 @@ int16_t retrieveRunningProcessesData()
       pid = strtol(ent->d_name, NULL, 10);
       if(pid != 1)
       {
-        process = malloc(sizeof(TRunningProcess));
-        if(process == NULL)
-        {
-          return ERR_MEMORY_ALLOCATION_FAILED;
-        }
-        process->PID = pid;
+        // process = malloc(sizeof(TRunningProcess));
+        // if(process == NULL)
+        // {
+        //   return ERR_MEMORY_ALLOCATION_FAILED;
+        // }
 
-        readProcessStatusFile(process);
-        err = TVector_addElement(vector, process);
+        process.PID = pid;
 
+        readProcessStatusFile(&process);
+        err = TVector_addElement(vector, &process);
+
+        numProcesses += 1;
       }
-      
-      numProcesses += 1;
+      memset(&process, 0, sizeof(TRunningProcess));
     }
   }
-  
-  printf("Printing Vector:\n");
-  printAllProcessStatus(vector);
-  printf("\nNumber Of Processes: %lu", numProcesses);
+  printf("\nNumber Of Processes: %u\n\n", numProcesses);
 
   closedir(procDir);
   return ERR_NONE;

@@ -1,3 +1,15 @@
+/*
+ *   Copyright (c) [2023], Calum Dawson
+ *   All rights reserved.
+ *   This code is the exclusive property of Calum Dawson.
+ *   Any unauthorized use or reproduction without the explicit
+ *   permission of Calum Dawson is strictly prohibited.
+ *   Unauthorized copying of this file, via any medium, is
+ *   strictly prohibited.
+ *   Proprietary and confidential.
+ *   Written by Calum Dawson calumjamesdawson@gmail.com, [2024].
+ */
+
 #ifndef _IOCS_
 #define _IOCS_
 
@@ -100,5 +112,7 @@ typedef struct RunningProcess
  * RETURN: Returns an ERROR/WARNING code indicating the
  *         successfulness of reading the running processes.
 */
-int16_t retrieveRunningProcessesData();
+int16_t retrieveRunningProcessesData(TVector * vector);
+
+void printAllProcessStatus(TVector * vector);
 #endif

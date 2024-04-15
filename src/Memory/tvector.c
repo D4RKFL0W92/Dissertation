@@ -33,7 +33,6 @@ int8_t TVector_initVector(TVector * vec, size_t elementSize, uint32_t initialEle
         return ERR_MEMORY_ALLOCATION_FAILED;
     }
 
-    vec->currElement = 0;
     vec->numElements = 0;
     vec->elementSize = elementSize;
     vec->totalFreeElements = initialElementCount;
@@ -123,17 +122,11 @@ int8_t TVector_removeElement(TVector * vec, uint32_t index)
 
 int8_t TVector_deinitVector(TVector * vec)
 {
-    if(vec->elementSize == 0 || vec->numElements == 0 ||
-       vec->totalFreeElements == 0 || vec->pData == NULL)
+    if(vec == NULL || vec->pData == NULL || vec->elementSize == 0 ||
+       vec->numElements == 0 || vec->totalFreeElements == 0)
     {
         return ERR_INVALID_ARGUMENT; // Not really a problem.
     }
-
-    // TODO: Do we really need to set these to zero??
-    vec->currElement       = 0;
-    vec->elementSize       = 0;
-    vec->numElements       = 0;
-    vec->totalFreeElements = 0;
 
     free(vec->pData);
     vec->pData = NULL;
@@ -150,7 +143,6 @@ static void test_TVector_initVector_zeroInitialSize()
     err = TVector_initVector(&vec, sizeof(int), 0);
     assert(err == ERR_NONE);
     assert(vec.pData != NULL);
-    assert(vec.currElement == 0);
     assert(vec.numElements == 0);
     assert(vec.elementSize == sizeof(int));
     assert(vec.totalFreeElements == 4);
