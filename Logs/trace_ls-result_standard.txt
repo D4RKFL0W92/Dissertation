@@ -1,0 +1,529 @@
+Running Trace On Untrusted Software Is A Security Risk
+Be Sure To Only Run In A Sandboxed Environment.
+Are You Sure You Would Like To Continue?  Y/N y
+execve("/bin/ls")
+
+Entering sycall number: 59
+execve()
+Returned With: 0
+
+Entering sycall number: 12
+brk(brk=0x00000000)
+Returned With: -38
+
+Entering sycall number: 12
+brk(brk=0x00000000)
+Returned With: -596701184
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x00002000, protections=0x00000003, flags=0x00000022, fd=-1, offset=0x00000000)
+Flags:  MAP_PRIVATE  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x00002000, protections=0x00000003, flags=0x00000022, fd=-1, offset=0x00000000)
+Flags:  MAP_PRIVATE  MAP_PRIVATE 
+Returned With: 1053806592
+
+Entering sycall number: 21
+access(filename="/etc/ld.so.preload", mode=0x00000004)
+Returned With: -38
+
+Entering sycall number: 21
+access(filename="/etc/ld.so.preload", mode=0x00000004)
+Returned With: -2
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/etc/ld.so.cache", flags=0x00080000, mode=0x00000000)
+Returned With: -38
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/etc/ld.so.cache", flags=0x00080000, mode=0x00000000)
+Returned With: 4
+
+Entering sycall number: 262
+Entering sycall number: 262
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x0001e773, protections=0x00000001, flags=0x00000002, fd=4, offset=0x00000000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x0001e773, protections=0x00000001, flags=0x00000002, fd=4, offset=0x00000000)
+Flags:  MAP_PRIVATE 
+Returned With: 1053679616
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: 0
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/lib/x86_64-linux-gnu/libselinux.so.1", flags=0x00080000, mode=0x00000000)
+Returned With: -38
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/lib/x86_64-linux-gnu/libselinux.so.1", flags=0x00080000, mode=0x00000000)
+Returned With: 4
+
+Entering sycall number: 0
+read(fd=4, buffer-addr=0x340, count=832)
+Returned With: -38
+
+Entering sycall number: 262
+Entering sycall number: 262
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x0002e6d0, protections=0x00000001, flags=0x00000802, fd=4, offset=0x00000000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x0002e6d0, protections=0x00000001, flags=0x00000802, fd=4, offset=0x00000000)
+Flags:  MAP_PRIVATE 
+Returned With: 1053487104
+
+Entering sycall number: 9
+mmap(address=0x3ecb6000, length=0x0001c000, protections=0x00000005, flags=0x00000812, fd=4, offset=0x00007000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3ecb6000, length=0x0001c000, protections=0x00000005, flags=0x00000812, fd=4, offset=0x00007000)
+Flags:  MAP_PRIVATE 
+Returned With: 1053515776
+
+Entering sycall number: 9
+mmap(address=0x3ecd2000, length=0x00008000, protections=0x00000001, flags=0x00000812, fd=4, offset=0x00023000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3ecd2000, length=0x00008000, protections=0x00000001, flags=0x00000812, fd=4, offset=0x00023000)
+Flags:  MAP_PRIVATE 
+Returned With: 1053630464
+
+Entering sycall number: 9
+mmap(address=0x3ecda000, length=0x00002000, protections=0x00000003, flags=0x00000812, fd=4, offset=0x0002b000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3ecda000, length=0x00002000, protections=0x00000003, flags=0x00000812, fd=4, offset=0x0002b000)
+Flags:  MAP_PRIVATE 
+Returned With: 1053663232
+
+Entering sycall number: 9
+mmap(address=0x3ecdc000, length=0x000016d0, protections=0x00000003, flags=0x00000032, fd=-1, offset=0x00000000)
+Flags:  MAP_PRIVATE  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3ecdc000, length=0x000016d0, protections=0x00000003, flags=0x00000032, fd=-1, offset=0x00000000)
+Flags:  MAP_PRIVATE  MAP_PRIVATE 
+Returned With: 1053671424
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: 0
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/lib/x86_64-linux-gnu/libc.so.6", flags=0x00080000, mode=0x00000000)
+Returned With: -38
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/lib/x86_64-linux-gnu/libc.so.6", flags=0x00080000, mode=0x00000000)
+Returned With: 4
+
+Entering sycall number: 0
+read(fd=4, buffer-addr=0x340, count=832)
+Returned With: -38
+
+Entering sycall number: 17
+pread64(fd=4, buff-add=0x7ffd69ec2800, count=0x00000310, position=0x40)
+Returned With: -38
+
+Entering sycall number: 17
+pread64(fd=4, buff-add=0x7ffd69ec2800, count=0x00000310, position=0x40)
+Returned With: 784
+
+Entering sycall number: 262
+Entering sycall number: 262
+Entering sycall number: 17
+pread64(fd=4, buff-add=0x7ffd69ec26d0, count=0x00000310, position=0x40)
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x001e1f50, protections=0x00000001, flags=0x00000802, fd=4, offset=0x00000000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x001e1f50, protections=0x00000001, flags=0x00000802, fd=4, offset=0x00000000)
+Flags:  MAP_PRIVATE 
+Returned With: 1051512832
+
+Entering sycall number: 9
+mmap(address=0x3eaf3000, length=0x00155000, protections=0x00000005, flags=0x00000812, fd=4, offset=0x00026000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3eaf3000, length=0x00155000, protections=0x00000005, flags=0x00000812, fd=4, offset=0x00026000)
+Flags:  MAP_PRIVATE 
+Returned With: 1051668480
+
+Entering sycall number: 9
+mmap(address=0x3ec48000, length=0x00054000, protections=0x00000001, flags=0x00000812, fd=4, offset=0x0017b000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3ec48000, length=0x00054000, protections=0x00000001, flags=0x00000812, fd=4, offset=0x0017b000)
+Flags:  MAP_PRIVATE 
+Returned With: 1053065216
+
+Entering sycall number: 9
+mmap(address=0x3ec9c000, length=0x00006000, protections=0x00000003, flags=0x00000812, fd=4, offset=0x001cf000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3ec9c000, length=0x00006000, protections=0x00000003, flags=0x00000812, fd=4, offset=0x001cf000)
+Flags:  MAP_PRIVATE 
+Returned With: 1053409280
+
+Entering sycall number: 9
+mmap(address=0x3eca2000, length=0x0000cf50, protections=0x00000003, flags=0x00000032, fd=-1, offset=0x00000000)
+Flags:  MAP_PRIVATE  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3eca2000, length=0x0000cf50, protections=0x00000003, flags=0x00000032, fd=-1, offset=0x00000000)
+Flags:  MAP_PRIVATE  MAP_PRIVATE 
+Returned With: 1053433856
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: 0
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/lib/x86_64-linux-gnu/libpcre2-8.so.0", flags=0x00080000, mode=0x00000000)
+Returned With: -38
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/lib/x86_64-linux-gnu/libpcre2-8.so.0", flags=0x00080000, mode=0x00000000)
+Returned With: 4
+
+Entering sycall number: 0
+read(fd=4, buffer-addr=0x340, count=832)
+Returned With: -38
+
+Entering sycall number: 262
+Entering sycall number: 262
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x0009a388, protections=0x00000001, flags=0x00000802, fd=4, offset=0x00000000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x0009a388, protections=0x00000001, flags=0x00000802, fd=4, offset=0x00000000)
+Flags:  MAP_PRIVATE 
+Returned With: 1050877952
+
+Entering sycall number: 9
+mmap(address=0x3ea34000, length=0x0006c000, protections=0x00000005, flags=0x00000812, fd=4, offset=0x00002000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3ea34000, length=0x0006c000, protections=0x00000005, flags=0x00000812, fd=4, offset=0x00002000)
+Flags:  MAP_PRIVATE 
+Returned With: 1050886144
+
+Entering sycall number: 9
+mmap(address=0x3eaa0000, length=0x0002b000, protections=0x00000001, flags=0x00000812, fd=4, offset=0x0006e000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3eaa0000, length=0x0002b000, protections=0x00000001, flags=0x00000812, fd=4, offset=0x0006e000)
+Flags:  MAP_PRIVATE 
+Returned With: 1051328512
+
+Entering sycall number: 9
+mmap(address=0x3eacb000, length=0x00002000, protections=0x00000003, flags=0x00000812, fd=4, offset=0x00099000)
+Flags:  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x3eacb000, length=0x00002000, protections=0x00000003, flags=0x00000812, fd=4, offset=0x00099000)
+Flags:  MAP_PRIVATE 
+Returned With: 1051504640
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: 0
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x00003000, protections=0x00000003, flags=0x00000022, fd=-1, offset=0x00000000)
+Flags:  MAP_PRIVATE  MAP_PRIVATE 
+Returned With: -38
+
+Entering sycall number: 9
+mmap(address=0x00000000, length=0x00003000, protections=0x00000003, flags=0x00000022, fd=-1, offset=0x00000000)
+Flags:  MAP_PRIVATE  MAP_PRIVATE 
+Returned With: 1050865664
+
+Entering sycall number: 158
+Entering sycall number: 158
+Entering sycall number: 218
+set_tid_address(tid=0)
+Returned With: -38
+
+Entering sycall number: 273
+set_robust_list(list-head=0x7eff3ea2fae0, len=24)
+Returned With: -38
+
+Entering sycall number: 273
+set_robust_list(list-head=0x7eff3ea2fae0, len=24)
+Returned With: 0
+
+Entering sycall number: 334
+Entering sycall number: 334
+Entering sycall number: 10
+mprotect(start=0x7eff3ec9c000, size=0x00004000, protections=0x00000001)
+Returned With: -38
+
+Entering sycall number: 10
+mprotect(start=0x7eff3ec9c000, size=0x00004000, protections=0x00000001)
+Returned With: 0
+
+Entering sycall number: 10
+mprotect(start=0x7eff3eacb000, size=0x00001000, protections=0x00000001)
+Returned With: -38
+
+Entering sycall number: 10
+mprotect(start=0x7eff3eacb000, size=0x00001000, protections=0x00000001)
+Returned With: 0
+
+Entering sycall number: 10
+mprotect(start=0x7eff3ecda000, size=0x00001000, protections=0x00000001)
+Returned With: -38
+
+Entering sycall number: 10
+mprotect(start=0x7eff3ecda000, size=0x00001000, protections=0x00000001)
+Returned With: 0
+
+Entering sycall number: 10
+mprotect(start=0x5617db5df000, size=0x00001000, protections=0x00000001)
+Returned With: -38
+
+Entering sycall number: 10
+mprotect(start=0x5617db5df000, size=0x00001000, protections=0x00000001)
+Returned With: 0
+
+Entering sycall number: 10
+mprotect(start=0x7eff3ed2f000, size=0x00002000, protections=0x00000001)
+Returned With: -38
+
+Entering sycall number: 10
+mprotect(start=0x7eff3ed2f000, size=0x00002000, protections=0x00000001)
+Returned With: 0
+
+Entering sycall number: 302
+prlimit64(pid=0, resource=3, newLimit=NULL, oldLimit=NULL)
+Returned With: -38
+
+Entering sycall number: 302
+prlimit64(pid=0, resource=3, newLimit=NULL, oldLimit=NULL)
+Returned With: 0
+
+Entering sycall number: 11
+munmap(address=0x7eff3ecde000, size=0x0001e773)
+Returned With: -38
+
+Entering sycall number: 11
+munmap(address=0x7eff3ecde000, size=0x0001e773)
+Returned With: 0
+
+Entering sycall number: 137
+statfs(path="/sys/fs/selinux")
+Returned With: -38
+
+Entering sycall number: 137
+statfs(path="/sys/fs/selinux")
+Returned With: -2
+
+Entering sycall number: 137
+statfs(path="/selinux")
+Returned With: -38
+
+Entering sycall number: 137
+statfs(path="/selinux")
+Returned With: -2
+
+Entering sycall number: 318
+getrandom(buffer-addr=0x7eff3eca7498, buffer-length=8, flags=0x00000001)
+Data:
+
+         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+--------------------------------------------------------
+00000000 ff ff ff ff ff ff ff ff 00 00 00 00 00 00 00 00  |................|
+Returned With: -38
+
+Entering sycall number: 318
+getrandom(buffer-addr=0x7eff3eca7498, buffer-length=8, flags=0x00000001)
+Data:
+
+         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+--------------------------------------------------------
+00000000 ff ff ff ff ff ff ff ff 00 00 00 00 00 00 00 00  |................|
+Returned With: 8
+
+Entering sycall number: 12
+brk(brk=0x00000000)
+Returned With: -38
+
+Entering sycall number: 12
+brk(brk=0x00000000)
+Returned With: -596701184
+
+Entering sycall number: 12
+brk(brk=0xdc712000)
+Returned With: -38
+
+Entering sycall number: 12
+brk(brk=0xdc712000)
+Returned With: -596566016
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/proc/filesystems", flags=0x00080000, mode=0x00000000)
+Returned With: -38
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename="/proc/filesystems", flags=0x00080000, mode=0x00000000)
+Returned With: 4
+
+Entering sycall number: 262
+Entering sycall number: 262
+Entering sycall number: 0
+read(fd=4, buffer-addr=0x400, count=1024)
+Returned With: -38
+
+Entering sycall number: 0
+read(fd=4, buffer-addr=0x400, count=1024)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: 0
+
+Entering sycall number: 21
+access(filename="/etc/selinux/config", mode=0x00000000)
+Returned With: -38
+
+Entering sycall number: 21
+access(filename="/etc/selinux/config", mode=0x00000000)
+Returned With: -2
+
+Entering sycall number: 16
+ioctl(fd=1, cmd=21505, arg=140726380541808)
+Returned With: -38
+
+Entering sycall number: 16
+ioctl(fd=1, cmd=21505, arg=140726380541808)
+Returned With: 0
+
+Entering sycall number: 16
+ioctl(fd=1, cmd=21523, arg=140726380542048)
+Returned With: -38
+
+Entering sycall number: 16
+ioctl(fd=1, cmd=21523, arg=140726380542048)
+Returned With: 0
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename=".", flags=0x00090800, mode=0x00000000)
+Returned With: -38
+
+Entering sycall number: 257
+openat(dir-fd=-100, filename=".", flags=0x00090800, mode=0x00000000)
+Returned With: 4
+
+Entering sycall number: 262
+Entering sycall number: 262
+Entering sycall number: 217
+getdents64(fd=4, dir_Inode=0, dir_offset=0x00000000, dirent-length=0, dir-name="", count=0)
+Returned With: -38
+
+Entering sycall number: 217
+getdents64(fd=4, dir_Inode=2626462, dir_offset=0xd8056745, dirent-length=32, dir-name=dev-l.���", count=0)
+Returned With: 224
+
+Entering sycall number: 217
+getdents64(fd=4, dir_Inode=2626462, dir_offset=0xd8056745, dirent-length=32, dir-name=dev-l.���", count=0)
+Returned With: -38
+
+Entering sycall number: 217
+getdents64(fd=4, dir_Inode=2626462, dir_offset=0xd8056745, dirent-length=32, dir-name=dev-l.���", count=0)
+Returned With: 0
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=4)
+Returned With: 0
+
+Entering sycall number: 262
+Entering sycall number: 262
+Entering sycall number: 1
+write(fd=1, buffer="Backup_FinalProduct  Hatch-Turtle.py  Turtle-Scan  build.sh  dev-log.log
+", count=73)
+Returned With: -38
+
+Backup_FinalProduct  Hatch-Turtle.py  Turtle-Scan  build.sh  dev-log.log
+Entering sycall number: 1
+write(fd=1, buffer="Backup_FinalProduct  Hatch-Turtle.py  Turtle-Scan  build.sh  dev-log.log
+", count=73)
+Returned With: 73
+
+Entering sycall number: 3
+close(fd=1)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=1)
+Returned With: 0
+
+Entering sycall number: 3
+close(fd=2)
+Returned With: -38
+
+Entering sycall number: 3
+close(fd=2)
+Returned With: 0
+
+Entering sycall number: 231
+exit_group(errror-code=0)
+Returned With: -38	(overrun-time)

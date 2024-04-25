@@ -1,12 +1,12 @@
 #include "./IOCs.h"
 
-const char ** PUA = {"bash", "sh"};
+static const char ** PUA = {"bash", "sh", "zsh", "nmap", "ssh"};
 
 /*
  * A simple helper function to help progress the character pointer on a given line
  * provided from the processes /proc/[PID]/status file.
 */
-static char * progressPointerToData(char * pChar)
+static char * progressPointerToData(const char * pChar)
 {
   if(pChar == NULL)
   {
@@ -20,7 +20,75 @@ static char * progressPointerToData(char * pChar)
   return pChar;
 }
 
-void printAllProcessStatus(TVector * vector)
+static uint8_t isIPv4Octet(const char * str)
+{
+  uint8_t i = 0;
+  if(str == NULL)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+
+  while( (str[i] >= 0x30 && str[i] <= 0x39) && i < 3 )
+  {
+    ++i;
+  }
+
+  return i;
+}
+
+BOOL isIPv4Addr(const char * str)
+{
+  uint8_t charIndex = 0;
+  uint8_t octLen = 0;
+
+  charIndex = isIPv4Octet(str);
+  if(charIndex == 0 || charIndex > 3)
+  {
+    return FALSE;
+  }
+
+  if(str[charIndex] != '.')
+  {
+    return FALSE;
+  }
+  ++charIndex;
+  
+  octLen = isIPv4Octet(str[charIndex]);
+  if(octLen == 0 || octLen > 3)
+  {
+    return FALSE;
+  }
+  charIndex += octLen;
+  octLen = 0;
+
+  if(str[charIndex] != '.')
+  {
+    return FALSE;
+  }
+
+  octLen = isIPv4Octet(str[charIndex]);
+  if(octLen == 0 || octLen > 3)
+  {
+    return FALSE;
+  }
+  charIndex += octLen;
+  octLen = 0;
+
+  if(str[charIndex] != '.')
+  {
+    return FALSE;
+  }
+
+  octLen = isIPv4Octet(str[charIndex]);
+  if(octLen == 0 || octLen > 3)
+  {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+void printAllProcessStatus(const TVector * vector)
 {
   TRunningProcess process = {0};
 
@@ -822,3 +890,39 @@ int16_t retrieveRunningProcessesData(TVector * vector)
   closedir(procDir);
   return ERR_NONE;
 }
+
+
+#ifdef UNITTEST
+
+
+static void unittest_isIPv4Addr()
+{
+  char t1[] = "255.1.128.0";
+  char t2[] = "28.1.128.0";
+  char t3[] = "10.1.128.128";
+  char t4[] = "10.255.128.0";
+
+  // char f1[] = "AAADR";
+  // char f2[] = "abc.def.ghi.jkl";
+  // char f3[] = "TEST.STRING";
+  // char f4[] = "Random";
+
+  assert(isIPv4Addr(t1) == TRUE);
+  assert(isIPv4Addr(t2) == TRUE);
+  assert(isIPv4Addr(t3) == TRUE);
+  assert(isIPv4Addr(t4) == TRUE);
+
+  // assert(isIPv4Addr(f1) == FALSE);
+  // assert(isIPv4Addr(f2) == FALSE);
+  // assert(isIPv4Addr(f3) == FALSE);
+  // assert(isIPv4Addr(f4) == FALSE);
+
+  printf("\nUnit Test unittest_isIPv4Addr() Ran Successfully\n");
+}
+
+void IOCsTestSuite()
+{
+  unittest_isIPv4Addr();
+}
+
+#endif /* UNITTEST */

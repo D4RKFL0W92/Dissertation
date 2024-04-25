@@ -25,6 +25,7 @@
 #include <linux/limits.h>
 #include <openssl/sha.h>
 #include "../Types/turtle_types.h"
+#include "../Memory/tvector.h"
 #include "../Logging/logging.h"
 
 typedef struct FILE_HANDLE
@@ -115,7 +116,7 @@ int8_t printSHA1OfFile(const char* filepath);
 */
 int8_t printSHA256OfFile(const char* filepath);
 
-int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen);
+int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen, TVector * vector);
 
 /* A simple function that scans a given file for ASCII
  * printable strings.
@@ -126,7 +127,7 @@ int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen);
  * Return:  Returns an error code indicating the success or
  *          failure of the function.
 */
-int8_t scanFileForStrings(char* filepath, uint16_t toFindLen);
+int8_t scanFileForStrings(char* filepath, uint16_t toFindLen, TVector * vector);
 
 /* Dumps a given amount of bytes in hex from a given offset.
  * Prints the bytes and the ASCII representation if there is one.

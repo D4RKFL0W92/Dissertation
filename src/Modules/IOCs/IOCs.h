@@ -114,5 +114,11 @@ typedef struct RunningProcess
 */
 int16_t retrieveRunningProcessesData(TVector * vector);
 
-void printAllProcessStatus(TVector * vector);
+BOOL isIPv4Addr(const char * str);
+void printAllProcessStatus(const TVector * vector);
+
+#ifdef UNITTEST
+void IOCsTestSuite();
+#endif /* UNITTEST */
+
 #endif

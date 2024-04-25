@@ -45,12 +45,47 @@ int main(int argc, char *argv[], char *envp[])
 
   if(argc < 2 || strcmp(argv[1], "-h") == 0)
   {
-    printf(helpMenu);
-    exit(-1);
+    printf("\n%s\n", helpMenu);
+    exit(ERR_INVALID_ARGUMENT);
   }
-  else if(argc <= 2)
+
+  
+  /* Option: Dump hex bytes from given offset.*/
+  else if(strcmp(argv[1], "-hd") == 0)
   {
-    /* Option: Print info about running processes on the system. */
+    uint8_t err = ERR_NONE;
+    uint64_t start = 0;
+    uint64_t uCount = 0;
+
+    err = stringToInteger(argv[2], &start);
+    if(err != ERR_NONE)
+    {
+      printf("Byte Offset Provided In Incorrect Format.\n");
+      exit(err);
+    }
+
+    err = stringToInteger(argv[3], &uCount);
+    if(err != ERR_NONE)
+    {
+      printf("Count Provided In Incorrect Format.\n");
+      exit(err);
+    }
+
+    if(uCount == 0)
+    {
+      printf("Count Must Be Greater Than Zero.\n");
+      exit(ERR_INVALID_ARGUMENT);
+    }
+    
+    err = dumpHexBytesFromFile(argv[argc-1], start, uCount);
+    exit(err);
+  }
+
+  else if(argc <= 3)
+  {
+    /* Option: Print info about running processes on the system.
+     * Usage: <Turtle-Scan> <-processes>
+    */
     if(strcmp(argv[1], "-processes") == 0)
     {
       processesVector = malloc(sizeof(TVector));
@@ -71,7 +106,45 @@ int main(int argc, char *argv[], char *envp[])
 
       TVector_deinitVector(processesVector);
       free(processesVector);
+      exit(err);
     }
+
+    /* Option: Convert a hex passed as argument after switch value to decimal.
+     * <Turtle-Scan> <Hexidecimal number in the format 0xaa1234ff> it's not case insensitive.
+    */
+    else if((strcmp(argv[1], "-h2d")) == 0)
+    {
+      uint64_t result = 0;
+      
+      err = hexToDecimal(argv[2], &result);
+      printf("Result: %llu\n", result);
+      exit(err);
+    }
+
+
+    /* Option: Print SHA1 of given file.
+     * <Turtle-Scan> <-sha1> <file>*/
+    else if(strcmp(argv[1], "-sha1") == 0)
+    {
+      if(printSHA1OfFile(argv[argc-1]) == ERR_UNKNOWN)
+      {
+        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
+        exit(ERR_UNKNOWN);
+      }
+      exit(0);
+    }
+
+    else if(strcmp(argv[1], "-sha256") == 0)
+    {
+      if(printSHA256OfFile(argv[argc-1]) == ERR_UNKNOWN)
+      {
+        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
+        exit(ERR_UNKNOWN);
+      }
+      exit(0);
+    }
+
+
 
   /* Debug_Option: Unit tests. */
   #ifdef UNITTEST
@@ -84,113 +157,16 @@ int main(int argc, char *argv[], char *envp[])
       elfDynamicTestSuite();
       ioTestSuite();
       TVectorTestSuite();
+      // IOCsTestSuite();
       printf("\nUnit Tests Successful.\n");
     }
   #endif
 
-    exit(err);
-  }
-  else if(argc < 4) // Takes only an option + 1 additional argument
-  {
   }
 
-  else
+
+  if(argc >= 3)
   {
-    /*
-     * Check for options with specific ordering to their arguments.
-    */
-
-    /* Option: Print SHA1 of given file. */
-    if(strcmp(argv[1], "-sha1") == 0)
-    {
-      if(printSHA1OfFile(argv[argc-1]) == ERR_UNKNOWN)
-      {
-        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
-        exit(-1);
-      }
-      exit(0);
-    }
-
-    else if(strcmp(argv[1], "-sha256") == 0)
-    {
-      if(printSHA256OfFile(argv[argc-1]) == ERR_UNKNOWN)
-      {
-        printf("Unable to calculate hash for %s.\n", argv[argc-1]);
-        exit(-1);
-      }
-      exit(0);
-    }
-
-    /* Option: Dump hex bytes from given offset.*/
-    else if(strcmp(argv[1], "-hd") == 0 &&
-            executionMode == UNKNOWN_MODE)
-    {
-      // Only makes sense for UNKNOWN_MODE
-      uint8_t err = ERR_NONE;
-      uint64_t start = 0;
-      uint64_t uCount = 0;
-
-      err = stringToInteger(argv[2], &start);
-
-      if(err != ERR_NONE)
-      {
-        printf("Byte Offset Provided In Incorrect Format.\n");
-        exit(1);
-      }
-
-      err = stringToInteger(argv[3], &uCount);
-
-      if(err != ERR_NONE)
-      {
-        printf("Count Provided In Incorrect Format.\n");
-        exit(1);
-      }
-      if(uCount == 0)
-      {
-        printf("Count Must Be Greater Than Zero.\n");
-      }
-      
-      err = dumpHexBytesFromFile(argv[argc-1], start, uCount);
-      exit(err);
-    }
-
-    /*
-     * Option: Lookup address of ELF symbol.
-     * Usage: <Program> <-lookup> <symbol> <program-name>
-    */
-    else if(strcmp(argv[1], "-lookup") == 0)
-    {
-      uint64_t addr;
-
-      if(argv[2] == NULL) // TODO: Could we make some check that it is a sensical name
-      {
-        printf("Please Provide A Symbol Name To Lookup.\n");
-        exit(0);
-      }
-
-      if(argv[argc-1] == NULL)
-      {
-        printf("Please provide The Name Of An Executable File.\n");
-      }
-
-      err = mapFile_ElfHandle(argv[argc-1], &elfHandle);
-
-      addr = lookupSymbolAddress(elfHandle, argv[2]);
-      printf("<%s>\t0x%016lx\n", argv[2], addr);
-      exit(0);
-    }
-
-    /* Option: Convert a hex passed as argument after switch value to decimal. */
-    else if((strcmp(argv[1], "-h2d")) == 0)
-    {
-      uint64_t result = 0;
-      uint8_t ret = 0;
-      
-      ret = hexToDecimal(argv[2], &result);
-      printf("Result: %llu\n", result);
-      exit(0);
-    }
-
     // Determine which argument is the filepath/PID.
     for(int j = 1, found = FALSE; j < argc && found != TRUE; j++)
     {
@@ -230,11 +206,72 @@ int main(int argc, char *argv[], char *envp[])
     if(usingPid == FALSE)
     {
       err = mapFile_ElfHandle(argv[targetFileIndex], &elfHandle);
+      if(err != ERR_NONE)
+      {
+        exit(err);
+      }
     }
     else
     {
-      mapELFToHandleFromPID(pidStr, &elfHandle, &arch);
+      err = mapELFToHandleFromPID(pidStr, &elfHandle);
+      if(err != ERR_NONE)
+      {
+        exit(err);
+      }
     }
+
+
+    /* Option: Dump ASCII strings. */
+    if(strcmp(argv[i], "-s") == 0)
+    {
+      if(executionMode == PID_MODE)
+      {
+        ELF64_EXECUTABLE_HANDLE_T * tmpElf = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
+        scanFileForStrings(tmpElf->fileHandle.path, 3, NULL);
+      }
+      else
+      {
+        scanFileForStrings(argv[targetFileIndex], 3, NULL);
+      }
+    }
+  }
+  
+
+
+
+  /*
+    * Option: Lookup address of ELF symbol.
+    * Usage: <Program> <-lookup> <symbol> <program-name>
+  */
+  if(strcmp(argv[1], "-lookup") == 0)
+  {
+    uint64_t addr;
+
+    if(argv[2] == NULL) // TODO: Could we make some check that it is a sensical name
+    {
+      printf("Please Provide A Symbol Name To Lookup.\n");
+      exit(0);
+    }
+
+    if(argv[argc-1] == NULL)
+    {
+      printf("Please provide The Name Of An Executable File.\n");
+    }
+
+    err = mapFile_ElfHandle(argv[argc-1], &elfHandle);
+
+    addr = lookupSymbolAddress(elfHandle, argv[2]);
+    printf("<%s>\t0x%016lx\n", argv[2], addr);
+    exit(0);
+  }
+  
+
+  else
+  {
+    /*
+     * Check for options with specific ordering to their arguments.
+    */
+
 
 
     /*
@@ -242,29 +279,8 @@ int main(int argc, char *argv[], char *envp[])
     */
     while(i <= endOfProgArgs)
     {
-      /* Header info related options. */
-      /*
-      * Option:
-      * Print verbose infomation found in the various ELF, section
-      * and program headers of the file passed as last argument.
-      */
-      if(strcmp(argv[i], "-E") == 0 && usingPid == FALSE) // This option relies on a path rather than a PID. (Can we change this).
-      {
-        if(mapFileToStruct(argv[targetFileIndex], &fileHandle) == ERR_UNKNOWN)
-        {
-          printf("Unable map %s into memory\n", argv[targetFileIndex]);
-          exit(-1);
-        }
-
-        if(printElfInfoVerbose(&fileHandle) == ERR_UNKNOWN)
-        {
-          printf("Unable to get ELF info from %s\n", argv[targetFileIndex]);
-          exit(-1);
-        }
-
-      }
       /* Option: Prints the program header info contained in the binary. */
-      else if(strcmp(argv[i], "-phdrs") == 0)
+      if(strcmp(argv[i], "-phdrs") == 0)
       {
         err = printELFProgramHeaders(elfHandle);
       }
@@ -292,10 +308,10 @@ int main(int argc, char *argv[], char *envp[])
           {
             printSymbolTableData(elfHandle, ALL);
           }
-        }
-        else
-        {
-          printSymbolTableData(elfHandle, LOCAL);
+          else
+          {
+            printSymbolTableData(elfHandle, LOCAL);
+          }
         }
       }
 
@@ -320,23 +336,20 @@ int main(int argc, char *argv[], char *envp[])
         }
       }
 
-      /* Option: Dump ASCII strings. */
-      else if(strcmp(argv[i], "-s") == 0)
-      {
-        if(executionMode == PID_MODE)
-        {
-          ELF64_EXECUTABLE_HANDLE_T * tmpElf = (ELF64_EXECUTABLE_HANDLE_T *) elfHandle;
-          scanFileForStrings(tmpElf->fileHandle.path, 3);
-        }
-        else
-        {
-          scanFileForStrings(argv[targetFileIndex], 3);
-        }
-      }
 
-      /* TODO: Find a way to print out any unknown commands the user provides. */
 
-    i++; // Increment the argv pointer.
+
+
+
+
+
+
+
+
+
+
+
+      i++;  // Increment the argv pointer.
     }
 
   }
