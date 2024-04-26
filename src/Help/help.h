@@ -4,12 +4,17 @@
 
 const char helpMenu[] = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%-Turtle-Scan-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n" \
                         "--------------------------------Help Menu--------------------------------\n\n\n" \
-                        "Usage: < Turtle-Scan > < -Opt1 -Opt2, ... > < Executable >\n" \
+
+                        "Data Dumping Related Options:\n" \
                         "-------------------------------------------------------------------------\n\n\n" \
+                        "\t-sha1\n\t"         "Usage: -sha1 <File> Prints the sha1 hash of the file given as a first argument not starting with '-'.\n\n" \
+                        "\t-sha256\n\t"       "Usage: -sha256 <File> Prints the sha256 hash of the file given as a first argument not starting with '-'.\n\n" \
+                        "\t-s\n\t"            "Usage: -s <File> Scans the given binary for ASCII strings," \
+                                                        "will work on all files, not just binaries.\n\n" \
+                        "\t-hd\n\t"           "Usage: -hd <offset> <byte count>. Hex dump a specified number of bytes from given offset.\n\n" \
 
                         "Header Related Options:\n" \
                         "-------------------------------------------------------------------------\n\n\n" \
-                        "\t-E\n\t"            "Prints useful information about an ELF executable, (first argument not starting with '-').\n\n" \
                         "\t-phdrs\n\t"        "Prints all program header data in the ELF executable, (first argument not starting with '-').\n\n" \
                         "\t-shdrs\n\t"        "Prints all section header data in the ELF executable, (first argument not starting with '-').\n\n" \
 
@@ -19,17 +24,16 @@ const char helpMenu[] = "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%-Turtle-Scan-%%%%%%%%%%%%
                         "\t-f\n\t"            "Usage: -f Print local functions refereced by an ELF executable (first argument not starting with '-').\n\n" \
                         "\t-lookup\n\t"       "Usage: -lookup <symbol_name> Print the address of the provided symbol if found\n\t\t" \
                                                        "within the provided ELF binary (first argument not starting with '-').\n\n" \
-                        
-                        "Data Dumping Related Options:\n" \
+
+                        "Tracing And IOC Options:\n" \
                         "-------------------------------------------------------------------------\n\n\n" \
-                        "\t-sha1\n\t"         "Usage: -sha1 <File> Prints the sha1 hash of the file given as a first argument not starting with '-'.\n\n" \
-                        "\t-sha256\n\t"       "Usage: -sha1 <File> Prints the sha1 hash of the file given as a first argument not starting with '-'.\n\n" \
-                        "\t-s\n\t"            "Usage: -s <File> Scans the given binary for ASCII strings," \
-                                                        "will work on all files, not just binaries.\n\n" \
-                        "\t-hd\n\t"           "Usage: -hd <offset> <byte count>. Hex dump a specified number of bytes from given offset.\n\n" \
+                        "\t-i\n\t"            "Usage: -trace <ELF file> Performs a syscall trace upon an ELF executable image.\n\n" \
+                        "\t-i\n\t"            "Usage: -processes Enumerates all running processes currently running on the system.\n\n" \
                         
                         "Data Representation Related Options:\n" \
                         "-------------------------------------------------------------------------\n\n\n" \
                         "\t-h2d\n\t"         "Usage: -h2d <hex value> Converts a hex value to decimal.\n\n" \
 
+                        "Micelaneous:\n" \
+                        "-------------------------------------------------------------------------\n\n\n" \
                         "\t-u\n\t"            "Runs all unit tests for the project.\n\n";
