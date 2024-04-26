@@ -14,12 +14,13 @@ class Hatch:
         self.memory = "../src/Memory/turtle_memory.c"
         self.vector = "../src/Memory/tvector.c"
         self.io = "../src/Modules/IO/io.c"
+        self.IOCs = "../src/Modules/IOCs/IOCs.c"
 
         self.FLAGS = ""
         self.SSLLIB = "/usr/bin/openssl"            # These may not always be in the same place
         self.SSLINCLUDES = "/usr/local/src/openssl-3.0.7/include"  # maybe we can locate these dynamically.
         
-        self.buildParameters = [self.elfInfo, self.elfdynamic, self.logging, self.fileops, self.cli, self.memory, self.vector, self.io, "-L", self.SSLLIB, "-lssl", "-lcrypto", "-I", self.SSLINCLUDES, "-lm"]
+        self.buildParameters = [self.elfInfo, self.elfdynamic, self.logging, self.fileops, self.cli, self.memory, self.vector, self.io, self.IOCs, "-L", self.SSLLIB, "-lssl", "-lcrypto", "-I", self.SSLINCLUDES, "-lm"]
 
         self.process = None
         self.stdout = ""
@@ -29,7 +30,8 @@ class Hatch:
         # Any new tests should be added here to include them in the automated CI.
         self.tests = [
             "../tests/symbol-scan/symbol-scan.py",
-            "../tests/hexdump-test/hexdump-test.py"
+            "../tests/hexdump-test/hexdump-test.py",
+            "../tests/sha1-test/sha1_test.py"
         ]
 
     def setFlags(self, flags):

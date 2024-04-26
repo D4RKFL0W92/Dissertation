@@ -32,8 +32,6 @@
 #include "../IO/io.h"
 #include "../Dynamic/elfdynamic.h"
 #include "../Headers/elftypes.h"
-#include "../../Memory/tvector.h"
-
 
 #define CLASS32           "32"
 #define CLASS64           "64"
@@ -92,7 +90,7 @@ int8_t mapFile_ElfHandle(char * filepath, ELF_EXECUTABLE_T ** elfHandle);
  * Checks for active PID with same value as given, if one is found it will be mapped
  * to the union type ELF_EXECUTABLE_T that can be later checked for architecture.
  * */
-int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle, enum BITS * pArch);
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle);
 
 
 uint64_t getELFEntryFromFile(char* filepath);

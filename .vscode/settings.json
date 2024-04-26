@@ -9,6 +9,7 @@
         "syscall.h": "c",
         "stdio.h": "c",
         "elfinfo.h": "c",
-        "compare": "c"
+        "compare": "c",
+        "vector": "c"
     }
 }

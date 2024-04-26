@@ -336,9 +336,9 @@ int8_t printSHA256OfFile(const char* filepath)
   return ERR_NONE;
 }
 
-int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen)
+int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen, TVector * vector)
 {
-  char strBuff[8192];
+  char strBuff[8192] = {0};
 
   if(pMem == NULL)
   {
@@ -379,21 +379,26 @@ int8_t scanMemForStrings(char * pMem, uint64_t memLen, uint16_t toFindLen)
       if(strLen >= toFindLen)
       {
         printf("%s\n", strBuff);
-      }
-
-      if(strLen > 0)
-      {
-        for(uint16_t j = strLen; j > 0; --j)
+        if(vector != NULL)
         {
-          strBuff[j] = '\0';
+          TVector_addElement(vector, strBuff);
         }
       }
+
+      // if(strLen > 0)
+      // {
+      //   for(uint16_t j = strLen; j > 0; --j)
+      //   {
+      //     strBuff[j] = '\0';
+      //   }
+      // }
+
     }   
   }
   return ERR_NONE;
 }
 
-int8_t scanFileForStrings(char* filepath, uint16_t toFindLen)
+int8_t scanFileForStrings(char* filepath, uint16_t toFindLen, TVector * vector)
 {
   char* p_mem;
   uint64_t sz;
@@ -407,7 +412,9 @@ int8_t scanFileForStrings(char* filepath, uint16_t toFindLen)
     return ERR_UNKNOWN;
   }
 
-  err = scanMemForStrings(p_mem, sz, toFindLen);
+  err = scanMemForStrings(p_mem, sz, toFindLen, vector);
+  close(filepath);
+
   return err;
 }
 

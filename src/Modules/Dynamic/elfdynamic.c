@@ -183,6 +183,40 @@ int8_t readProcessMemoryFromPID(pid_t pid, const void *srcAddr, void *dstAddr, u
   return ERR_NONE;
 }
 
+int8_t ProcessMemoryFromPID(pid_t pid, const void * offset, void * data, uint64_t uCount)
+{
+  uint16_t iterations = 0;
+  long * writeWord = 0;
+
+  if(uCount == 0)
+  {
+    return ERR_INVALID_ARGUMENT;
+  }
+
+  iterations = (uCount % sizeof(long) == 0) ? uCount / sizeof(long) : uCount / sizeof(long) + 1;
+  if (iterations == 0)
+  {
+    return ERR_INVALID_ARGUMENT;
+  }
+
+  if (data == NULL)
+  {
+    return ERR_NULL_ARGUMENT;
+  }
+
+  for (uint16_t i = 0; i < iterations; i++)
+  {
+    // DO NOT DELETE!!! The sleep is required for the correct data to be read
+    // when ran on the terminal, else the result is just a bunch of 0xFF bytes.
+    sleep(0.05); // This is an arbitrary value but it seems reasonable in its tracing speed.
+
+    *writeWord = (long *) (data + i * sizeof(long));
+    *writeWord = ptrace(PTRACE_POKEDATA, pid, (long *)writeWord, NULL);
+  }
+
+  return ERR_NONE;
+}
+
 static int getKeyctlOperation(int cmd, char *operationBuff)
 {
   char tmpBuff[40];
@@ -899,25 +933,21 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
      */
     PROGRESS_TO_SYSCALL_EXIT(executableHandle->pid);
 
-    err = readStringFromProcessMemory(executableHandle->pid,
-                                      executableHandle->regs.rdi,
-                                      &tmpBuffer1);
-
-    tmpBuffer2 = malloc(executableHandle->regs.rdx);
-    if (tmpBuffer2 == NULL)
+    tmpBuffer1 = malloc(executableHandle->regs.rdx);
+    if (tmpBuffer1 == NULL)
     {
       return ERR_MEMORY_ALLOCATION_FAILED;
     }
     err = readProcessMemoryFromPID(executableHandle->pid,
                                    executableHandle->regs.rsi,
-                                   tmpBuffer2,
+                                   tmpBuffer1,
                                    executableHandle->regs.rdx);
     if (err != ERR_NONE)
     {
       return err;
     }
 
-    if (isAsciidata(tmpBuffer2, executableHandle->regs.rdx))
+    if (isAsciidata(tmpBuffer1, executableHandle->regs.rdx))
     {
       printf("pread64(fd=%d, buff=\"%s\", count=0x%08x, offset=%p)\n",
                       executableHandle->regs.rdi,
@@ -933,8 +963,8 @@ static int8_t printSyscallInfoElf64(ELF64_EXECUTABLE_HANDLE_T *executableHandle)
                       executableHandle->regs.rdx,
                       executableHandle->regs.r10);
 
-      dumpHexBytesFromOffset(tmpBuffer2,
-                             executableHandle->regs.r10,
+      dumpHexBytesFromOffset(tmpBuffer1,
+                             executableHandle->regs.rsi,
                              executableHandle->regs.rdx);
     }
 
@@ -8669,7 +8699,7 @@ static void unittest_processBPFUnion()
 
 void elfDynamicTestSuite()
 {
-  unittest_getKeyctlOperation_validOperations(); // TODO: Confirm this test works.
+  unittest_getKeyctlOperation_validOperations();
 
   unittest_printMmapFlags();
   unittest_isRepeatedSyscallX64_legalUsage();

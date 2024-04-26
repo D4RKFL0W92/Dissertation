@@ -7,6 +7,7 @@ cli="../src/CLI/cli.c"
 memory="../src/Memory/turtle_memory.c"
 vector="../src/Memory/tvector.c"
 io="../src/Modules/IO/io.c"
+IOCs="../src/Modules/IOCs/IOCs.c"
 
 FLAGS='-DDEBUG -DUNITTEST'
 SSLLIB='/usr/bin/openssl -lssl -lcrypto'            # These may not always be in the same place
@@ -33,7 +34,7 @@ elif [ $# -eq 2 ]; then
 fi
 
 gcc $FLAGS $elfinfo $elfdynamic $cli $logging \
-$fileops $memory $vector $io \
+$fileops $memory $vector $io $IOCs \
 -L$SSLLIB -I$SSLINCLUDES -lm -ggdb -o Turtle-Scan
 
 # Run the unit tests for the project on each build.

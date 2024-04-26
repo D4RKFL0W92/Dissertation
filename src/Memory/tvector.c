@@ -27,11 +27,15 @@ int8_t TVector_initVector(TVector * vec, size_t elementSize, uint32_t initialEle
         initialElementCount = 4; // Arbitrary number.
     }
 
-    vec->currElement = 0;
+    vec->pData = malloc(elementSize * initialElementCount);
+    if(vec->pData == NULL)
+    {
+        return ERR_MEMORY_ALLOCATION_FAILED;
+    }
+
     vec->numElements = 0;
     vec->elementSize = elementSize;
     vec->totalFreeElements = initialElementCount;
-    vec->pData = malloc(elementSize * initialElementCount);
     memset(vec->pData, 0, elementSize * initialElementCount);
     if(vec->pData == NULL)
     {
@@ -42,28 +46,30 @@ int8_t TVector_initVector(TVector * vec, size_t elementSize, uint32_t initialEle
 
 int8_t TVector_addElement(TVector * vec, void * element)
 {
-    if(vec == NULL || element == NULL)
-    {
-        return ERR_NULL_ARGUMENT;
-    }
-    if(vec->numElements != 0 && vec->numElements >= vec->totalFreeElements - 1)
-    {
-        void * pTmp = NULL;
+  if(vec == NULL || element == NULL)
+  {
+      return ERR_NULL_ARGUMENT;
+  }
+  if(vec->numElements != 0 && vec->numElements >= vec->totalFreeElements - 1)
+  {
+    void * pTmp = NULL;
 
-        pTmp = realloc(vec->pData, (vec->totalFreeElements + 10) * vec->elementSize);
-        if(pTmp == NULL)
-        {
-            return ERR_NO_MEMORY;
-        }
-
-        vec->totalFreeElements += 10;
-        memset(&pTmp[vec->numElements * vec->elementSize], 0, (vec->totalFreeElements - vec->numElements) * vec->elementSize);
-        vec->pData = pTmp;
+    // Reallocate enough memory to hold an extra 10 elements.
+    pTmp = realloc(vec->pData, (vec->totalFreeElements + 10) * vec->elementSize);
+    if(pTmp == NULL)
+    {
+        return ERR_NO_MEMORY;
     }
 
-    memcpy(&vec->pData[vec->numElements * vec->elementSize], element, vec->elementSize);
-    vec->numElements++;
-    return ERR_NONE;
+    vec->totalFreeElements += 10;
+    memset(&pTmp[vec->numElements * vec->elementSize], 0, (vec->totalFreeElements - vec->numElements) * vec->elementSize);
+    vec->pData = pTmp;
+  }
+
+  memcpy(vec->pData + (vec->numElements * vec->elementSize), element, vec->elementSize);
+  --vec->totalFreeElements;
+  ++vec->numElements;
+  return ERR_NONE;
 }
 
 int8_t TVector_getElement(const TVector * vec, void * element, uint32_t index)
@@ -76,7 +82,7 @@ int8_t TVector_getElement(const TVector * vec, void * element, uint32_t index)
     {
         return ERR_INVALID_ARGUMENT;
     }
-    memcpy(element, &vec->pData[index * vec->elementSize], vec->elementSize);
+    memcpy(element, vec->pData + (index * vec->elementSize), vec->elementSize);
     return ERR_NONE;
 }
 
@@ -116,17 +122,11 @@ int8_t TVector_removeElement(TVector * vec, uint32_t index)
 
 int8_t TVector_deinitVector(TVector * vec)
 {
-    if(vec->elementSize == 0 || vec->numElements == 0 ||
-       vec->totalFreeElements == 0 || vec->pData == NULL)
+    if(vec == NULL || vec->pData == NULL || vec->elementSize == 0 ||
+       vec->numElements == 0 || vec->totalFreeElements == 0)
     {
         return ERR_INVALID_ARGUMENT; // Not really a problem.
     }
-
-    // TODO: Do we really need to set these to zero??
-    vec->currElement       = 0;
-    vec->elementSize       = 0;
-    vec->numElements       = 0;
-    vec->totalFreeElements = 0;
 
     free(vec->pData);
     vec->pData = NULL;
@@ -143,7 +143,6 @@ static void test_TVector_initVector_zeroInitialSize()
     err = TVector_initVector(&vec, sizeof(int), 0);
     assert(err == ERR_NONE);
     assert(vec.pData != NULL);
-    assert(vec.currElement == 0);
     assert(vec.numElements == 0);
     assert(vec.elementSize == sizeof(int));
     assert(vec.totalFreeElements == 4);

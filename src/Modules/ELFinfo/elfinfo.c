@@ -1618,14 +1618,13 @@ cleanup:
   return err;
 }
 
-int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle, enum BITS * pArch)
+int8_t mapELFToHandleFromPID(char* pidStr, ELF_EXECUTABLE_T ** elfHandle)
 {
   uint8_t * pMem = NULL;
   pid_t     pid = 0;
   uint64_t  mappingSize = 0;
   int8_t    err = ERR_NONE;
 
-  *pArch = T_NO_ELF;
 
   err = stringToInteger(pidStr, &pid);
   if(err != ERR_NONE || pid == 0)

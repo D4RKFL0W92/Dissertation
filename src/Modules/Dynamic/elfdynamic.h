@@ -80,6 +80,7 @@
 
 int8_t readStringFromProcessMemory(pid_t pid, uint64_t offset, char** pStr);
 int8_t readProcessMemoryFromPID(pid_t pid, const void * offset, void * dstAddr, uint64_t uCount);
+int8_t ProcessMemoryFromPID(pid_t pid, const void * offset, void * data, uint64_t uCount);
 
 
 int8_t mapELF32ToHandleFromProcessMemory(const void ** pMem, ELF32_EXECUTABLE_HANDLE_T ** elfHandle, const uint64_t uCount);
