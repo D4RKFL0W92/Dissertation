@@ -164,6 +164,32 @@ int main(int argc, char *argv[], char *envp[])
 
   }
 
+    /*
+    * Option: Lookup address of ELF symbol.
+    * Usage: <Program> <-lookup> <symbol> <program-name>
+  */
+  if(strcmp(argv[1], "-lookup") == 0)
+  {
+    uint64_t addr;
+
+    if(argv[2] == NULL) // TODO: Could we make some check that it is a sensical name
+    {
+      printf("Please Provide A Symbol Name To Lookup.\n");
+      exit(0);
+    }
+
+    if(argv[argc-1] == NULL)
+    {
+      printf("Please provide The Name Of An Executable File.\n");
+    }
+
+    err = mapFile_ElfHandle(argv[argc-1], &elfHandle);
+
+    addr = lookupSymbolAddress(elfHandle, argv[2]);
+    printf("<%s>\t0x%016lx\n", argv[2], addr);
+    exit(0);
+  }
+
 
   if(argc >= 3)
   {
@@ -239,31 +265,7 @@ int main(int argc, char *argv[], char *envp[])
 
 
 
-  /*
-    * Option: Lookup address of ELF symbol.
-    * Usage: <Program> <-lookup> <symbol> <program-name>
-  */
-  if(strcmp(argv[1], "-lookup") == 0)
-  {
-    uint64_t addr;
 
-    if(argv[2] == NULL) // TODO: Could we make some check that it is a sensical name
-    {
-      printf("Please Provide A Symbol Name To Lookup.\n");
-      exit(0);
-    }
-
-    if(argv[argc-1] == NULL)
-    {
-      printf("Please provide The Name Of An Executable File.\n");
-    }
-
-    err = mapFile_ElfHandle(argv[argc-1], &elfHandle);
-
-    addr = lookupSymbolAddress(elfHandle, argv[2]);
-    printf("<%s>\t0x%016lx\n", argv[2], addr);
-    exit(0);
-  }
   
 
   else
