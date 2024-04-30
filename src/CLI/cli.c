@@ -260,16 +260,6 @@ int main(int argc, char *argv[], char *envp[])
         scanFileForStrings(argv[targetFileIndex], 3, NULL);
       }
     }
-  }
-  
-
-
-
-
-  
-
-  else
-  {
     /*
      * Check for options with specific ordering to their arguments.
     */
@@ -336,17 +326,8 @@ int main(int argc, char *argv[], char *envp[])
         {
           exit(0);
         }
-      }
-
-
-
-
-
-
-
-
-
-
+  }
+  
 
 
 
